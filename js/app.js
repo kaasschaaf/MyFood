@@ -12,18 +12,23 @@ class MyFoodApp {
     
     this.activeRecipeId = null;
     this.modalServings = 2;
+    this.visibleRecipeCount = 30;
   }
 
   async init() {
     // 1. Initialiseer AH data & recepten
     await this.ahService.init();
-    await this.recipesService.loadRecipes();
+    await this.recipesService.loadRecipes(() => {
+      this.initCuisineFilters();
+      this.render();
+    });
 
     // 2. Initialiseer UI elementen & filters
     this.initCuisineFilters();
     this.bindEvents();
     this.initTheme();
     this.render();
+    this.refreshExternalPrices();
   }
 
   initCuisineFilters() {
@@ -39,8 +44,8 @@ class MyFoodApp {
 
     cuisines.forEach(c => {
       pillsHtml += `
-        <button type="button" class="cuisine-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 transition" data-cuisine="${c}">
-          ${c}
+        <button type="button" class="cuisine-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 transition" data-cuisine="${this.ui.escapeHtml(c)}">
+          ${this.ui.escapeHtml(c)}
         </button>
       `;
     });
@@ -169,6 +174,12 @@ class MyFoodApp {
     const recipeGrid = document.getElementById('recipes-grid');
     if (recipeGrid) {
       recipeGrid.addEventListener('click', (e) => {
+        if (e.target.closest('#load-more-recipes')) {
+          this.visibleRecipeCount += 30;
+          this.render();
+          return;
+        }
+        if (e.target.closest('a')) return;
         const card = e.target.closest('[data-recipe-id]');
         if (card) {
           this.openRecipeModal(card.dataset.recipeId);
@@ -209,6 +220,24 @@ class MyFoodApp {
         // Open settings vanuit modal
         if (e.target.closest('.open-settings-btn')) {
           this.openSettingsModal();
+        }
+      });
+
+      recipeModal.addEventListener('change', async (e) => {
+        const select = e.target.closest('.ah-product-select');
+        if (!select) return;
+        try {
+          await this.recipesService.selectProductMatch(
+            this.activeRecipeId,
+            Number(select.dataset.ingredientIndex),
+            select.value
+          );
+          this.refreshModalContent();
+          this.render();
+        } catch (error) {
+          console.error('AH-productkeuze opslaan mislukt.', error);
+          const status = recipeModal.querySelector('#product-match-status');
+          if (status) status.textContent = `Productkeuze opslaan mislukt: ${error.message}`;
         }
       });
 
@@ -254,13 +283,30 @@ class MyFoodApp {
     }
   }
 
-  openRecipeModal(recipeId) {
+  async openRecipeModal(recipeId) {
+    const recipe = this.recipesService.getRecipeById(recipeId);
+    if (recipe?.ahRecipeOnly) {
+      window.open(recipe.sourceUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
     this.activeRecipeId = recipeId;
     this.modalServings = this.recipesService.getServings();
-    this.refreshModalContent();
     const modal = document.getElementById('recipe-modal');
     if (modal) {
+      modal.innerHTML = '<p class="p-8 text-center text-slate-600 dark:text-slate-300">Receptdetails en AH-producten laden...</p>';
       modal.showModal();
+    }
+    try {
+      await this.recipesService.getRecipeDetails(recipeId);
+      if (this.activeRecipeId === recipeId) {
+        this.refreshModalContent();
+        this.render();
+      }
+    } catch (error) {
+      console.error('Receptdetails laden mislukt.', error);
+      if (modal && this.activeRecipeId === recipeId) {
+        modal.innerHTML = `<p class="p-8 text-center text-rose-600">Receptdetails konden niet worden geladen: ${this.ui.escapeHtml(error.message)}</p>`;
+      }
     }
   }
 
@@ -350,6 +396,7 @@ class MyFoodApp {
 
     const filtered = this.recipesService.getFilteredRecipes();
     const servings = this.recipesService.getServings();
+    const visibleRecipes = filtered.slice(0, this.visibleRecipeCount);
 
     if (countEl) {
       countEl.textContent = `${filtered.length} recepten gevonden`;
@@ -366,7 +413,45 @@ class MyFoodApp {
       return;
     }
 
-    grid.innerHTML = filtered.map(r => this.ui.renderRecipeCard(r, servings)).join('');
+    grid.innerHTML = visibleRecipes.map(r => this.ui.renderRecipeCard(r, servings)).join('');
+    if (filtered.length > visibleRecipes.length) {
+      grid.insertAdjacentHTML('beforeend', `
+        <div class="col-span-full text-center py-4">
+          <button id="load-more-recipes" type="button"
+            class="px-5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-semibold hover:border-emerald-500">
+            Laad meer recepten (${filtered.length - visibleRecipes.length} resterend)
+          </button>
+        </div>
+      `);
+    }
+  }
+
+  async refreshExternalPrices() {
+    const status = document.getElementById('catalog-status');
+    const recipeCount = this.recipesService.recipes.filter(recipe => recipe.external).length;
+    if (recipeCount === 0) {
+      if (status) status.textContent = 'Geen externe recepten om AH-prijzen voor op te halen.';
+      return;
+    }
+    if (status) {
+      status.textContent = `Live AH-productprijzen controleren voor ${recipeCount} externe recepten...`;
+    }
+    let failedRecipes = 0;
+    try {
+      await this.recipesService.refreshPrices(({ completed, total, recipe }) => {
+        if (recipe.priceError) failedRecipes++;
+        if (status) {
+          status.textContent = completed < total
+            ? `AH-prijzen gecontroleerd: ${completed}/${total}${failedRecipes ? ` · ${failedRecipes} met zoekfouten` : ''}`
+            : `AH-prijzen gecontroleerd voor ${total} externe recepten${failedRecipes ? ` · ${failedRecipes} met zoekfouten` : ''}`;
+        }
+        this.render();
+        if (recipe.id === this.activeRecipeId) this.refreshModalContent();
+      });
+    } catch (error) {
+      console.error('Externe AH-prijzen konden niet worden bijgewerkt.', error);
+      if (status) status.textContent = `AH-prijzen bijwerken is mislukt: ${error.message}`;
+    }
   }
 }
 

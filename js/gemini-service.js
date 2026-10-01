@@ -4,7 +4,7 @@
 export class GeminiService {
   constructor() {
     this.storageKey = 'myfood_gemini_api_key';
-    this.modelName = 'gemini-2.5-flash';
+    this.modelName = 'gemini-3.8-flash';
   }
 
   getApiKey() {
@@ -42,7 +42,7 @@ export class GeminiService {
       return `- ${amount} ${i.unit} ${i.name}`;
     }).join('\n');
 
-    const systemPrompt = `Je bent een vriendelijke, deskundige Nederlandse chef-kok en voedingsdeskundige in de MyFood webapp.
+    const systemInstruction = `Je bent een vriendelijke, deskundige Nederlandse chef-kok en voedingsdeskundige in de MyFood webapp.
 De gebruiker bekijkt momenteel dit recept:
 - Naam: "${recipe.title}"
 - Stijl / Keuken: ${recipe.cuisine}
@@ -59,34 +59,32 @@ ${(recipe.instructions || []).map((step, idx) => `${idx + 1}. ${step}`).join('\n
 
 Geef een to-the-point, enthousiast en praktisch antwoord in goed Nederlands. Gebruik markdown waar nuttig (lijstjes, vetgedrukt).`;
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${this.modelName}:generateContent?key=${apiKey}`;
-
-    const requestBody = {
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: `${systemPrompt}\n\nVraag van de gebruiker:\n${userQuestion}` }
-          ]
-        }
-      ],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 1000
-      }
-    };
-
     try {
-      const response = await fetch(endpoint, {
+      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          model: this.modelName,
+          system_instruction: systemInstruction,
+          input: userQuestion,
+          generation_config: {
+            temperature: 0.7,
+            max_output_tokens: 1000
+          },
+          store: false
+        })
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
+        let errorData = null;
+        try {
+          errorData = await response.json();
+        } catch (error) {
+          console.warn('Gemini gaf geen JSON-foutdetails terug.', error);
+        }
         let errorMsg = `API Fout (${response.status})`;
         if (errorData && errorData.error && errorData.error.message) {
           errorMsg = errorData.error.message;
@@ -98,7 +96,13 @@ Geef een to-the-point, enthousiast en praktisch antwoord in goed Nederlands. Geb
       }
 
       const data = await response.json();
-      const answer = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      const answer = data.output_text || (data.steps || [])
+        .filter(step => step.type === 'model_output')
+        .flatMap(step => step.content || [])
+        .filter(content => content.type === 'text')
+        .map(content => content.text)
+        .join('\n')
+        .trim();
       if (!answer) {
         throw new Error('Geen antwoord ontvangen van Gemini.');
       }
