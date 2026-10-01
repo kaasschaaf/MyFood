@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="nl" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MyFood - Recepten, AH Bonus Prijzen & AI Kookhulp</title>
+  <meta name="description" content="Vind heerlijke recepten, bekijk actuele AH prijzen en bonus deals voor 2 personen, en stel vragen aan Gemini AI.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍲</text></svg>">
+  
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col font-sans antialiased transition-colors duration-200">
+
+  <!-- Navigatiebalk -->
+  <header class="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 transition-colors">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      
+      <!-- Logo & Titel -->
+      <div class="flex items-center gap-3">
+        <span class="text-3xl filter drop-shadow-sm select-none">🍲</span>
+        <div>
+          <h1 class="text-lg font-extrabold tracking-tight bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent leading-none">
+            MyFood
+          </h1>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+            AH Prijzen • Eiwitrijk • Gemini AI
+          </p>
+        </div>
+      </div>
+
+      <!-- Midden: Portie Schakelaar (Standaard 2 personen) -->
+      <div class="hidden sm:flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+        <span class="text-xs font-semibold text-slate-600 dark:text-slate-300">Standaard voor:</span>
+        <div class="inline-flex items-center bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs">
+          <button type="button" id="main-portion-minus" class="px-2.5 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-l-lg transition" title="1 persoon minder">-</button>
+          <span id="main-portion-count" class="px-2 py-1 text-xs font-extrabold text-emerald-600 dark:text-emerald-400 min-w-[3.5rem] text-center">2 pers.</span>
+          <button type="button" id="main-portion-plus" class="px-2.5 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-r-lg transition" title="1 persoon meer">+</button>
+        </div>
+      </div>
+
+      <!-- Knoppen Rechts (Settings, Thema) -->
+      <div class="flex items-center gap-2">
+        <button 
+          type="button" 
+          id="nav-settings-btn" 
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-xl transition"
+          title="Instellingen en Gemini API key"
+        >
+          <span>🔑</span>
+          <span class="hidden sm:inline">Gemini AI</span>
+        </button>
+
+        <button 
+          type="button" 
+          id="theme-toggle" 
+          class="p-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 transition"
+          aria-label="Wissel thema"
+        >
+          <span class="dark:hidden">🌙</span>
+          <span class="hidden dark:inline">☀️</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Mobiele Portie Selector Bar -->
+  <div class="sm:hidden bg-slate-100/90 dark:bg-slate-800/90 px-4 py-2 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
+    <span class="font-semibold text-slate-600 dark:text-slate-300">Porties berekend voor:</span>
+    <div class="inline-flex items-center bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs">
+      <button type="button" onclick="document.getElementById('main-portion-minus').click()" class="px-3 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100">-</button>
+      <span class="px-2 font-extrabold text-emerald-600 dark:text-emerald-400" id="mobile-portion-label">2 pers.</span>
+      <button type="button" onclick="document.getElementById('main-portion-plus').click()" class="px-3 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100">+</button>
+    </div>
+  </div>
+
+  <!-- Hoofd Inhoud -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+
+    <!-- Zoekbalk & Snelfilters -->
+    <section class="space-y-3.5 bg-white dark:bg-slate-800/60 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+      
+      <!-- Zoekveld & Sorteren -->
+      <div class="flex flex-col sm:flex-row gap-3">
+        <div class="relative flex-1">
+          <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+            🔍
+          </span>
+          <input 
+            type="text" 
+            id="search-input" 
+            placeholder="Zoek op gerecht, keuken, trefwoord (bijv. zalm, pasta, kip)..." 
+            class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+          />
+        </div>
+
+        <!-- Sorteren -->
+        <div class="sm:w-56 shrink-0">
+          <select 
+            id="sort-select" 
+            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition cursor-pointer"
+          >
+            <option value="default">✨ Sortering: Aanbevolen</option>
+            <option value="price-asc">💰 Goedkoopst per persoon</option>
+            <option value="bonus-desc">🔥 Meeste Bonusvoordeel</option>
+            <option value="protein-desc">🥩 Meeste Proteïne (g)</option>
+            <option value="health-desc">🥗 Hoogste Gezondheidsscore</option>
+            <option value="time-asc">⏱️ Kortste Bereidingstijd</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Keukenstijl Horizontale Scrollbar -->
+      <div id="cuisine-pills" class="flex items-center gap-1.5 overflow-x-auto pb-1 horizontal-scroll-hide-bar">
+        <!-- Dynamisch gevuld via JS -->
+      </div>
+
+      <!-- Snelle Toggles (Bonus, Eiwit, Snel) -->
+      <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-700/60">
+        <div class="flex flex-wrap items-center gap-2">
+          <button 
+            type="button" 
+            id="filter-bonus" 
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-amber-500 transition shadow-xs"
+          >
+            <span>🔥</span> AH Bonus Deals
+          </button>
+          <button 
+            type="button" 
+            id="filter-protein" 
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-blue-500 transition shadow-xs"
+          >
+            <span>🥩</span> Eiwitrijk (&gt;30g)
+          </button>
+          <button 
+            type="button" 
+            id="filter-quick" 
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-emerald-500 transition shadow-xs"
+          >
+            <span>⏱️</span> Snel (&lt;25 min)
+          </button>
+        </div>
+
+        <span id="results-count" class="text-xs font-medium text-slate-500 dark:text-slate-400">
+          Recepten laden...
+        </span>
+      </div>
+
+    </section>
+
+    <!-- Recepten Raster -->
+    <section>
+      <div id="recipes-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Receptkaarten worden dynamisch ingeladen via UIComponents -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Recept Detail Modal (Native HTML5 Dialog) -->
+  <dialog id="recipe-modal" class="w-11/12 max-w-4xl bg-white dark:bg-slate-850 dark:bg-slate-900 rounded-3xl shadow-2xl overflow-y-auto max-h-[90vh]">
+    <!-- Dynamisch ingeladen via ui-components.js -->
+  </dialog>
+
+  <!-- Settings / Gemini API Key Modal -->
+  <dialog id="settings-modal" class="w-11/12 max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-6">
+    <div class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <span>✨</span> Gemini AI Instellingen
+        </h3>
+        <button type="button" id="close-settings-btn" class="text-slate-400 hover:text-slate-600 text-xl font-bold">✕</button>
+      </div>
+
+      <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+        Om vragen over recepten te stellen aan Chef Gemini, heb je een gratis Google Gemini API key nodig. Deze wordt uitsluitend lokaal in je eigen browser (<code class="bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">localStorage</code>) bewaard en nooit gedeeld.
+      </p>
+
+      <div class="space-y-1.5">
+        <label for="api-key-input" class="text-xs font-semibold text-slate-700 dark:text-slate-200">
+          Google Gemini API Sleutel:
+        </label>
+        <input 
+          type="password" 
+          id="api-key-input" 
+          placeholder="AIzaSy..." 
+          class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+        />
+      </div>
+
+      <div class="bg-indigo-50 dark:bg-indigo-950/40 p-3 rounded-xl border border-indigo-100 dark:border-indigo-900/60 text-xs text-indigo-800 dark:text-indigo-300">
+        💡 <strong>Nog geen sleutel?</strong> Maak er in 1 minuut gratis eentje aan via 
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="underline font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500">
+          Google AI Studio ↗
+        </a>.
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button 
+          type="button" 
+          id="save-settings-btn" 
+          class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition shadow-sm"
+        >
+          Opslaan & Activeren
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Footer -->
+  <footer class="bg-white dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 mt-12 py-6 text-center text-xs text-slate-500 dark:text-slate-400">
+    <div class="max-w-7xl mx-auto px-4 space-y-1">
+      <p class="font-medium">
+        🍲 <strong>MyFood</strong> — Jouw persoonlijke kookassistent op GitHub Pages.
+      </p>
+      <p class="text-[11px] text-slate-400">
+        Prijzen & Bonusdata gebaseerd op actuele Albert Heijn winkelprijzen. Aangedreven door Google Gemini.
+      </p>
+    </div>
+  </footer>
+
+  <!-- Script Modules -->
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+name: Update Wekelijkse AH Bonus & Prijzen
+
+on:
+  schedule:
+    # Draait elke maandag om 06:00 UTC (nieuwe AH bonusweek)
+    - cron: '0 6 * * 1'
+  workflow_dispatch: # Maakt handmatig starten via de GitHub UI mogelijk
+
+permissions:
+  contents: write
+
+jobs:
+  update-bonus:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Update AH Bonus Data
+        run: node scripts/update_ah_data.js
+
+      - name: Commit en Push updates
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/ah-bonus.json data/recipes.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore(bonus): wekelijkse AH bonus update [skip ci]" && git push)

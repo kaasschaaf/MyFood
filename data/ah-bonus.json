@@ -1,0 +1,76 @@
+{
+  "updatedAt": "2026-10-01T19:34:08.691Z",
+  "bonusPeriod": "Week 40 (okt 2026)",
+  "discounts": {
+    "ah-kipfilet": {
+      "isBonus": true,
+      "bonusText": "15% korting",
+      "discountPercent": 15,
+      "originalPrice": 6.89,
+      "bonusPrice": 5.85,
+      "unit": "500g"
+    },
+    "ah-zalmfilet": {
+      "isBonus": true,
+      "bonusText": "2e halve prijs",
+      "discountPercent": 25,
+      "originalPrice": 7.49,
+      "bonusPrice": 5.62,
+      "unit": "2 stuks (250g)"
+    },
+    "ah-avocado": {
+      "isBonus": true,
+      "bonusText": "2 voor € 1,99",
+      "originalPrice": 2.78,
+      "bonusPrice": 1.99,
+      "unit": "2 stuks"
+    },
+    "ah-spinazie": {
+      "isBonus": true,
+      "bonusText": "25% korting",
+      "discountPercent": 25,
+      "originalPrice": 1.89,
+      "bonusPrice": 1.42,
+      "unit": "400g"
+    },
+    "ah-pasta-penne": {
+      "isBonus": false,
+      "originalPrice": 1.19,
+      "bonusPrice": 1.19,
+      "unit": "500g"
+    },
+    "ah-cherrytomaat": {
+      "isBonus": true,
+      "bonusText": "€ 1,29 ipv € 1,79",
+      "originalPrice": 1.79,
+      "bonusPrice": 1.29,
+      "unit": "250g"
+    },
+    "ah-tofu": {
+      "isBonus": true,
+      "bonusText": "2e voor € 1,-",
+      "originalPrice": 2.19,
+      "bonusPrice": 1.59,
+      "unit": "375g"
+    },
+    "ah-paprika-mix": {
+      "isBonus": true,
+      "bonusText": "Nu € 1,69",
+      "originalPrice": 2.19,
+      "bonusPrice": 1.69,
+      "unit": "3 stuks"
+    },
+    "ah-cottage-cheese": {
+      "isBonus": false,
+      "originalPrice": 1.45,
+      "bonusPrice": 1.45,
+      "unit": "200g"
+    },
+    "ah-rijst-basmati": {
+      "isBonus": false,
+      "originalPrice": 1.99,
+      "bonusPrice": 1.99,
+      "unit": "1kg"
+    }
+  }
+}

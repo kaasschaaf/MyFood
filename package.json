@@ -1,0 +1,20 @@
+{
+  "name": "myfood",
+  "version": "1.0.0",
+  "description": "Recepten webapp met AH bonus prijzen en Gemini AI voor GitHub Pages",
+  "type": "module",
+  "scripts": {
+    "start": "npx serve .",
+    "update-bonus": "node scripts/update_ah_data.js"
+  },
+  "keywords": [
+    "recipes",
+    "ah",
+    "albert-heijn",
+    "bonus",
+    "gemini",
+    "github-pages"
+  ],
+  "author": "Jesse Deelstra",
+  "license": "MIT"
+}

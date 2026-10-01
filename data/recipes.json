@@ -1,0 +1,724 @@
+[
+  {
+    "id": "pasta-zalm-spinazie",
+    "title": "Romige Volkoren Penne met Zalm & Gewokte Spinazie",
+    "description": "Een heerlijk en snel diner bomvol omega-3 vetzuren en eiwitten. Romig gemaakt met zuivelspread light.",
+    "cuisine": "Italiaans",
+    "mealType": "Hoofdgerecht",
+    "prepTimeMinutes": 20,
+    "difficulty": "Makkelijk",
+    "baseServings": 2,
+    "image": "https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=800&q=80",
+    "nutrition": {
+      "calories": 540,
+      "proteinGrams": 42,
+      "carbsGrams": 52,
+      "fatGrams": 16,
+      "healthScore": 92
+    },
+    "tags": [
+      "italiaans",
+      "vis",
+      "high-protein",
+      "snel",
+      "bonus"
+    ],
+    "ingredients": [
+      {
+        "name": "Zalmfilet",
+        "amount": 250,
+        "unit": "g",
+        "ahProductId": "ah-zalmfilet",
+        "ahName": "AH Verse Noorse zalmfilet",
+        "standardPrice": 7.49,
+        "bonusPrice": 5.62,
+        "isBonus": true,
+        "bonusText": "2e halve prijs"
+      },
+      {
+        "name": "Verse spinazie",
+        "amount": 300,
+        "unit": "g",
+        "ahProductId": "ah-spinazie",
+        "ahName": "AH Gewassen spinazie",
+        "standardPrice": 1.89,
+        "bonusPrice": 1.42,
+        "isBonus": true,
+        "bonusText": "25% korting"
+      },
+      {
+        "name": "Volkoren penne",
+        "amount": 160,
+        "unit": "g",
+        "ahProductId": "ah-pasta-penne",
+        "ahName": "AH Volkoren penne",
+        "standardPrice": 1.19,
+        "bonusPrice": 1.19,
+        "isBonus": false
+      },
+      {
+        "name": "Zuivelspread bieslook light",
+        "amount": 100,
+        "unit": "g",
+        "ahProductId": "ah-zuivelspread",
+        "ahName": "AH Zuivelspread bieslook light",
+        "standardPrice": 1.25,
+        "bonusPrice": 1.25,
+        "isBonus": false
+      },
+      {
+        "name": "Cherrytomaatjes",
+        "amount": 150,
+        "unit": "g",
+        "ahProductId": "ah-cherrytomaat",
+        "ahName": "AH Snoeptomaatjes",
+        "standardPrice": 1.79,
+        "bonusPrice": 1.29,
+        "isBonus": true,
+        "bonusText": "€ 1,29 ipv € 1,79"
+      }
+    ],
+    "instructions": [
+      "Kook de volkoren penne volgens de aanwijzingen op de verpakking beetgaar (ca. 10 minuten).",
+      "Kruid de zalmfilet met peper, zout en een beetje dille of citroensap.",
+      "Verhit een scheutje olijfolie in een koekenpan en bak de zalm in ca. 6-8 minuten goudbruin en net gaar. Haal uit de pan en trek in grove stukken.",
+      "Voeg in dezelfde pan de spinazie en gehalveerde cherrytomaatjes toe en laat de spinazie in 2 minuten slinken.",
+      "Draai het vuur laag, roer de zuivelspread en een lepel kookvocht van de pasta door de spinazie voor een romige saus.",
+      "Meng de afgegoten pasta en de zalm voorzichtig door de saus. Serveer direct warm!"
+    ]
+  },
+  {
+    "id": "aziatische-kip-cashew-wok",
+    "title": "Thaise Wokschotel met Kipfilet, Paprika & Cashewnoten",
+    "description": "Knapperige groenten gewokt in een lichte sojasoep met magere kipfilet en geroosterde cashewnoten.",
+    "cuisine": "Aziatisch",
+    "mealType": "Hoofdgerecht",
+    "prepTimeMinutes": 25,
+    "difficulty": "Makkelijk",
+    "baseServings": 2,
+    "image": "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=800&q=80",
+    "nutrition": {
+      "calories": 510,
+      "proteinGrams": 46,
+      "carbsGrams": 44,
+      "fatGrams": 14,
+      "healthScore": 95
+    },
+    "tags": [
+      "aziatisch",
+      "kip",
+      "high-protein",
+      "snel",
+      "bonus"
+    ],
+    "ingredients": [
+      {
+        "name": "Kipfilet",
+        "amount": 300,
+        "unit": "g",
+        "ahProductId": "ah-kipfilet",
+        "ahName": "AH Kipfilet voordeelverpakking",
+        "standardPrice": 6.89,
+        "bonusPrice": 5.85,
+        "isBonus": true,
+        "bonusText": "15% korting"
+      },
+      {
+        "name": "Paprika (mix)",
+        "amount": 2,
+        "unit": "stuks",
+        "ahProductId": "ah-paprika-mix",
+        "ahName": "AH Paprika stoplicht 3 stuks",
+        "standardPrice": 2.19,
+        "bonusPrice": 1.69,
+        "isBonus": true,
+        "bonusText": "Nu € 1,69"
+      },
+      {
+        "name": "Broccoli",
+        "amount": 350,
+        "unit": "g",
+        "ahProductId": "ah-broccoli",
+        "ahName": "AH Verse broccoli",
+        "standardPrice": 1.39,
+        "bonusPrice": 1.39,
+        "isBonus": false
+      },
+      {
+        "name": "Basmatirijst",
+        "amount": 150,
+        "unit": "g",
+        "ahProductId": "ah-rijst-basmati",
+        "ahName": "AH Basmati rijst",
+        "standardPrice": 1.99,
+        "bonusPrice": 1.99,
+        "isBonus": false
+      },
+      {
+        "name": "Ongezouten cashewnoten",
+        "amount": 40,
+        "unit": "g",
+        "ahProductId": "ah-cashewnoten",
+        "ahName": "AH Cashewnoten ongezouten",
+        "standardPrice": 1.89,
+        "bonusPrice": 1.89,
+        "isBonus": false
+      }
+    ],
+    "instructions": [
+      "Kook de basmatirijst volgens de aanwijzingen op het pak.",
+      "Snijd de kipfilet in blokjes en breng op smaak met sojasaus, knoflook en gemberpoeder.",
+      "Snijd de paprika's in reepjes en de broccoli in kleine roosjes. Blancheer de broccoli 2 minuten voor.",
+      "Verhit een wok op hoog vuur met sesamolie en bak de kipblokjes in 4-5 minuten rondom bruin.",
+      "Voeg de paprikareepjes en broccoli toe en roerbak 4 minuten mee.",
+      "Voeg een scheutje sojasaus, oestersaus en de cashewnoten toe. Schep 1 minuut door en serveer over de rijst."
+    ]
+  },
+  {
+    "id": "mexicaanse-burrito-bowl-avocado",
+    "title": "Mexicaanse Fiesta Bowl met Zwarte Bonen, Maïs & Guacamole",
+    "description": "Kleurrijke en vezelrijke bowl met limoenrijst, zwarte bonen, knapperige paprika en verse avocado.",
+    "cuisine": "Mexicaans",
+    "mealType": "Hoofdgerecht",
+    "prepTimeMinutes": 20,
+    "difficulty": "Makkelijk",
+    "baseServings": 2,
+    "image": "https://images.unsplash.com/photo-1543339308-43e59d6b73a6?auto=format&fit=crop&w=800&q=80",
+    "nutrition": {
+      "calories": 480,
+      "proteinGrams": 24,
+      "carbsGrams": 68,
+      "fatGrams": 15,
+      "healthScore": 96
+    },
+    "tags": [
+      "mexicaans",
+      "vegetarisch",
+      "vegan",
+      "vezelrijk",
+      "snel",
+      "bonus"
+    ],
+    "ingredients": [
+      {
+        "name": "Eetrijpe avocado",
+        "amount": 1,
+        "unit": "stuk",
+        "ahProductId": "ah-avocado",
+        "ahName": "AH Eetrijpe avocado's 2 stuks",
+        "standardPrice": 2.78,
+        "bonusPrice": 1.99,
+        "isBonus": true,
+        "bonusText": "2 voor € 1,99"
+      },
+      {
+        "name": "Zwarte bonen (blik)",
+        "amount": 400,
+        "unit": "g",
+        "ahProductId": "ah-zwarte-bonen",
+        "ahName": "AH Zwarte bonen",
+        "standardPrice": 1.19,
+        "bonusPrice": 1.19,
+        "isBonus": false
+      },
+      {
+        "name": "Maiskorrels (blik)",
+        "amount": 150,
+        "unit": "g",
+        "ahProductId": "ah-mais",
+        "ahName": "AH Mais extra zoet",
+        "standardPrice": 0.99,
+        "bonusPrice": 0.99,
+        "isBonus": false
+      },
+      {
+        "name": "Paprika (rood)",
+        "amount": 1,
+        "unit": "stuk",
+        "ahProductId": "ah-paprika-mix",
+        "ahName": "AH Paprika stoplicht 3 stuks",
+        "standardPrice": 2.19,
+        "bonusPrice": 1.69,
+        "isBonus": true,
+        "bonusText": "Nu € 1,69"
+      },
+      {
+        "name": "Zilvervliesrijst",
+        "amount": 150,
+        "unit": "g",
+        "ahProductId": "ah-zilvervliesrijst",
+        "ahName": "AH Zilvervliesrijst",
+        "standardPrice": 1.09,
+        "bonusPrice": 1.09,
+        "isBonus": false
+      }
+    ],
+    "instructions": [
+      "Kook de zilvervliesrijst gaar en breng op smaak met limoensap en fijngehakte koriander.",
+      "Spoel de zwarte bonen en maïs af in een vergiet.",
+      "Verhit een pan en verwarm de bonen kort met wat komijn, paprikapoeder en chilivlokken.",
+      "Prak de avocado met een vork, voeg limoensap, zout en peper toe voor een snelle verse guacamole.",
+      "Verdeel de rijst over twee kommen en schik de bonen, maïs, paprikablokjes en guacamole er kleurrijk omheen."
+    ]
+  },
+  {
+    "id": "mediterrane-kabeljauw-ovenschaal",
+    "title": "Mediterrane Kabeljauw uit de Oven met Tomaat & Olijven",
+    "description": "Mager witvisgerecht met gekonfijte cherrytomaten, kalamata olijven, kappertjes en verse oregano.",
+    "cuisine": "Mediterraans",
+    "mealType": "Hoofdgerecht",
+    "prepTimeMinutes": 30,
+    "difficulty": "Makkelijk",
+    "baseServings": 2,
+    "image": "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=800&q=80",
+    "nutrition": {
+      "calories": 420,
+      "proteinGrams": 38,
+      "carbsGrams": 28,
+      "fatGrams": 14,
+      "healthScore": 94
+    },
+    "tags": [
+      "mediterraans",
+      "vis",
+      "high-protein",
+      "low-carb",
+      "bonus"
+    ],
+    "ingredients": [
+      {
+        "name": "Kabeljauwfilet",
+        "amount": 260,
+        "unit": "g",
+        "ahProductId": "ah-kabeljauw",
+        "ahName": "AH Kabeljauwfilet vers",
+        "standardPrice": 5.99,
+        "bonusPrice": 4.99,
+        "isBonus": true,
+        "bonusText": "€ 1,- korting"
+      },
+      {
+        "name": "Cherrytomaatjes",
+        "amount": 250,
+        "unit": "g",
+        "ahProductId": "ah-cherrytomaat",
+        "ahName": "AH Snoeptomaatjes",
+        "standardPrice": 1.79,
+        "bonusPrice": 1.29,
+        "isBonus": true,
+        "bonusText": "€ 1,29 ipv € 1,79"
+      },
+      {
+        "name": "Kalamata olijven",
+        "amount": 50,
+        "unit": "g",
+        "ahProductId": "ah-olijven",
+        "ahName": "AH Kalamata olijven ontpit",
+        "standardPrice": 1.85,
+        "bonusPrice": 1.85,
+        "isBonus": false
+      },
+      {
+        "name": "Krieltjes in de schil",
+        "amount": 350,
+        "unit": "g",
+        "ahProductId": "ah-krieltjes",
+        "ahName": "AH Mini krieltjes",
+        "standardPrice": 1.49,
+        "bonusPrice": 1.49,
+        "isBonus": false
+      }
+    ],
+    "instructions": [
+      "Verwarm de oven voor op 200°C.",
+      "Kook de mini krieltjes 8 minuten voor en halveer ze.",
+      "Leg de kabeljauwfilets in een ovenschaal. Schik de gehalveerde cherrytomaten, krieltjes en olijven eromheen.",
+      "Besprenkel met extra vergine olijfolie, zeezout, zwarte peper en oregano.",
+      "Bak in 15-18 minuten in de oven tot de vis mals en sappig is en de tomaatjes openbarsten."
+    ]
+  },
+  {
+    "id": "krokante-tofu-teriyaki-bowl",
+    "title": "Krokante Tofu Teriyaki Bowl met Edamame & Sesam",
+    "description": "Goudbruin gebakken tofu blokjes in sticky teriyakisaus met sojaboontjes en gewokte paksoi.",
+    "cuisine": "Aziatisch",
+    "mealType": "Hoofdgerecht",
+    "prepTimeMinutes": 25,
+    "difficulty": "Gemiddeld",
+    "baseServings": 2,
+    "image": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80",
+    "nutrition": {
+      "calories": 490,
+      "proteinGrams": 36,
+      "carbsGrams": 48,
+      "fatGrams": 16,
+      "healthScore": 97
+    },
+    "tags": [
+      "aziatisch",
+      "vegetarisch",
+      "vegan",
+      "high-protein",
+      "bonus"
+    ],
+    "ingredients": [
+      {
+        "name": "Stevige Tofu",
+        "amount": 375,
+        "unit": "g",
+        "ahProductId": "ah-tofu",
+        "ahName": "AH Biologische Tofu naturel",
+        "standardPrice": 2.19,
+        "bonusPrice": 1.59,
+        "isBonus": true,
+        "bonusText": "2e voor € 1,-"
+      },
+      {
+        "name": "Edamame boontjes",
+        "amount": 150,
+        "unit": "g",
+        "ahProductId": "ah-edamame",
+        "ahName": "AH Edamame sojabonen",
+        "standardPrice": 1.99,
+        "bonusPrice": 1.99,
+        "isBonus": false
+      },
+      {
+        "name": "Mini paksoi",
+        "amount": 2,
+        "unit": "stuks",
+        "ahProductId": "ah-paksoi",
+        "ahName": "AH Mini paksoi",
+        "standardPrice": 1.49,
+        "bonusPrice": 1.49,
+        "isBonus": false
+      },
+      {
+        "name": "Basmatirijst of noedels",
+        "amount": 140,
+        "unit": "g",
+        "ahProductId": "ah-rijst-basmati",
+        "ahName": "AH Basmati rijst",
+        "standardPrice": 1.99,
+        "bonusPrice": 1.99,
+        "isBonus": false
+      }
+    ],
+    "instructions": [
+      "Dep de tofu droog met keukenpapier en snijd in dobbelsteentjes. Schep om met 1 eetlepel maïzena.",
+      "Bak de tofu in zonnebloemolie in een koekenpan op middelhoog vuur in ca. 8 minuten rondom knapperig.",
+      "Kook de rijst en stoom de edamame en gehalveerde mini paksoi kort gaar.",
+      "Giet teriyakisaus over de hete tofu in de pan en laat in 1 minuut indikken en karamelliseren.",
+      "Serveer de sticky tofu op de rijst met paksoi, edamame en geroosterde sesamzaadjes."
+    ]
+  },
+  {
+    "id": "griekse-bifteki-met-feta-tzatziki",
+    "title": "Griekse Gekruide Runderburgers met Feta & Zelfgemaakte Tzatziki",
+    "description": "Mager rundergehakt met verse munt en oregano, geserveerd met een frisse komkommer-tzatziki en tomatensalade.",
+    "cuisine": "Mediterraans",
+    "mealType": "Hoofdgerecht",
+    "prepTimeMinutes": 25,
+    "difficulty": "Makkelijk",
+    "baseServings": 2,
+    "image": "https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?auto=format&fit=crop&w=800&q=80",
+    "nutrition": {
+      "calories": 530,
+      "proteinGrams": 44,
+      "carbsGrams": 22,
+      "fatGrams": 24,
+      "healthScore": 88
+    },
+    "tags": [
+      "mediterraans",
+      "rund",
+      "high-protein",
+      "low-carb"
+    ],
+    "ingredients": [
+      {
+        "name": "Mager rundergehakt",
+        "amount": 300,
+        "unit": "g",
+        "ahProductId": "ah-rundergehakt",
+        "ahName": "AH Mager rundergehakt",
+        "standardPrice": 4.29,
+        "bonusPrice": 4.29,
+        "isBonus": false
+      },
+      {
+        "name": "Griekse feta BOB",
+        "amount": 75,
+        "unit": "g",
+        "ahProductId": "ah-feta",
+        "ahName": "AH Griekse feta",
+        "standardPrice": 1.99,
+        "bonusPrice": 1.99,
+        "isBonus": false
+      },
+      {
+        "name": "Griekse yoghurt 0%",
+        "amount": 150,
+        "unit": "g",
+        "ahProductId": "ah-yoghurt-grieks",
+        "ahName": "AH Griekse stijl yoghurt 0%",
+        "standardPrice": 1.29,
+        "bonusPrice": 1.29,
+        "isBonus": false
+      },
+      {
+        "name": "Komkommer",
+        "amount": 1,
+        "unit": "stuk",
+        "ahProductId": "ah-komkommer",
+        "ahName": "AH Komkommer",
+        "standardPrice": 0.89,
+        "bonusPrice": 0.89,
+        "isBonus": false
+      }
+    ],
+    "instructions": [
+      "Meng het rundergehakt met fijngehakte knoflook, oregano, munt, peper en zout.",
+      "Verkruimel de feta erdoor en vorm 4 platte langwerpige bifteki burgers.",
+      "Rasp de komkommer, knijp het overtollige vocht er goed uit en meng met Griekse yoghurt, knoflook en olijfolie voor de tzatziki.",
+      "Grill of bak de bifteki's in 4-5 minuten per kant mooi goudbruin en sappig.",
+      "Serveer met de koele tzatziki en een frisse Griekse salade."
+    ]
+  },
+  {
+    "id": "indiase-rode-linzen-dahl",
+    "title": "Indiase Romige Dahl met Rode Linzen & Verse Spinazie",
+    "description": "Verwarmende curry van rode linzen, gember, kurkuma, kokosmelk en gewokte spinazie.",
+    "cuisine": "Indiaas",
+    "mealType": "Hoofdgerecht",
+    "prepTimeMinutes": 25,
+    "difficulty": "Makkelijk",
+    "baseServings": 2,
+    "image": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=800&q=80",
+    "nutrition": {
+      "calories": 460,
+      "proteinGrams": 26,
+      "carbsGrams": 62,
+      "fatGrams": 12,
+      "healthScore": 98
+    },
+    "tags": [
+      "indiaas",
+      "vegetarisch",
+      "vegan",
+      "budget",
+      "bonus"
+    ],
+    "ingredients": [
+      {
+        "name": "Rode linzen (gedroogd)",
+        "amount": 180,
+        "unit": "g",
+        "ahProductId": "ah-rode-linzen",
+        "ahName": "AH Rode linzen",
+        "standardPrice": 1.59,
+        "bonusPrice": 1.59,
+        "isBonus": false
+      },
+      {
+        "name": "Verse spinazie",
+        "amount": 200,
+        "unit": "g",
+        "ahProductId": "ah-spinazie",
+        "ahName": "AH Gewassen spinazie",
+        "standardPrice": 1.89,
+        "bonusPrice": 1.42,
+        "isBonus": true,
+        "bonusText": "25% korting"
+      },
+      {
+        "name": "Kokosmelk light",
+        "amount": 200,
+        "unit": "ml",
+        "ahProductId": "ah-kokosmelk",
+        "ahName": "AH Kokosmelk light",
+        "standardPrice": 1.35,
+        "bonusPrice": 1.35,
+        "isBonus": false
+      },
+      {
+        "name": "Naanbrood knoflook-koriander",
+        "amount": 2,
+        "unit": "stuks",
+        "ahProductId": "ah-naanbrood",
+        "ahName": "AH Naanbrood knoflook koriander",
+        "standardPrice": 1.69,
+        "bonusPrice": 1.69,
+        "isBonus": false
+      }
+    ],
+    "instructions": [
+      "Fruit gesnipperde ui, geperste knoflook, geraspte gember en garam masala specerijen in een soeppan met olie.",
+      "Voeg de afgespoelde rode linzen, 400ml groentebouillon en de kokosmelk toe.",
+      "Laat 15 minuten zachtjes pruttelen tot de linzen zacht en gebonden zijn.",
+      "Roer de verse spinazie erdoor en laat in 2 minuten slinken.",
+      "Bak het naanbrood kort af in de oven of broodrooster en serveer met de dahl."
+    ]
+  },
+  {
+    "id": "hollandse-zoete-aardappel-stamppot-zalm",
+    "title": "Moderne Zoete Aardappel Stamppot met Spinazie & Warmgerookte Zalm",
+    "description": "Een lichte, moderne twist op de oer-Hollandse stamppot met romige zoete aardappel en gevlokte warmgerookte zalm.",
+    "cuisine": "Hollands",
+    "mealType": "Hoofdgerecht",
+    "prepTimeMinutes": 20,
+    "difficulty": "Makkelijk",
+    "baseServings": 2,
+    "image": "https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&fit=crop&w=800&q=80",
+    "nutrition": {
+      "calories": 495,
+      "proteinGrams": 36,
+      "carbsGrams": 55,
+      "fatGrams": 13,
+      "healthScore": 93
+    },
+    "tags": [
+      "hollands",
+      "vis",
+      "high-protein",
+      "snel",
+      "bonus"
+    ],
+    "ingredients": [
+      {
+        "name": "Warmgerookte zalmmoot",
+        "amount": 200,
+        "unit": "g",
+        "ahProductId": "ah-zalmfilet",
+        "ahName": "AH Warmgerookte zalmfilet",
+        "standardPrice": 7.49,
+        "bonusPrice": 5.62,
+        "isBonus": true,
+        "bonusText": "2e halve prijs"
+      },
+      {
+        "name": "Zoete aardappelen",
+        "amount": 500,
+        "unit": "g",
+        "ahProductId": "ah-zoete-aardappel",
+        "ahName": "AH Zoete aardappelen",
+        "standardPrice": 1.79,
+        "bonusPrice": 1.79,
+        "isBonus": false
+      },
+      {
+        "name": "Verse spinazie",
+        "amount": 250,
+        "unit": "g",
+        "ahProductId": "ah-spinazie",
+        "ahName": "AH Gewassen spinazie",
+        "standardPrice": 1.89,
+        "bonusPrice": 1.42,
+        "isBonus": true,
+        "bonusText": "25% korting"
+      },
+      {
+        "name": "Grofkorrelige mosterd",
+        "amount": 2,
+        "unit": "tl",
+        "ahProductId": "ah-mosterd",
+        "ahName": "AH Franse grove mosterd",
+        "standardPrice": 0.89,
+        "bonusPrice": 0.89,
+        "isBonus": false
+      }
+    ],
+    "instructions": [
+      "Schil de zoete aardappels, snijd in gelijke blokken en kook in 12-14 minuten gaar in gezouten water.",
+      "Giet af en stamp fijn met een scheutje melk of olijfolie en 2 theelepels grove mosterd.",
+      "Schep de verse spinazie in delen rauw door de hete puree zodat deze zachtjes slinkt.",
+      "Verdeel de stamppot over 2 borden en breek de warmgerookte zalm in grove vlokken erbovenop.",
+      "Garneer naar wens met wat fijngehakte bieslook en versgemalen zwarte peper."
+    ]
+  },
+  {
+    "id": "shakshuka-feta-volkoren-pita",
+    "title": "Kruidige Shakshuka met Gepocheerde Eieren & Volkoren Pita",
+    "description": "Noord-Afrikaans & Midden-Oosters pannetje van rijke tomaten-paprikasaus met zacht gegaarde eieren en feta.",
+    "cuisine": "Mediterraans",
+    "mealType": "Hoofdgerecht",
+    "prepTimeMinutes": 25,
+    "difficulty": "Makkelijk",
+    "baseServings": 2,
+    "image": "https://images.unsplash.com/photo-1590412200988-a436970781fa?auto=format&fit=crop&w=800&q=80",
+    "nutrition": {
+      "calories": 450,
+      "proteinGrams": 28,
+      "carbsGrams": 46,
+      "fatGrams": 17,
+      "healthScore": 91
+    },
+    "tags": [
+      "mediterraans",
+      "vegetarisch",
+      "high-protein",
+      "budget",
+      "bonus"
+    ],
+    "ingredients": [
+      {
+        "name": "Scharreleieren (beter leven 2 sterren)",
+        "amount": 4,
+        "unit": "stuks",
+        "ahProductId": "ah-eieren",
+        "ahName": "AH Vrije-uitloopeieren M 10 stuks",
+        "standardPrice": 3.49,
+        "bonusPrice": 3.49,
+        "isBonus": false
+      },
+      {
+        "name": "Paprika (rood & geel)",
+        "amount": 2,
+        "unit": "stuks",
+        "ahProductId": "ah-paprika-mix",
+        "ahName": "AH Paprika stoplicht 3 stuks",
+        "standardPrice": 2.19,
+        "bonusPrice": 1.69,
+        "isBonus": true,
+        "bonusText": "Nu € 1,69"
+      },
+      {
+        "name": "Gepelde tomaten (blik)",
+        "amount": 400,
+        "unit": "g",
+        "ahProductId": "ah-gepelde-tomaten",
+        "ahName": "AH Tomatenblokjes",
+        "standardPrice": 0.89,
+        "bonusPrice": 0.89,
+        "isBonus": false
+      },
+      {
+        "name": "Feta",
+        "amount": 60,
+        "unit": "g",
+        "ahProductId": "ah-feta",
+        "ahName": "AH Griekse feta",
+        "standardPrice": 1.99,
+        "bonusPrice": 1.99,
+        "isBonus": false
+      },
+      {
+        "name": "Volkoren pitabroodjes",
+        "amount": 2,
+        "unit": "stuks",
+        "ahProductId": "ah-pita",
+        "ahName": "AH Volkoren pitabroodjes",
+        "standardPrice": 0.99,
+        "bonusPrice": 0.99,
+        "isBonus": false
+      }
+    ],
+    "instructions": [
+      "Snijd de paprika's en een ui in dunne reepjes en fruit in olijfolie met komijn en paprikapoeder.",
+      "Voeg de tomatenblokjes toe en laat de saus 10 minuten zachtjes indikken.",
+      "Maak met een lepel 4 kuiltjes in de saus en breek in elk kuiltje voorzichtig een ei.",
+      "Doe een deksel op de pan en laat op laag vuur in ca. 6-8 minuten stollen tot het eiwit gaar is maar de dooier nog vloeibaar.",
+      "Verkruimel de feta erover en serveer direct in de pan met warme volkoren pita's om te dippen."
+    ]
+  }
+]
