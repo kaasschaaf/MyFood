@@ -8,6 +8,16 @@ Recipes are sourced from the built-in MyFood collection, up to 250 recipes from 
 
 ## 🌟 Key Features
 
+- **🛒 Frequent Product Price & Health Comparison**:
+  - Keep a private, browser-saved list of product types you buy often.
+  - Preview live AH matches before adding a search group, and refresh the available category filters from AH for the current search.
+  - Use a sliding overview and comparison detail panel; scoring criteria are saved separately for each product type.
+  - Add a product as a draft directly to the overview, then edit its search term, AH category, and score criteria alongside live AH results; save to keep the changes or cancel to discard them.
+  - Compare live Albert Heijn search results by price per kilogram, Nutri-Score, and protein per kcal; configure which criteria count separately for each product type.
+  - Show protein per 100 g and a protein score based on the share of calories from protein, using AH's product nutrition details.
+  - Current AH bonus prices are used when available; products without a per-kilogram unit price are shown without an invented conversion.
+  - A shared setting to ignore online-only products is on by default and applies to recipe matches as well as product comparisons.
+
 - **🔍 Smart Search & Filtering**:
   - Filter by dish style / cuisine: *Italian, Asian, Mexican, Mediterranean, Dutch, Indian*.
   - Quick toggles for:
