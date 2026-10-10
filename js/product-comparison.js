@@ -5,6 +5,7 @@ const SORT_KEY = 'myfood_product_comparison_sort';
 const SCORE_CRITERIA_KEY = 'myfood_product_score_criteria';
 const NUTRI_SCORES = ['A', 'B', 'C', 'D', 'E'];
 const DEFAULT_SCORE_CRITERIA = { price: true, health: true, protein: true };
+const PREVIEW_DEBOUNCE_MS = 800;
 const REFRESH_CATEGORIES_VALUE = '__refresh_categories__';
 
 function hasProductSearchCategory(category) {
@@ -22,6 +23,10 @@ function getProductSearchCategoryLabel(category, label = '') {
 function capitalizeFirstLetter(value) {
   const text = String(value || '');
   return text ? text[0].toLocaleUpperCase('nl-NL') + text.slice(1) : '';
+}
+
+function normalizeProductQuery(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ');
 }
 
 export function getPricePerKg(product) {
@@ -245,7 +250,10 @@ export class ProductComparisonApp {
   }
 
   isDuplicateDraft(draft) {
-    const draftKey = this.getItemKey({ query: draft.query, category: draft.category });
+    const draftKey = this.getItemKey({
+      query: normalizeProductQuery(draft.query),
+      category: draft.category
+    });
     return this.items.some(item =>
       item !== draft &&
       item.query &&
@@ -326,7 +334,7 @@ export class ProductComparisonApp {
       saveButton.disabled = !enabled || !this.editingDraft?.query?.trim() ||
         this.isDuplicateDraft(this.editingDraft) ||
         result?.status !== 'loaded' ||
-        result.query !== this.editingDraft.query ||
+        result.query !== normalizeProductQuery(this.editingDraft.query) ||
         result.category !== (this.editingDraft.category || '');
     }
     if (cancelButton) cancelButton.classList.toggle('hidden', !enabled);
@@ -353,14 +361,15 @@ export class ProductComparisonApp {
 
   saveEdit() {
     const draft = this.editingDraft;
-    if (!draft || !draft.query?.trim()) {
+    const query = normalizeProductQuery(draft?.query);
+    if (!draft || !query) {
       this.setStatus('Vul een product of productsoort in voordat je opslaat.');
       return;
     }
     const draftKey = this.getItemKey(draft);
     const result = this.results.get(draftKey);
     if (result?.status !== 'loaded' ||
-        result.query !== draft.query ||
+        result.query !== query ||
         result.category !== (draft.category || '')) {
       this.setStatus('Wacht tot de AH-resultaten voor deze zoekopdracht zijn bijgewerkt.');
       return;
@@ -381,7 +390,7 @@ export class ProductComparisonApp {
     }
 
     const savedItem = {
-      query: draft.query,
+      query,
       criteria: { ...draft.criteria },
       ...(draft.category ? { category: draft.category, categoryLabel: draft.categoryLabel || '' } : {})
     };
@@ -455,7 +464,7 @@ export class ProductComparisonApp {
     const categoryInput = this.document.getElementById('product-category');
     queryInput?.addEventListener('input', () => {
       this.categoryRefreshRequestId += 1;
-      if (this.editingDraft) this.editingDraft.query = queryInput.value.trim().replace(/\s+/g, ' ');
+      if (this.editingDraft) this.editingDraft.query = queryInput.value;
       const selectedCategory = categoryInput?.selectedOptions[0];
       const selectedDynamicCategory = selectedCategory?.dataset.ahCategory === 'true'
         ? selectedCategory.cloneNode(true)
@@ -595,7 +604,8 @@ export class ProductComparisonApp {
   }
 
   schedulePreview() {
-    const query = this.document.getElementById('product-query')?.value.trim().replace(/\s+/g, ' ') || '';
+    const query = this.document.getElementById('product-query')?.value || '';
+    const normalizedQuery = normalizeProductQuery(query);
     const category = this.document.getElementById('product-category')?.value || '';
     const selectedCategory = this.document.getElementById('product-category')?.selectedOptions[0];
     const categoryLabel = category
@@ -608,7 +618,7 @@ export class ProductComparisonApp {
     this.editingDraft.category = category;
     this.editingDraft.categoryLabel = categoryLabel;
     this.preview = { query, category, categoryLabel, status: 'idle', products: [], error: '' };
-    if (query.length < 2) {
+    if (normalizedQuery.length < 2) {
       this.results.delete(this.getItemKey(this.editingDraft));
       this.setStatus('Vul minimaal 2 tekens in om AH-producten te zoeken.');
       this.render();
@@ -622,8 +632,9 @@ export class ProductComparisonApp {
     this.renderPreview();
     this.previewTimer = setTimeout(() => {
       if (requestId !== this.previewRequestId) return;
-      this.loadProducts(this.editingDraft);
-    }, 350);
+      this.preview = { query: normalizedQuery, category, categoryLabel, status: 'loading', products: [], error: '' };
+      this.loadProducts({ ...this.editingDraft, query: normalizedQuery });
+    }, PREVIEW_DEBOUNCE_MS);
   }
 
   renderPreview() {
@@ -636,7 +647,7 @@ export class ProductComparisonApp {
     if (!draft || !query || query.length < 2) {
       preview.innerHTML = '<p class="text-sm text-slate-500 dark:text-slate-400">Vul minimaal 2 tekens in om direct de bijbehorende AH-producten te bekijken.</p>';
     } else if (status === 'loading' || result?.status === 'loading') {
-      preview.innerHTML = '<p class="text-sm text-slate-500 dark:text-slate-400">AH-producten worden bijgewerkt…</p>';
+      preview.innerHTML = this.renderLoadingMessage('AH-producten worden bijgewerkt…');
     } else if (status === 'error') {
       preview.innerHTML = `<p class="text-sm text-rose-600 dark:text-rose-400">Voorbeeld ophalen mislukt: ${this.escape(error)}</p>`;
     } else if (result?.status === 'error') {
@@ -647,10 +658,10 @@ export class ProductComparisonApp {
         result.category === (draft.category || '')) {
       preview.innerHTML = `<p class="text-sm text-sky-700 dark:text-sky-300">${result.products.length} AH-opties geladen${categoryLabel ? ` in ${this.escape(categoryLabel)}` : ''}. De resultaten hieronder worden direct bijgewerkt.</p>`;
     } else {
-      preview.innerHTML = '<p class="text-sm text-slate-500 dark:text-slate-400">AH-resultaten bijwerken…</p>';
+      preview.innerHTML = this.renderLoadingMessage('AH-resultaten bijwerken…');
     }
     saveButton.disabled = !draft?.query?.trim() || result?.status !== 'loaded' ||
-      result.query !== draft.query || result.category !== (draft.category || '') ||
+      result.query !== normalizeProductQuery(draft.query) || result.category !== (draft.category || '') ||
       this.isDuplicateDraft(draft);
   }
 
@@ -817,6 +828,16 @@ export class ProductComparisonApp {
     return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(amount);
   }
 
+  renderLoadingMessage(message, spacing = '') {
+    return `<p role="status" class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 ${spacing}">
+      <svg aria-hidden="true" class="h-4 w-4 shrink-0 animate-spin motion-reduce:animate-none" viewBox="0 0 24 24" fill="none">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <span>${this.escape(message)}</span>
+    </p>`;
+  }
+
   escape(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -907,7 +928,7 @@ export class ProductComparisonApp {
     const result = this.results.get(key);
     let body;
     if (!result || result.status === 'loading') {
-      body = '<p class="text-sm text-slate-500 dark:text-slate-400 py-4">Live AH-producten laden…</p>';
+      body = this.renderLoadingMessage('Live AH-producten laden…', 'py-4');
     } else if (result.status === 'error') {
       body = `<p class="text-sm text-rose-600 dark:text-rose-400 py-4">Producten ophalen mislukt: ${this.escape(result.message)}</p>`;
     } else if (result.status === 'empty') {
