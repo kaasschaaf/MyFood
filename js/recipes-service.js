@@ -298,7 +298,36 @@ export class RecipesService {
       const cached = await this.readCache(`priced-recipe:${recipe.id}`);
       if (!cached?.value) return;
       Object.assign(recipe, cached.value, { priceUpdatedAt: cached.updatedAt });
+      this.applyOnlineOnlyPreference(recipe);
     }));
+  }
+
+  applyOnlineOnlyPreference(recipe) {
+    const filterProducts = this.ahService.filterProductsByOnlinePreference;
+    if (typeof filterProducts !== 'function') return;
+    (recipe.ingredients || []).forEach(ingredient => {
+      ingredient.ahProductOptions = filterProducts.call(this.ahService, ingredient.ahProductOptions || []);
+      const selectedStillAvailable = ingredient.ahProductOptions.some(
+        product => product.id === ingredient.selectedAHProduct?.id
+      );
+      if (!selectedStillAvailable) {
+        ingredient.selectedAHProduct = ingredient.ahProductOptions[0] || null;
+      }
+    });
+    recipe.priceEstimate = this.ahService.calculateRecipePrice(recipe, recipe.baseServings);
+  }
+
+  async refreshAHMatchesForLoadedRecipes() {
+    const recipes = this.recipes.filter(recipe => recipe.external && !recipe.ahRecipeOnly && recipe.ingredients?.length);
+    let completed = 0;
+    await this.mapWithConcurrency(recipes, 3, async recipe => {
+      await this.loadAHMatches(recipe);
+      this.applyOnlineOnlyPreference(recipe);
+      const stored = await this.writeCache(`priced-recipe:${recipe.id}`, recipe);
+      recipe.priceUpdatedAt = stored?.updatedAt || Date.now();
+      completed++;
+    });
+    return completed;
   }
 
   async refreshPrices(onProgress = () => {}) {
@@ -377,18 +406,22 @@ export class RecipesService {
         const savedMatch = saved?.value
           ? result.products.find(product => product.id === saved.value.id)
           : null;
-        if (saved?.value && !savedMatch) {
+        const savedMatchAllowed = saved?.value &&
+          this.ahService.filterProductsByOnlinePreference([saved.value]).length > 0;
+        if (savedMatchAllowed && !savedMatch) {
           ingredient.ahProductOptions.unshift({ ...saved.value, cachedMatch: true });
           ingredient.productLookupStale = true;
         }
-        ingredient.selectedAHProduct = savedMatch || saved?.value || result.products[0] || null;
+        ingredient.selectedAHProduct = savedMatch || (savedMatchAllowed ? saved.value : null) || result.products[0] || null;
       } catch (error) {
         ingredient.ahProductOptions = [];
         ingredient.productLookupError = error.message;
         const saved = await this.ahService.getSavedMatch(recipe.id, ingredient.name);
-        ingredient.selectedAHProduct = saved?.value || null;
-        if (saved?.value) ingredient.ahProductOptions = [{ ...saved.value, cachedMatch: true }];
-        ingredient.productLookupStale = Boolean(saved?.value);
+        const savedMatchAllowed = saved?.value &&
+          this.ahService.filterProductsByOnlinePreference([saved.value]).length > 0;
+        ingredient.selectedAHProduct = savedMatchAllowed ? saved.value : null;
+        if (savedMatchAllowed) ingredient.ahProductOptions = [{ ...saved.value, cachedMatch: true }];
+        ingredient.productLookupStale = Boolean(savedMatchAllowed);
       }
     });
     recipe.priceError = ingredients.some(ingredient => ingredient.productLookupError);

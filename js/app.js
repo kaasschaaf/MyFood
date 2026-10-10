@@ -1,4 +1,4 @@
-import { AHService } from './ah-service.js';
+import { AHService, ONLINE_ONLY_SETTING_KEY } from './ah-service.js';
 import { GeminiService } from './gemini-service.js';
 import { RecipesService } from './recipes-service.js';
 import { UIComponents } from './ui-components.js';
@@ -54,6 +54,36 @@ class MyFoodApp {
   }
 
   bindEvents() {
+    const onlineOnlySetting = document.getElementById('ignore-online-only-products');
+    if (onlineOnlySetting) {
+      onlineOnlySetting.checked = this.ahService.getIgnoreOnlineOnlyProducts();
+      onlineOnlySetting.addEventListener('change', () => {
+        try {
+          this.ahService.setIgnoreOnlineOnlyProducts(onlineOnlySetting.checked);
+        } catch (error) {
+          onlineOnlySetting.checked = this.ahService.getIgnoreOnlineOnlyProducts();
+          this.showOnlineOnlySettingError(error);
+        }
+      });
+    }
+    const refreshOnlineOnlyMatches = event => {
+      if (onlineOnlySetting && typeof event.detail?.enabled === 'boolean') {
+        onlineOnlySetting.checked = event.detail.enabled;
+      }
+      this.recipesService.refreshAHMatchesForLoadedRecipes()
+        .then(() => {
+          this.render();
+          if (this.activeRecipeId) this.refreshModalContent();
+        })
+        .catch(error => this.showOnlineOnlySettingError(error));
+    };
+    window.addEventListener('myfood:online-only-setting-changed', refreshOnlineOnlyMatches);
+    window.addEventListener('storage', event => {
+      if (event.key !== ONLINE_ONLY_SETTING_KEY) return;
+      if (onlineOnlySetting) onlineOnlySetting.checked = this.ahService.getIgnoreOnlineOnlyProducts();
+      refreshOnlineOnlyMatches(event);
+    });
+
     // Zoekbalk met lichte debounce
     const searchInput = document.getElementById('search-input');
     let debounceTimer;
@@ -281,6 +311,12 @@ class MyFoodApp {
         }
       });
     }
+  }
+
+  showOnlineOnlySettingError(error) {
+    console.error('AH-matches voor de online-only instelling konden niet worden bijgewerkt.', error);
+    const status = document.getElementById('catalog-status');
+    if (status) status.textContent = `Productinstelling opslaan of toepassen is mislukt: ${error.message}`;
   }
 
   async openRecipeModal(recipeId) {

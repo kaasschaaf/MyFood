@@ -420,7 +420,7 @@ export class UIComponents {
                             data-ingredient-index="${idx}" aria-label="Kies AH-product voor ${this.escapeHtml(ing.name)}">
                             ${ing.ahProductOptions.map(option => `
                               <option value="${this.escapeHtml(option.id)}" ${product?.id === option.id ? 'selected' : ''}>
-                                ${option.cachedMatch ? 'Cached · ' : ''}${this.escapeHtml(option.title)} · ${this.ahService.formatEuro(option.price)}
+                                ${option.cachedMatch ? 'Cached · ' : ''}${option.isOnlineOnly ? 'Alleen online · ' : ''}${this.escapeHtml(option.title)} · ${this.ahService.formatEuro(option.price)}
                               </option>
                             `).join('')}
                           </select>
