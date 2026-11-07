@@ -330,8 +330,8 @@ class MyFoodApp {
     if (modal) {
       modal.innerHTML = `
         <div class="flex flex-col items-center justify-center gap-3 px-8 py-16 text-center">
-          <span class="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-emerald-600 dark:border-slate-700 dark:border-t-emerald-400" aria-hidden="true"></span>
-          <p class="text-sm text-slate-600 dark:text-slate-300">Receptdetails en AH-producten laden…</p>
+          <span class="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-emerald-600 dark:border-neutral-700 dark:border-t-emerald-400" aria-hidden="true"></span>
+          <p class="text-sm text-slate-600 dark:text-neutral-300">Receptdetails en AH-producten laden…</p>
         </div>
       `;
       modal.showModal();
@@ -392,7 +392,7 @@ class MyFoodApp {
         <div class="font-bold text-xs uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-1">
           Antwoord van Chef Gemini:
         </div>
-        <div class="text-slate-800 dark:text-slate-100 whitespace-pre-line">${this.ui.escapeHtml(answer)}</div>
+        <div class="text-slate-800 dark:text-neutral-100 whitespace-pre-line">${this.ui.escapeHtml(answer)}</div>
       `;
     } catch (err) {
       responseArea.innerHTML = `
@@ -497,14 +497,14 @@ class MyFoodApp {
     if (filtered.length === 0) {
       grid.innerHTML = `
         <div class="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white/60 px-6 py-16 text-center dark:border-white/15 dark:bg-white/5">
-          <span class="grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-400 dark:bg-white/10 dark:text-slate-500">
+          <span class="grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-400 dark:bg-white/10 dark:text-neutral-500">
             <svg aria-hidden="true" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="11" cy="11" r="7"/>
               <path d="m20 20-3.5-3.5"/>
             </svg>
           </span>
-          <h3 class="font-display mt-4 text-lg font-semibold text-slate-800 dark:text-slate-100">Geen recepten gevonden</h3>
-          <p class="mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">Probeer een ander trefwoord of wis je actieve filters.</p>
+          <h3 class="font-display mt-4 text-lg font-semibold text-slate-800 dark:text-neutral-100">Geen recepten gevonden</h3>
+          <p class="mt-1 max-w-sm text-sm text-slate-500 dark:text-neutral-400">Probeer een ander trefwoord of wis je actieve filters.</p>
         </div>
       `;
       return;
@@ -515,9 +515,9 @@ class MyFoodApp {
       grid.insertAdjacentHTML('beforeend', `
         <div class="col-span-full py-4 text-center">
           <button id="load-more-recipes" type="button"
-            class="inline-flex items-center gap-2 rounded-xl border border-slate-200/90 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-800 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:border-emerald-500/30 dark:hover:text-emerald-300">
+            class="inline-flex items-center gap-2 rounded-xl border border-slate-200/90 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-800 dark:border-white/10 dark:bg-white/5 dark:text-neutral-200 dark:hover:border-emerald-500/30 dark:hover:text-emerald-300">
             Laad meer recepten
-            <span class="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 dark:bg-white/10 dark:text-slate-400">${filtered.length - visibleRecipes.length}</span>
+            <span class="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 dark:bg-white/10 dark:text-neutral-400">${filtered.length - visibleRecipes.length}</span>
           </button>
         </div>
       `);

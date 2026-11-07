@@ -689,7 +689,7 @@ export class ProductComparisonApp {
     const result = draft ? this.results.get(this.getItemKey(draft)) : null;
     const { query, categoryLabel, status, error } = this.preview;
     if (!draft || !query || query.length < 2) {
-      preview.innerHTML = '<p class="text-sm text-slate-500 dark:text-slate-400">Vul minimaal 2 tekens in om direct de bijbehorende AH-producten te bekijken.</p>';
+      preview.innerHTML = '<p class="text-sm text-slate-500 dark:text-neutral-400">Vul minimaal 2 tekens in om direct de bijbehorende AH-producten te bekijken.</p>';
     } else if (status === 'loading' || result?.status === 'loading') {
       preview.innerHTML = this.renderLoadingMessage('AH-producten worden bijgewerkt…');
     } else if (status === 'error') {
@@ -697,7 +697,7 @@ export class ProductComparisonApp {
     } else if (result?.status === 'error') {
       preview.innerHTML = `<p class="text-sm text-rose-600 dark:text-rose-400">AH-producten ophalen mislukt: ${this.escape(result.message)}</p>`;
     } else if (result?.status === 'empty') {
-      preview.innerHTML = `<p class="text-sm text-slate-500 dark:text-slate-400">Geen AH-producten gevonden${categoryLabel ? ` in ${this.escape(categoryLabel)}` : ''} voor “${this.escape(query)}”.</p>`;
+      preview.innerHTML = `<p class="text-sm text-slate-500 dark:text-neutral-400">Geen AH-producten gevonden${categoryLabel ? ` in ${this.escape(categoryLabel)}` : ''} voor “${this.escape(query)}”.</p>`;
     } else if (result?.status === 'loaded' && result.query === query &&
         result.category === (draft.category || '')) {
       preview.innerHTML = `<p class="text-sm text-emerald-700 dark:text-emerald-300">${result.products.length} AH-opties geladen${categoryLabel ? ` in ${this.escape(categoryLabel)}` : ''}. De resultaten hieronder worden direct bijgewerkt.</p>`;
@@ -873,7 +873,7 @@ export class ProductComparisonApp {
   }
 
   renderLoadingMessage(message, spacing = '') {
-    return `<p role="status" class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 ${spacing}">
+    return `<p role="status" class="flex items-center gap-2 text-sm text-slate-500 dark:text-neutral-400 ${spacing}">
       <svg aria-hidden="true" class="h-4 w-4 shrink-0 animate-spin motion-reduce:animate-none" viewBox="0 0 24 24" fill="none">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 0 1 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -894,7 +894,7 @@ export class ProductComparisonApp {
       C: 'bg-amber-50 text-amber-700 ring-amber-200/70 dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-800/60',
       D: 'bg-orange-50 text-orange-700 ring-orange-200/70 dark:bg-orange-950/50 dark:text-orange-300 dark:ring-orange-800/60',
       E: 'bg-rose-50 text-rose-700 ring-rose-200/70 dark:bg-rose-950/50 dark:text-rose-300 dark:ring-rose-800/60'
-    }[product.nutriScore] || 'bg-slate-100 text-slate-500 ring-slate-200/70 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700';
+    }[product.nutriScore] || 'bg-slate-100 text-slate-500 ring-slate-200/70 dark:bg-neutral-800 dark:text-neutral-300 dark:ring-neutral-700';
     const image = product.imageUrl
       ? `<img src="${this.escape(product.imageUrl)}" alt="" loading="lazy" class="h-full w-full object-contain">`
       : '<svg aria-hidden="true" class="h-5 w-5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l1 12H5L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>';
@@ -906,13 +906,13 @@ export class ProductComparisonApp {
           ? `Eiwit ${product.proteinGrams} g / 100 g · ${product.proteinScore === null ? 'score n.b.' : `score ${product.proteinScore}`}`
           : 'Eiwitscore niet beschikbaar';
 
-    return `<article class="grid grid-cols-[2.75rem_minmax(0,1fr)] items-center gap-x-2.5 gap-y-1.5 rounded-xl border px-3 py-2.5 transition sm:grid-cols-[2.75rem_minmax(0,1fr)_5.75rem_6.75rem_3.25rem] sm:gap-3 ${bonus ? 'border-amber-300/80 bg-amber-50/40 dark:border-amber-800/70 dark:bg-amber-950/20' : 'border-slate-200/80 bg-white hover:border-emerald-200 hover:bg-emerald-50/20 dark:border-white/10 dark:bg-slate-900/40 dark:hover:border-emerald-500/30 dark:hover:bg-slate-900'}">
-      <span class="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-lg border border-slate-100 bg-white p-1 dark:border-white/10 dark:bg-slate-800">
+    return `<article class="grid grid-cols-[2.75rem_minmax(0,1fr)] items-center gap-x-2.5 gap-y-1.5 rounded-xl border px-3 py-2.5 transition sm:grid-cols-[2.75rem_minmax(0,1fr)_5.75rem_6.75rem_3.25rem] sm:gap-3 ${bonus ? 'border-amber-300/80 bg-amber-50/40 dark:border-amber-800/70 dark:bg-amber-950/20' : 'border-slate-200/80 bg-white hover:border-emerald-200 hover:bg-emerald-50/20 dark:border-white/10 dark:bg-neutral-900/40 dark:hover:border-emerald-500/30 dark:hover:bg-neutral-900'}">
+      <span class="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-lg border border-slate-100 bg-white p-1 dark:border-white/10 dark:bg-neutral-800">
         ${image}
       </span>
       <div class="min-w-0">
-        <a href="${this.escape(product.productUrl)}" target="_blank" rel="noopener noreferrer" class="block truncate text-sm font-semibold text-slate-800 transition hover:text-emerald-700 dark:text-slate-100 dark:hover:text-emerald-400 sm:whitespace-normal">${this.escape(product.title)}</a>
-        <p class="mt-0.5 truncate text-[11px] text-slate-500 dark:text-slate-400">${this.escape(product.unitSize || 'Verpakking niet vermeld')} <span class="text-slate-300 dark:text-slate-600">·</span> <span class="font-medium text-blue-700 dark:text-blue-300" title="Eiwitscore is het aandeel van de calorieën dat uit eiwit komt, berekend met AH-voedingswaarden per 100 g.">${this.escape(proteinInfo)}</span></p>
+        <a href="${this.escape(product.productUrl)}" target="_blank" rel="noopener noreferrer" class="block truncate text-sm font-semibold text-slate-800 transition hover:text-emerald-700 dark:text-neutral-100 dark:hover:text-emerald-400 sm:whitespace-normal">${this.escape(product.title)}</a>
+        <p class="mt-0.5 truncate text-[11px] text-slate-500 dark:text-neutral-400">${this.escape(product.unitSize || 'Verpakking niet vermeld')} <span class="text-slate-300 dark:text-neutral-600">·</span> <span class="font-medium text-blue-700 dark:text-blue-300" title="Eiwitscore is het aandeel van de calorieën dat uit eiwit komt, berekend met AH-voedingswaarden per 100 g.">${this.escape(proteinInfo)}</span></p>
         ${product.isOnlineOnly || (product.bonusDescription && bonus) ? `
           <div class="mt-1 flex flex-wrap items-center gap-1">
             ${product.isOnlineOnly ? '<span class="rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">Alleen online</span>' : ''}
@@ -929,7 +929,7 @@ export class ProductComparisonApp {
             <p class="text-sm font-bold ${bonus ? 'text-amber-700 dark:text-amber-300' : 'text-slate-900 dark:text-white'}">${this.formatEuro(product.price)}</p>
             ${bonus ? `<p class="text-[11px] text-slate-500 line-through">${this.formatEuro(product.regularPrice)}</p>` : ''}
           </div>
-          <p class="text-[11px] font-medium text-slate-500 dark:text-slate-400 sm:text-right">${product.pricePerKg === null ? '€/kg n.b.' : `${this.formatEuro(product.pricePerKg)} / kg`}</p>
+          <p class="text-[11px] font-medium text-slate-500 dark:text-neutral-400 sm:text-right">${product.pricePerKg === null ? '€/kg n.b.' : `${this.formatEuro(product.pricePerKg)} / kg`}</p>
         </div>
         <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-50 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-200/70 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-800/60 sm:col-start-5 sm:h-9 sm:w-9 sm:justify-self-end sm:text-sm" title="Productscore op basis van de geselecteerde criteria">${product.score === null ? '—' : product.score}</span>
       </div>
@@ -955,14 +955,14 @@ export class ProductComparisonApp {
       summary = `${result.products.length} ${result.products.length === 1 ? 'optie' : 'opties'}`;
     }
 
-    return `<article class="flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white p-2 shadow-sm transition hover:border-emerald-200 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_16px_32px_-24px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-slate-900/50 dark:hover:border-emerald-500/30 sm:p-3">
+    return `<article class="flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white p-2 shadow-sm transition hover:border-emerald-200 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_16px_32px_-24px_rgba(15,23,42,0.28)] dark:border-white/10 dark:bg-neutral-900/50 dark:hover:border-emerald-500/30 sm:p-3">
       <button type="button" data-open-group="${this.escape(key)}" class="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-xl p-2 text-left transition hover:bg-slate-50 dark:hover:bg-white/5">
         <span class="min-w-0 flex-1">
           <span class="font-display block truncate text-base font-semibold text-slate-900 dark:text-white">${this.escape(capitalizeFirstLetter(item.query || 'Nieuw product'))}</span>
-          <span class="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+          <span class="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] text-slate-500 dark:text-neutral-400">
             ${categoryLabel ? `<span class="rounded-md bg-emerald-50 px-1.5 py-0.5 font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-200/70 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-800/60">${this.escape(capitalizeFirstLetter(categoryLabel))}</span>` : ''}
-            <span class="rounded-md bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-600 dark:bg-white/10 dark:text-slate-300">${this.escape(capitalizeFirstLetter(summary))}</span>
-            ${bestProduct ? `<span class="min-w-0 truncate font-medium text-slate-500 dark:text-slate-400">${this.escape(capitalizeFirstLetter(bestProduct.title))} · ${this.formatEuro(bestProduct.price)}</span>` : ''}
+            <span class="rounded-md bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-600 dark:bg-white/10 dark:text-neutral-300">${this.escape(capitalizeFirstLetter(summary))}</span>
+            ${bestProduct ? `<span class="min-w-0 truncate font-medium text-slate-500 dark:text-neutral-400">${this.escape(capitalizeFirstLetter(bestProduct.title))} · ${this.formatEuro(bestProduct.price)}</span>` : ''}
           </span>
         </span>
         <span class="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-slate-200/80 text-slate-400 dark:border-white/10" aria-hidden="true">
@@ -984,10 +984,10 @@ export class ProductComparisonApp {
     } else if (result.status === 'empty') {
       const filteredOnlineOnly = this.ahService.getIgnoreOnlineOnlyProducts();
       body = `<div class="flex flex-col items-center rounded-xl border border-dashed border-slate-300 px-5 py-10 text-center dark:border-white/15">
-        <span class="grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-400 dark:bg-white/10 dark:text-slate-500">
+        <span class="grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-400 dark:bg-white/10 dark:text-neutral-500">
           <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         </span>
-        <p class="mt-3 max-w-sm text-sm text-slate-500 dark:text-slate-400">
+        <p class="mt-3 max-w-sm text-sm text-slate-500 dark:text-neutral-400">
           Geen producten met een bekende prijs gevonden. Probeer een andere zoekterm.
           ${filteredOnlineOnly ? 'Pas de online-only instelling in bewerkmodus aan om deze producten te tonen.' : ''}
         </p>
@@ -1011,12 +1011,12 @@ export class ProductComparisonApp {
         ? `<div class="pt-4 text-center">
             ${result.pageError ? `<p class="mb-2 text-sm text-rose-600 dark:text-rose-400">Meer resultaten ophalen mislukt: ${this.escape(result.pageError)}</p>` : ''}
             <button type="button" data-action="load-more" data-group-key="${this.escape(key)}" ${this.loadingMore.has(key) ? 'disabled' : ''}
-              class="inline-flex items-center gap-2 rounded-xl border border-slate-200/90 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-800 disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:border-emerald-500/30 dark:hover:text-emerald-300">
+              class="inline-flex items-center gap-2 rounded-xl border border-slate-200/90 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:text-emerald-800 disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-neutral-200 dark:hover:border-emerald-500/30 dark:hover:text-emerald-300">
               ${this.loadingMore.has(key) ? 'Meer resultaten laden…' : 'Meer AH-resultaten laden'}
             </button>
           </div>`
         : '';
-      body = `<div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] font-medium text-slate-500 dark:text-slate-400"><span>${pageStatus}</span><span class="ml-auto text-right">${staleNotice}</span></div>${productTableHeader}<div class="mt-1 space-y-2">${products.map(product => this.renderProduct(product)).join('')}</div>${moreButton}`;
+      body = `<div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] font-medium text-slate-500 dark:text-neutral-400"><span>${pageStatus}</span><span class="ml-auto text-right">${staleNotice}</span></div>${productTableHeader}<div class="mt-1 space-y-2">${products.map(product => this.renderProduct(product)).join('')}</div>${moreButton}`;
     }
 
     return `<section class="surface-card p-4 sm:p-5">
@@ -1031,14 +1031,14 @@ export class ProductComparisonApp {
     groups.innerHTML = this.items.length
       ? this.items.map(item => this.renderOverviewItem(item)).join('')
       : `<div class="surface-card flex flex-col items-center justify-center px-6 py-16 text-center">
-          <span class="grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-400 dark:bg-white/10 dark:text-slate-500">
+          <span class="grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-400 dark:bg-white/10 dark:text-neutral-500">
             <svg aria-hidden="true" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
               <path d="M6 8h12l1 12H5L6 8Z"/>
               <path d="M9 8V6a3 3 0 0 1 6 0v2"/>
             </svg>
           </span>
           <h2 class="font-display mt-4 text-lg font-semibold text-slate-900 dark:text-white">Je lijst is nog leeg</h2>
-          <p class="mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">Voeg een product toe dat je vaak koopt om AH-opties te vergelijken.</p>
+          <p class="mt-1 max-w-sm text-sm text-slate-500 dark:text-neutral-400">Voeg een product toe dat je vaak koopt om AH-opties te vergelijken.</p>
         </div>`;
     const detail = this.document.getElementById('product-detail');
     const selectedItem = this.editingDraft ||
@@ -1055,7 +1055,7 @@ export class ProductComparisonApp {
     if (detail) {
       detail.innerHTML = selectedItem
         ? this.renderGroup(selectedItem)
-        : '<div class="surface-card px-6 py-12 text-center text-sm text-slate-500 dark:text-slate-400">Selecteer een product uit je lijst.</div>';
+        : '<div class="surface-card px-6 py-12 text-center text-sm text-slate-500 dark:text-neutral-400">Selecteer een product uit je lijst.</div>';
     }
     const queryInput = this.document.getElementById('product-query');
     const categoryInput = this.document.getElementById('product-category');

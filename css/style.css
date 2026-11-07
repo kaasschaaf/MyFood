@@ -63,11 +63,11 @@ body {
 
 html.dark #recipe-modal,
 html.dark #settings-modal {
-  background-color: #0f172a;
+  background-color: #171717;
 }
 
 dialog::backdrop {
-  background: rgb(2 6 23 / 0.6);
+  background: rgb(10 10 10 / 0.72);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
@@ -124,12 +124,12 @@ dialog[open] {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgb(148 163 184 / 0.35);
+  background: rgb(163 163 163 / 0.35);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgb(148 163 184 / 0.6);
+  background: rgb(163 163 163 / 0.62);
 }
 
 /* Horizontal filter rows on mobile without visible scrollbars */
@@ -164,8 +164,8 @@ dialog[open] {
 }
 
 .dark .surface-card {
-  background: rgb(15 23 42 / 0.55);
-  border-color: rgb(148 163 184 / 0.14);
+  background: rgb(23 23 23 / 0.7);
+  border-color: rgb(163 163 163 / 0.16);
   box-shadow: none;
 }
 
@@ -176,8 +176,8 @@ dialog[open] {
 }
 
 .dark .surface-inset {
-  background: rgb(2 6 23 / 0.35);
-  border-color: rgb(148 163 184 / 0.14);
+  background: rgb(10 10 10 / 0.45);
+  border-color: rgb(163 163 163 / 0.16);
 }
 
 /* Filter pills ------------------------------------------------------------ */
@@ -201,9 +201,9 @@ dialog[open] {
 
 .dark .cuisine-pill,
 .dark .filter-toggle {
-  background: rgb(30 41 59 / 0.55);
-  border-color: rgb(148 163 184 / 0.16);
-  color: #cbd5e1;
+  background: rgb(38 38 38 / 0.7);
+  border-color: rgb(163 163 163 / 0.18);
+  color: #d4d4d4;
 }
 
 .cuisine-pill:hover,
@@ -239,7 +239,7 @@ dialog[open] {
 }
 
 .filter-toggle--quick {
-  --toggle-bg: #0f172a;
+  --toggle-bg: #171717;
 }
 
 html.dark .filter-toggle--quick {
@@ -251,7 +251,7 @@ html.dark .filter-toggle--quick {
   background: var(--toggle-bg);
   border-color: var(--toggle-bg);
   color: #fff;
-  box-shadow: 0 1px 2px rgb(15 23 42 / 0.24);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.35);
 }
 
 .filter-toggle.is-active:hover,
@@ -273,9 +273,9 @@ html.dark .filter-toggle--quick {
 }
 
 .dark .icon-button {
-  background: rgb(30 41 59 / 0.55);
-  border-color: rgb(148 163 184 / 0.16);
-  color: #cbd5e1;
+  background: rgb(38 38 38 / 0.7);
+  border-color: rgb(163 163 163 / 0.18);
+  color: #d4d4d4;
 }
 
 .icon-button:hover {

@@ -90,17 +90,17 @@ export class UIComponents {
           : '';
         const selectedRing = isSelected
           ? 'border-emerald-400 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40'
-          : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-emerald-300 dark:hover:border-emerald-700';
+          : 'border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:border-emerald-300 dark:hover:border-emerald-700';
         const priceClass = option.isBonus
           ? 'text-amber-600 dark:text-amber-400'
-          : 'text-slate-700 dark:text-slate-300';
+          : 'text-slate-700 dark:text-neutral-300';
         return `
           <a href="${this.escapeHtml(url)}"
             target="_blank" rel="noopener noreferrer"
             title="${this.escapeHtml(option.title)} bekijken bij Albert Heijn"
-            class="flex items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] text-slate-700 transition dark:text-slate-200 ${selectedRing}">
+            class="flex items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] text-slate-700 transition dark:text-neutral-200 ${selectedRing}">
             <span class="min-w-0 flex flex-col">
-              <span class="truncate font-semibold text-slate-700 dark:text-slate-200">
+              <span class="truncate font-semibold text-slate-700 dark:text-neutral-200">
                 ${this.escapeHtml(option.title)} ${badge} ${onlineBadge} ${cacheBadge}
               </span>
               <span class="text-[10px] text-slate-400 truncate">${this.escapeHtml(option.unitSize || '')}</span>
@@ -135,11 +135,11 @@ export class UIComponents {
 
     // Eigen (ingebouwd) recept met vaste AH-productnaam.
     return `
-      <div class="flex items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+      <div class="flex items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-neutral-400">
         <span class="truncate">${this.escapeHtml(ingredient.ahName || 'AH artikel')}</span>
         <a href="${this.escapeHtml(this.buildAHSearchUrl(ingredient))}"
           target="_blank" rel="noopener noreferrer"
-          class="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-semibold text-emerald-700 transition hover:border-emerald-300 dark:border-white/10 dark:bg-slate-900 dark:text-emerald-400 dark:hover:border-emerald-700">
+          class="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-semibold text-emerald-700 transition hover:border-emerald-300 dark:border-white/10 dark:bg-neutral-900 dark:text-emerald-400 dark:hover:border-emerald-700">
           Shop bij AH ${this.icon('arrowUpRight', 'h-3 w-3')}
         </a>
       </div>
@@ -164,9 +164,9 @@ export class UIComponents {
     const healthPercent = Math.min(100, Math.max(0, nutrition?.healthScore || 75));
 
     return `
-      <article class="recipe-card group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_18px_40px_-28px_rgba(15,23,42,0.32)] transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-[0_2px_4px_rgba(15,23,42,0.05),0_24px_48px_-24px_rgba(15,23,42,0.32)] dark:border-white/10 dark:bg-slate-900/70 dark:hover:border-emerald-500/30 dark:hover:shadow-none" data-recipe-id="${this.escapeHtml(recipe.id)}">
+      <article class="recipe-card group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_18px_40px_-28px_rgba(15,23,42,0.32)] transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-[0_2px_4px_rgba(15,23,42,0.05),0_24px_48px_-24px_rgba(15,23,42,0.32)] dark:border-white/10 dark:bg-neutral-900/70 dark:hover:border-emerald-500/30 dark:hover:shadow-none" data-recipe-id="${this.escapeHtml(recipe.id)}">
         <!-- Foto & Badges -->
-        <div class="relative aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-800">
+        <div class="relative aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-neutral-800">
           <img 
             src="${this.escapeHtml(recipe.image)}"
             alt="${this.escapeHtml(recipe.title)}"
@@ -178,7 +178,7 @@ export class UIComponents {
           
           <!-- Badges bovenin -->
           <div class="absolute left-3 top-3 flex max-w-[calc(100%_-_5.5rem)] flex-wrap items-center gap-1.5">
-            <span class="inline-flex items-center gap-1 rounded-md bg-white/95 px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-sm backdrop-blur dark:bg-slate-950/80 dark:text-slate-200">
+            <span class="inline-flex items-center gap-1 rounded-md bg-white/95 px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-sm backdrop-blur dark:bg-neutral-950/80 dark:text-neutral-200">
               ${this.icon('clock', 'h-3.5 w-3.5')} ${this.escapeHtml(recipe.prepTimeMinutes || '—')} min
             </span>
             <span class="inline-flex items-center rounded-md bg-slate-950/45 px-2 py-1 text-[11px] font-semibold text-white ring-1 ring-inset ring-white/20 backdrop-blur-sm">
@@ -238,7 +238,7 @@ export class UIComponents {
             <h3 class="font-display line-clamp-1 text-lg font-semibold leading-snug tracking-tight text-slate-900 transition-colors group-hover:text-emerald-700 dark:text-white dark:group-hover:text-emerald-400">
               ${this.escapeHtml(recipe.title)}
             </h3>
-            <p class="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
+            <p class="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-slate-500 dark:text-neutral-400">
               ${this.escapeHtml(recipe.description)}
             </p>
           </div>
@@ -251,7 +251,7 @@ export class UIComponents {
                   ${this.icon('dumbbell', 'h-3.5 w-3.5')} Eiwit
                 </dt>
                 <dd class="mt-1 flex items-baseline gap-1">
-                  <span class="text-sm font-bold text-slate-800 dark:text-slate-100">${this.escapeHtml(nutrition.proteinGrams)} g</span>
+                  <span class="text-sm font-bold text-slate-800 dark:text-neutral-100">${this.escapeHtml(nutrition.proteinGrams)} g</span>
                   <span class="text-[10px] text-slate-400">/ p.p.</span>
                   ${isHighProtein ? '<span class="ml-auto rounded bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-700 dark:bg-blue-950 dark:text-blue-300">Hoog</span>' : ''}
                 </dd>
@@ -269,7 +269,7 @@ export class UIComponents {
                   ${this.icon('leaf', 'h-3.5 w-3.5')} Gezondheid
                 </dt>
                 <dd class="mt-1 flex items-baseline gap-1">
-                  <span class="text-sm font-bold ${healthPercent >= 90 ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100'}">${healthPercent}</span>
+                  <span class="text-sm font-bold ${healthPercent >= 90 ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-800 dark:text-neutral-100'}">${healthPercent}</span>
                   <span class="text-[10px] text-slate-400">/ 100</span>
                 </dd>
                 <div class="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
@@ -285,12 +285,12 @@ export class UIComponents {
 
           <!-- Actieknop -->
           <div class="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-3 dark:border-white/10">
-            <span class="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+            <span class="text-[11px] font-medium text-slate-400 dark:text-neutral-500">
               Berekend voor ${servings} personen
             </span>
             ${recipe.ahRecipeOnly ? `
               <a
-                class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/90 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-800 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:border-emerald-500/30 dark:hover:text-emerald-300"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/90 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-800 dark:border-white/10 dark:bg-white/5 dark:text-neutral-200 dark:hover:border-emerald-500/30 dark:hover:text-emerald-300"
                 href="${this.escapeHtml(recipe.sourceUrl)}"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -335,10 +335,10 @@ export class UIComponents {
               <span class="rounded-md bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-200/70 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-800/60">
                 ${this.escapeHtml(recipe.cuisine)}
               </span>
-              <span class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:bg-white/5 dark:text-slate-300">
+              <span class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:bg-white/5 dark:text-neutral-300">
                 ${this.icon('clock', 'h-3.5 w-3.5')} ${this.escapeHtml(recipe.prepTimeMinutes || '—')} minuten
               </span>
-              <span class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:bg-white/5 dark:text-slate-300">
+              <span class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:bg-white/5 dark:text-neutral-300">
                 ${this.icon('star', 'h-3.5 w-3.5')} ${this.escapeHtml(recipe.difficulty)}
               </span>
               ${priceInfo.hasPriceData && priceInfo.hasBonus ? `
@@ -350,7 +350,7 @@ export class UIComponents {
             <h2 class="font-display text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
               ${this.escapeHtml(recipe.title)}
             </h2>
-            <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">
+            <p class="text-sm text-slate-600 dark:text-neutral-300 mt-1">
               ${this.escapeHtml(recipe.description)}
             </p>
             ${recipe.sourceUrl ? `
@@ -364,7 +364,7 @@ export class UIComponents {
           <button 
             type="button" 
             id="close-modal-btn" 
-            class="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-slate-200"
+            class="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-neutral-200"
             aria-label="Sluiten"
           >
             ${this.icon('close', 'h-5 w-5')}
@@ -372,17 +372,17 @@ export class UIComponents {
         </div>
 
         <!-- Portie Schakelaar & AH Prijs Banner -->
-        <div class="flex flex-col items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-gradient-to-r from-slate-50 to-emerald-50/50 p-4 dark:border-white/10 dark:from-slate-800 dark:to-slate-800/80 sm:flex-row">
+        <div class="flex flex-col items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-gradient-to-r from-slate-50 to-emerald-50/50 p-4 dark:border-white/10 dark:from-neutral-800 dark:to-neutral-800/80 sm:flex-row">
           <!-- Portie selector -->
           <div class="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-start">
-            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+            <span class="text-sm font-semibold text-slate-700 dark:text-neutral-200">
               Aantal personen
             </span>
-            <div class="inline-flex items-center overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm dark:border-white/15 dark:bg-slate-900">
+            <div class="inline-flex items-center overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm dark:border-white/15 dark:bg-neutral-900">
               <button 
                 type="button" 
                 id="modal-portion-minus" 
-                class="px-3.5 py-1.5 font-bold text-slate-700 transition hover:bg-slate-100 disabled:opacity-40 dark:text-slate-200 dark:hover:bg-slate-800"
+                class="px-3.5 py-1.5 font-bold text-slate-700 transition hover:bg-slate-100 disabled:opacity-40 dark:text-neutral-200 dark:hover:bg-neutral-800"
                 ${servings <= 1 ? 'disabled' : ''}
                 aria-label="1 persoon minder"
               >
@@ -394,7 +394,7 @@ export class UIComponents {
               <button 
                 type="button" 
                 id="modal-portion-plus" 
-                class="px-3.5 py-1.5 font-bold text-slate-700 transition hover:bg-slate-100 disabled:opacity-40 dark:text-slate-200 dark:hover:bg-slate-800"
+                class="px-3.5 py-1.5 font-bold text-slate-700 transition hover:bg-slate-100 disabled:opacity-40 dark:text-neutral-200 dark:hover:bg-neutral-800"
                 ${servings >= 8 ? 'disabled' : ''}
                 aria-label="1 persoon meer"
               >
@@ -407,14 +407,14 @@ export class UIComponents {
           ${priceInfo.hasAnyPriceData ? `
           <div class="flex w-full items-center justify-between gap-4 sm:w-auto sm:justify-end">
             <div class="text-right">
-              <div class="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+              <div class="text-[11px] font-medium text-slate-500 dark:text-neutral-400">
                 ${priceInfo.hasPriceData
                   ? `AH-prijsindicatie (${servings} pers.)`
                   : `Gedeeltelijke prijs · ${priceInfo.matchedIngredientCount}/${priceInfo.ingredientCount} matches, ${priceInfo.pricedIngredientCount} berekend`}
               </div>
               <div class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
                 ${this.ahService.formatEuro(priceInfo.totalPrice)}
-                <span class="text-xs font-medium text-slate-500 dark:text-slate-400">(${this.ahService.formatEuro(priceInfo.pricePerPerson)} p.p.)</span>
+                <span class="text-xs font-medium text-slate-500 dark:text-neutral-400">(${this.ahService.formatEuro(priceInfo.pricePerPerson)} p.p.)</span>
               </div>
             </div>
             ${priceInfo.hasPriceData && priceInfo.totalSavings > 0 ? `
@@ -425,13 +425,13 @@ export class UIComponents {
             ` : ''}
           </div>
           ` : `
-          <p class="w-full text-sm text-slate-500 dark:text-slate-400 sm:w-auto">
+          <p class="w-full text-sm text-slate-500 dark:text-neutral-400 sm:w-auto">
             AH-prijzen zijn niet beschikbaar voor dit externe recept.
           </p>
           `}
         </div>
         ${this.isLivePriced(recipe) && recipe.priceUpdatedAt ? `
-          <p class="text-xs text-slate-500 dark:text-slate-400 -mt-4">
+          <p class="text-xs text-slate-500 dark:text-neutral-400 -mt-4">
             ${recipe.ingredients?.some(ingredient => ingredient.productLookupStale)
               ? 'AH was niet bereikbaar; deels getoonde productgegevens komen uit de cache.'
               : 'Laatst bijgewerkt: ' + this.formatTimestamp(recipe.priceUpdatedAt)}
@@ -443,7 +443,7 @@ export class UIComponents {
         <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           <div class="surface-inset p-3 text-center">
             <span class="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Calorieën p.p.</span>
-            <span class="mt-1 block text-lg font-bold text-slate-800 dark:text-slate-100">${this.escapeHtml(nutrition.calories)} <span class="text-xs font-normal text-slate-400">kcal</span></span>
+            <span class="mt-1 block text-lg font-bold text-slate-800 dark:text-neutral-100">${this.escapeHtml(nutrition.calories)} <span class="text-xs font-normal text-slate-400">kcal</span></span>
           </div>
           <div class="rounded-[0.875rem] border border-blue-100/80 bg-blue-50/50 p-3 text-center dark:border-blue-900/40 dark:bg-blue-950/30">
             <span class="block text-[10px] font-bold uppercase tracking-[0.12em] text-blue-600 dark:text-blue-400">Eiwit p.p.</span>
@@ -451,11 +451,11 @@ export class UIComponents {
           </div>
           <div class="surface-inset p-3 text-center">
             <span class="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Koolhydraten p.p.</span>
-            <span class="mt-1 block text-lg font-bold text-slate-800 dark:text-slate-100">${this.escapeHtml(nutrition.carbsGrams)} g</span>
+            <span class="mt-1 block text-lg font-bold text-slate-800 dark:text-neutral-100">${this.escapeHtml(nutrition.carbsGrams)} g</span>
           </div>
           <div class="surface-inset p-3 text-center">
             <span class="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Vetten p.p.</span>
-            <span class="mt-1 block text-lg font-bold text-slate-800 dark:text-slate-100">${this.escapeHtml(nutrition.fatGrams)} g</span>
+            <span class="mt-1 block text-lg font-bold text-slate-800 dark:text-neutral-100">${this.escapeHtml(nutrition.fatGrams)} g</span>
           </div>
         </div>
         ` : ''}
@@ -464,11 +464,11 @@ export class UIComponents {
         <div class="grid grid-cols-1 gap-6 md:grid-cols-12">
           <!-- Ingrediëntenlijst (5 kolommen op desktop) -->
           <div class="space-y-3 md:col-span-5">
-            <h3 class="flex items-center justify-between text-sm font-bold text-slate-800 dark:text-slate-100">
+            <h3 class="flex items-center justify-between text-sm font-bold text-slate-800 dark:text-neutral-100">
               <span class="inline-flex items-center gap-2">${this.icon('basket', 'h-4 w-4 text-emerald-700 dark:text-emerald-400')} Ingrediënten</span>
               <span class="text-[11px] font-normal text-slate-400">Klik voor AH-opties</span>
             </h3>
-            <ul class="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm dark:divide-white/10 dark:border-white/10 dark:bg-slate-800/60">
+            <ul class="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm dark:divide-white/10 dark:border-white/10 dark:bg-neutral-800/60">
               ${(recipe.ingredients || []).map(ing => {
                 const scaledAmount = Number.isFinite(ing.amount)
                   ? Math.round((ing.amount * scale) * 10) / 10
@@ -489,11 +489,11 @@ export class UIComponents {
                   <li>
                     <details class="ingredient-disclosure">
                       <summary class="flex items-center gap-3 px-3 py-2.5 transition hover:bg-slate-50 dark:hover:bg-white/5">
-                        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-400 dark:bg-white/10 dark:text-slate-500">
+                        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-400 dark:bg-white/10 dark:text-neutral-500">
                           ${this.icon('basket', 'h-4 w-4')}
                         </span>
                         <span class="min-w-0 flex-1">
-                          <span class="block truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+                          <span class="block truncate text-sm font-semibold text-slate-800 dark:text-neutral-100">
                             ${scaledAmount === null ? '' : `<span class="tabular-nums">${this.escapeHtml(scaledAmount)}</span> `}${this.escapeHtml(ing.unit)} ${this.escapeHtml(ing.name)}
                           </span>
                           <span class="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-400">
@@ -507,11 +507,11 @@ export class UIComponents {
                         </span>
                         <span class="flex shrink-0 items-center gap-1.5">
                           ${live && quantityCost ? `
-                            <span class="text-xs font-bold tabular-nums text-slate-700 dark:text-slate-300">
+                            <span class="text-xs font-bold tabular-nums text-slate-700 dark:text-neutral-300">
                               ${this.ahService.formatEuro(quantityCost.current)}
                             </span>
                           ` : !live && Number.isFinite(price) && price > 0 ? `
-                            <span class="text-xs font-bold tabular-nums text-slate-700 dark:text-slate-300">
+                            <span class="text-xs font-bold tabular-nums text-slate-700 dark:text-neutral-300">
                               ${this.ahService.formatEuro(price * scale)}
                             </span>
                           ` : ''}
@@ -531,13 +531,13 @@ export class UIComponents {
 
           <!-- Bereidingswijze (7 kolommen op desktop) -->
           <div class="space-y-3 md:col-span-7">
-            <h3 class="flex items-center justify-between text-sm font-bold text-slate-800 dark:text-slate-100">
+            <h3 class="flex items-center justify-between text-sm font-bold text-slate-800 dark:text-neutral-100">
               <span class="inline-flex items-center gap-2">${this.icon('list', 'h-4 w-4 text-emerald-700 dark:text-emerald-400')} Bereidingswijze</span>
               <span class="text-[11px] font-normal text-slate-400">Stap voor stap koken</span>
             </h3>
             <ol class="space-y-2.5">
               ${(recipe.instructions || []).map((step, idx) => `
-                <li class="flex items-start gap-3 rounded-xl border border-slate-200/80 bg-white p-3.5 text-sm leading-relaxed text-slate-700 shadow-sm dark:border-white/10 dark:bg-slate-800/60 dark:text-slate-300">
+                <li class="flex items-start gap-3 rounded-xl border border-slate-200/80 bg-white p-3.5 text-sm leading-relaxed text-slate-700 shadow-sm dark:border-white/10 dark:bg-neutral-800/60 dark:text-neutral-300">
                   <span class="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-50 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-200/70 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-800/60">
                     ${idx + 1}
                   </span>
@@ -549,7 +549,7 @@ export class UIComponents {
         </div>
 
         <!-- Gemini AI Kookhulp Sectie -->
-        <div class="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 via-white to-purple-50/50 p-4 shadow-sm dark:border-indigo-900/50 dark:from-slate-800/90 dark:via-slate-800 dark:to-indigo-950/40 sm:p-5">
+        <div class="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 via-white to-purple-50/50 p-4 shadow-sm dark:border-indigo-900/50 dark:from-neutral-800/90 dark:via-neutral-800 dark:to-indigo-950/40 sm:p-5">
           <div class="mb-3 flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
               <span class="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white shadow-sm">
@@ -559,7 +559,7 @@ export class UIComponents {
                 <h4 class="text-sm font-bold text-slate-900 dark:text-white sm:text-base">
                   Vraag Gemini Kookassistent
                 </h4>
-                <p class="text-xs text-slate-500 dark:text-slate-400">
+                <p class="text-xs text-slate-500 dark:text-neutral-400">
                   Stel een vraag over ingrediënten vervangen, bereiding of tips
                 </p>
               </div>
@@ -576,22 +576,22 @@ export class UIComponents {
 
           <!-- Snelkeuze vragen knoppen -->
           <div class="mb-3 flex flex-wrap gap-1.5">
-            <button type="button" class="gemini-quick-btn rounded-lg border border-slate-200/90 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-800 dark:border-white/10 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-indigo-900/50" data-prompt="Hoe kan ik dit gerecht nóg eiwitrijker maken zonder veel extra calorieën?">
+            <button type="button" class="gemini-quick-btn rounded-lg border border-slate-200/90 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-800 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-indigo-900/50" data-prompt="Hoe kan ik dit gerecht nóg eiwitrijker maken zonder veel extra calorieën?">
               Eiwitrijker maken
             </button>
-            <button type="button" class="gemini-quick-btn rounded-lg border border-slate-200/90 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-800 dark:border-white/10 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-indigo-900/50" data-prompt="Wat kan ik vervangen als ik bepaalde ingrediënten niet lust of in huis heb?">
+            <button type="button" class="gemini-quick-btn rounded-lg border border-slate-200/90 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-800 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-indigo-900/50" data-prompt="Wat kan ik vervangen als ik bepaalde ingrediënten niet lust of in huis heb?">
               Ingrediënten vervangen
             </button>
-            <button type="button" class="gemini-quick-btn rounded-lg border border-slate-200/90 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-800 dark:border-white/10 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-indigo-900/50" data-prompt="Welke wijn, bier of alcoholvrije drank past perfect bij de smaken van dit gerecht?">
+            <button type="button" class="gemini-quick-btn rounded-lg border border-slate-200/90 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-800 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-indigo-900/50" data-prompt="Welke wijn, bier of alcoholvrije drank past perfect bij de smaken van dit gerecht?">
               Wijn- &amp; drankparing
             </button>
-            <button type="button" class="gemini-quick-btn rounded-lg border border-slate-200/90 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-800 dark:border-white/10 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-indigo-900/50" data-prompt="Hoe kan ik dit recept het makkelijkst omtoveren tot een 100% vegetarische of plantaardige variant?">
+            <button type="button" class="gemini-quick-btn rounded-lg border border-slate-200/90 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-800 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-indigo-900/50" data-prompt="Hoe kan ik dit recept het makkelijkst omtoveren tot een 100% vegetarische of plantaardige variant?">
               Vegetarische variant
             </button>
           </div>
 
           <!-- Chat antwoord venster -->
-          <div id="gemini-response-area" class="mb-3 hidden max-h-60 overflow-y-auto whitespace-pre-line rounded-xl border border-indigo-100 bg-white p-3.5 text-sm leading-relaxed text-slate-800 shadow-inner dark:border-indigo-950 dark:bg-slate-900 dark:text-slate-200"></div>
+          <div id="gemini-response-area" class="mb-3 hidden max-h-60 overflow-y-auto whitespace-pre-line rounded-xl border border-indigo-100 bg-white p-3.5 text-sm leading-relaxed text-slate-800 shadow-inner dark:border-indigo-950 dark:bg-neutral-900 dark:text-neutral-200"></div>
 
           <!-- Chat invoer veld -->
           <form id="gemini-ask-form" class="flex gap-2">
@@ -600,7 +600,7 @@ export class UIComponents {
               type="text" 
               id="gemini-question-input" 
               placeholder="${this.geminiService.hasApiKey() ? 'Stel een vraag over dit gerecht aan Gemini…' : 'Vul eerst je Gemini API-key in om vragen te stellen…'}"
-              class="flex-1 rounded-xl border border-slate-200/90 bg-white px-3.5 py-2 text-sm text-slate-800 transition placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 dark:border-white/10 dark:bg-slate-900 dark:text-slate-100"
+              class="flex-1 rounded-xl border border-slate-200/90 bg-white px-3.5 py-2 text-sm text-slate-800 transition placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-100"
               ${!this.geminiService.hasApiKey() ? 'disabled' : ''}
             />
             <button 
