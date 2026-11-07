@@ -80,36 +80,52 @@ export class UIComponents {
       const rows = sorted.map(option => {
         const isSelected = option.id === selectedProduct?.id;
         const url = option.productUrl || this.buildAHSearchUrl(ingredient);
-        const badge = option.isBonus
-          ? '<span class="text-[9px] font-extrabold text-amber-600 dark:text-amber-400">BONUS</span>'
-          : '';
-        const onlineBadge = option.isOnlineOnly
-          ? '<span class="text-[9px] text-indigo-600 dark:text-indigo-400">alleen online</span>'
-          : '';
-        const cacheBadge = option.cachedMatch
-          ? '<span class="text-[9px] text-amber-600 dark:text-amber-400">cache</span>'
-          : '';
+        const bonusDescription = String(option.bonusDescription || '').trim();
+        const bonusLabel = bonusDescription
+          ? bonusDescription.charAt(0).toLocaleUpperCase('nl-NL') + bonusDescription.slice(1)
+          : 'Bonus';
+        const regularPrice = Number(option.regularPrice);
+        const hasDiscount = Boolean(option.isBonus) &&
+          Number.isFinite(regularPrice) && regularPrice > option.price;
+        const savings = hasDiscount ? Math.round((regularPrice - option.price) * 100) / 100 : 0;
+        const metaParts = [option.unitSize, option.isOnlineOnly ? 'alleen online' : '', option.cachedMatch ? 'cache' : '']
+          .filter(Boolean)
+          .map(part => this.escapeHtml(part));
         const selectedRing = isSelected
-          ? 'border-emerald-400 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40'
-          : 'border-slate-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:border-emerald-300 dark:hover:border-emerald-700';
-        const priceClass = option.isBonus
-          ? 'text-amber-600 dark:text-amber-400'
-          : 'text-slate-700 dark:text-neutral-300';
+          ? 'border-emerald-400 bg-emerald-50/60 ring-1 ring-inset ring-emerald-500/15 dark:border-emerald-600 dark:bg-emerald-950/25 dark:ring-emerald-500/20'
+          : 'border-slate-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/30 dark:border-white/10 dark:bg-neutral-900/50 dark:hover:border-emerald-700 dark:hover:bg-emerald-950/15';
         return `
           <a href="${this.escapeHtml(url)}"
             target="_blank" rel="noopener noreferrer"
             title="${this.escapeHtml(option.title)} bekijken bij Albert Heijn"
-            class="flex items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] text-slate-700 transition dark:text-neutral-200 ${selectedRing}">
-            <span class="min-w-0 flex flex-col">
-              <span class="truncate font-semibold text-slate-700 dark:text-neutral-200">
-                ${this.escapeHtml(option.title)} ${badge} ${onlineBadge} ${cacheBadge}
+            class="block rounded-xl border px-3 py-2.5 transition ${selectedRing}">
+            <span class="flex items-start justify-between gap-2">
+              <span class="min-w-0 flex-1">
+                <span class="flex items-center gap-1.5">
+                  <span class="truncate text-xs font-semibold text-slate-800 dark:text-neutral-100">${this.escapeHtml(option.title)}</span>
+                  ${isSelected ? '<span class="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">Gekozen</span>' : ''}
+                </span>
+                <span class="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[10px] text-slate-400 dark:text-neutral-400">
+                  ${metaParts.length ? `<span>${metaParts.join(' · ')}</span>` : ''}
+                </span>
               </span>
-              <span class="text-[10px] text-slate-400 truncate">${this.escapeHtml(option.unitSize || '')}</span>
+              <span class="flex shrink-0 items-start gap-1">
+                <span class="text-right">
+                  <span class="block text-xs font-bold ${hasDiscount ? 'text-amber-700 dark:text-amber-300' : 'text-slate-800 dark:text-neutral-100'}">${this.ahService.formatEuro(option.price)}</span>
+                  ${hasDiscount ? `<span class="block text-[10px] text-slate-400 dark:text-neutral-400 line-through">${this.ahService.formatEuro(regularPrice)}</span>` : ''}
+                </span>
+                <span class="mt-0.5 text-emerald-600 dark:text-emerald-400" aria-hidden="true">${this.icon('arrowUpRight', 'h-3 w-3')}</span>
+              </span>
             </span>
-            <span class="shrink-0 flex items-center gap-1">
-              <span class="font-bold ${priceClass}">${this.ahService.formatEuro(option.price)}</span>
-              <span class="text-emerald-600 dark:text-emerald-400" aria-hidden="true">${this.icon('arrowUpRight', 'h-3 w-3')}</span>
-            </span>
+            ${hasDiscount ? `
+              <span class="mt-2 flex items-center justify-between gap-2 border-t border-amber-200/70 pt-1.5 dark:border-amber-900/40">
+                <span class="inline-flex min-w-0 items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                  ${this.icon('flame', 'h-3 w-3 shrink-0')}
+                  <span class="truncate">${this.escapeHtml(bonusLabel)}</span>
+                </span>
+                <span class="shrink-0 text-[10px] font-bold text-amber-700 dark:text-amber-300">−${this.ahService.formatEuro(savings)}</span>
+              </span>
+            ` : ''}
           </a>
         `;
       }).join('');
@@ -123,7 +139,7 @@ export class UIComponents {
         : '';
       return `
         <div class="flex items-center justify-between gap-2">
-          <span class="text-[11px] text-slate-400">AH-zoekresultaten niet beschikbaar</span>
+          <span class="text-[11px] text-slate-400 dark:text-neutral-400">AH-zoekresultaten niet beschikbaar</span>
           <a href="${this.escapeHtml(this.buildAHSearchUrl(ingredient))}"
             target="_blank" rel="noopener noreferrer"
             class="inline-flex items-center gap-1 whitespace-nowrap text-[11px] text-emerald-700 hover:underline dark:text-emerald-400">
@@ -248,12 +264,12 @@ export class UIComponents {
           ${nutrition ? `
             <dl class="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 dark:border-white/10">
               <div>
-                <dt class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                <dt class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-neutral-400">
                   ${this.icon('dumbbell', 'h-3.5 w-3.5')} Eiwit
                 </dt>
                 <dd class="mt-1 flex items-baseline gap-1">
                   <span class="text-sm font-bold text-slate-800 dark:text-neutral-100">${this.escapeHtml(nutrition.proteinGrams)} g</span>
-                  <span class="text-[10px] text-slate-400">/ p.p.</span>
+                  <span class="text-[10px] text-slate-400 dark:text-neutral-400">/ p.p.</span>
                   ${isHighProtein ? '<span class="ml-auto rounded bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-700 dark:bg-blue-950 dark:text-blue-300">Hoog</span>' : ''}
                 </dd>
                 <div class="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
@@ -266,12 +282,12 @@ export class UIComponents {
               </div>
 
               <div>
-                <dt class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                <dt class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-neutral-400">
                   ${this.icon('leaf', 'h-3.5 w-3.5')} Gezondheid
                 </dt>
                 <dd class="mt-1 flex items-baseline gap-1">
                   <span class="text-sm font-bold ${healthPercent >= 90 ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-800 dark:text-neutral-100'}">${healthPercent}</span>
-                  <span class="text-[10px] text-slate-400">/ 100</span>
+                  <span class="text-[10px] text-slate-400 dark:text-neutral-400">/ 100</span>
                 </dd>
                 <div class="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
                   <div
@@ -341,6 +357,11 @@ export class UIComponents {
       ? product?.bonusDescription || 'Bonus'
       : ingredient.bonusText || 'Bonus';
     const optionCount = (ingredient.ahProductOptions || []).length;
+    const bonusCount = (ingredient.ahProductOptions || []).filter(option => option.isBonus).length;
+    const selectedRegularPrice = Number(product?.regularPrice);
+    const selectedSavings = isBonus && Number.isFinite(selectedRegularPrice) && selectedRegularPrice > (product?.price || 0)
+      ? Math.round((selectedRegularPrice - product.price) * 100) / 100
+      : 0;
     const amountLabel = [
       scaledAmount === null ? '' : scaledAmount,
       ingredient.unit || '',
@@ -361,7 +382,7 @@ export class UIComponents {
           <button
             type="button"
             data-close-modal
-            class="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-neutral-200"
+            class="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-400 dark:text-neutral-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-neutral-200"
             aria-label="Sluiten"
           >
             ${this.icon('close', 'h-5 w-5')}
@@ -376,18 +397,24 @@ export class UIComponents {
           </h2>
           <p class="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-neutral-400">
             ${isBonus
-              ? `<span class="rounded bg-amber-100 px-1.5 py-0.5 font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">${this.escapeHtml(bonusDesc)}</span>`
+              ? `<span class="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-1 font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">${this.icon('flame', 'h-3 w-3')} ${this.escapeHtml(bonusDesc)}${selectedSavings > 0 ? ` · −${this.ahService.formatEuro(selectedSavings)}` : ''}</span>`
               : ''}
             <span>${optionCount > 0
               ? `${optionCount} AH-${optionCount === 1 ? 'optie' : 'opties'} beschikbaar`
               : 'Bekijk beschikbare AH-producten'}</span>
+            ${bonusCount > 0 ? `<span aria-hidden="true">·</span><span class="font-semibold text-amber-700 dark:text-amber-300">${bonusCount} met bonus</span>` : ''}
             ${quantityCost ? `<span aria-hidden="true">·</span><span class="tabular-nums">${this.ahService.formatEuro(quantityCost.current)} gebruikt</span>` : ''}
           </p>
         </div>
 
         <!-- Opties -->
         <section class="rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-neutral-900/40 sm:p-4">
-          <p class="px-1 pb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Kies een product en open het bij AH</p>
+          <p class="flex items-center justify-between gap-2 px-1 pb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-neutral-400">
+            <span>Kies een product en open het bij AH</span>
+            <span class="inline-flex items-center gap-1 normal-case tracking-normal text-amber-700 dark:text-amber-300">
+              ${this.icon('flame', 'h-3 w-3')} bonus getoond
+            </span>
+          </p>
           ${this.renderIngredientProducts(ingredient, product)}
         </section>
       </div>
@@ -466,7 +493,7 @@ export class UIComponents {
           <button 
             type="button" 
             id="close-modal-btn" 
-            class="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-neutral-200"
+            class="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-400 dark:text-neutral-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-neutral-200"
             aria-label="Sluiten"
           >
             ${this.icon('close', 'h-5 w-5')}
@@ -544,19 +571,19 @@ export class UIComponents {
         ${nutrition ? `
         <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           <div class="surface-inset p-3 text-center">
-            <span class="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Calorieën p.p.</span>
-            <span class="mt-1 block text-lg font-bold text-slate-800 dark:text-neutral-100">${this.escapeHtml(nutrition.calories)} <span class="text-xs font-normal text-slate-400">kcal</span></span>
+            <span class="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-neutral-400">Calorieën p.p.</span>
+            <span class="mt-1 block text-lg font-bold text-slate-800 dark:text-neutral-100">${this.escapeHtml(nutrition.calories)} <span class="text-xs font-normal text-slate-400 dark:text-neutral-400">kcal</span></span>
           </div>
           <div class="rounded-[0.875rem] border border-blue-100/80 bg-blue-50/50 p-3 text-center dark:border-blue-900/40 dark:bg-blue-950/30">
             <span class="block text-[10px] font-bold uppercase tracking-[0.12em] text-blue-600 dark:text-blue-400">Eiwit p.p.</span>
             <span class="mt-1 block text-lg font-bold text-blue-700 dark:text-blue-300">${this.escapeHtml(nutrition.proteinGrams)} g</span>
           </div>
           <div class="surface-inset p-3 text-center">
-            <span class="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Koolhydraten p.p.</span>
+            <span class="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-neutral-400">Koolhydraten p.p.</span>
             <span class="mt-1 block text-lg font-bold text-slate-800 dark:text-neutral-100">${this.escapeHtml(nutrition.carbsGrams)} g</span>
           </div>
           <div class="surface-inset p-3 text-center">
-            <span class="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Vetten p.p.</span>
+            <span class="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-neutral-400">Vetten p.p.</span>
             <span class="mt-1 block text-lg font-bold text-slate-800 dark:text-neutral-100">${this.escapeHtml(nutrition.fatGrams)} g</span>
           </div>
         </div>
@@ -568,7 +595,7 @@ export class UIComponents {
           <div class="space-y-3 md:col-span-5">
             <h3 class="flex items-center justify-between text-sm font-bold text-slate-800 dark:text-neutral-100">
               <span class="inline-flex items-center gap-2">${this.icon('basket', 'h-4 w-4 text-emerald-700 dark:text-emerald-400')} Ingrediënten</span>
-              <span class="text-[11px] font-normal text-slate-400">Klik voor AH-opties</span>
+              <span class="text-[11px] font-normal text-slate-400 dark:text-neutral-400">Klik voor AH-opties</span>
             </h3>
             <ul class="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm dark:divide-white/10 dark:border-white/10 dark:bg-neutral-800/60">
               ${(recipe.ingredients || []).map((ing, index) => {
@@ -586,6 +613,10 @@ export class UIComponents {
                   ? product?.bonusDescription || 'Bonus'
                   : ing.bonusText || 'Bonus';
                 const optionCount = (ing.ahProductOptions || []).length;
+                const rowSavings = isBonus && quantityCost && Number.isFinite(quantityCost.regular) &&
+                  quantityCost.regular > quantityCost.current
+                  ? Math.round((quantityCost.regular - quantityCost.current) * 100) / 100
+                  : 0;
 
                 return `
                   <li>
@@ -602,9 +633,9 @@ export class UIComponents {
                         <span class="block truncate text-sm font-semibold text-slate-800 dark:text-neutral-100">
                           ${scaledAmount === null ? '' : `<span class="tabular-nums">${this.escapeHtml(scaledAmount)}</span> `}${this.escapeHtml(ing.unit)} ${this.escapeHtml(ing.name)}
                         </span>
-                        <span class="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-400">
+                        <span class="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400 dark:text-neutral-400">
                           ${isBonus
-                            ? `<span class="rounded bg-amber-100 px-1.5 py-0.5 font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">${this.escapeHtml(bonusDesc)}</span>`
+                            ? `<span class="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">${this.icon('flame', 'h-3 w-3')} ${this.escapeHtml(bonusDesc)}${rowSavings > 0 ? ` · −${this.ahService.formatEuro(rowSavings)}` : ''}</span>`
                             : ''}
                           <span>${optionCount > 0
                             ? `${optionCount} AH-${optionCount === 1 ? 'optie' : 'opties'}`
@@ -613,8 +644,11 @@ export class UIComponents {
                       </span>
                       <span class="flex shrink-0 items-center gap-1.5">
                         ${live && quantityCost ? `
-                          <span class="text-xs font-bold tabular-nums text-slate-700 dark:text-neutral-300">
-                            ${this.ahService.formatEuro(quantityCost.current)}
+                          <span class="text-right">
+                            <span class="block text-xs font-bold tabular-nums ${isBonus ? 'text-amber-700 dark:text-amber-300' : 'text-slate-700 dark:text-neutral-300'}">
+                              ${this.ahService.formatEuro(quantityCost.current)}
+                            </span>
+                            ${rowSavings > 0 ? `<span class="block text-[10px] tabular-nums text-slate-400 dark:text-neutral-400 line-through">${this.ahService.formatEuro(quantityCost.regular)}</span>` : ''}
                           </span>
                         ` : !live && Number.isFinite(price) && price > 0 ? `
                           <span class="text-xs font-bold tabular-nums text-slate-700 dark:text-neutral-300">
@@ -634,7 +668,7 @@ export class UIComponents {
           <div class="space-y-3 md:col-span-7">
             <h3 class="flex items-center justify-between text-sm font-bold text-slate-800 dark:text-neutral-100">
               <span class="inline-flex items-center gap-2">${this.icon('list', 'h-4 w-4 text-emerald-700 dark:text-emerald-400')} Bereidingswijze</span>
-              <span class="text-[11px] font-normal text-slate-400">Stap voor stap koken</span>
+              <span class="text-[11px] font-normal text-slate-400 dark:text-neutral-400">Stap voor stap koken</span>
             </h3>
             <ol class="space-y-2.5">
               ${(recipe.instructions || []).map((step, idx) => `
