@@ -41,7 +41,7 @@
 <body class="flex min-h-screen flex-col bg-[#f7f8f6] font-sans text-slate-800 antialiased transition-colors duration-200 dark:bg-[#141414] dark:text-neutral-100">
   <header class="sticky top-0 z-40 border-b border-slate-200/70 bg-[#f7f8f6]/85 backdrop-blur-xl dark:border-white/10 dark:bg-[#141414]/85">
     <div class="mx-auto grid h-16 max-w-7xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-4 sm:px-6 lg:px-8">
-      <a href="./index.html" class="group flex min-w-0 items-center gap-3 justify-self-start">
+      <a href="./index.html" class="group col-start-1 flex min-w-0 items-center gap-3 justify-self-start">
         <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-emerald-600 to-teal-500 text-white shadow-sm shadow-emerald-900/20 ring-1 ring-inset ring-white/20">
           <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <path d="M7 13a4 4 0 1 1 1.2-7.8A4 4 0 0 1 16 6a4 4 0 1 1 .8 7.1V19H7v-6Z"/>
@@ -54,7 +54,7 @@
         </span>
       </a>
 
-      <nav class="feature-nav hidden justify-self-center sm:inline-flex" data-i18n-attr="aria-label:nav.label" aria-label="Onderdelen van MyFood">
+      <nav class="feature-nav col-start-2 hidden justify-self-center sm:inline-flex" data-i18n-attr="aria-label:nav.label" aria-label="Onderdelen van MyFood">
         <a href="./index.html" class="feature-tab">
           <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5V5.5Z"/>
@@ -71,7 +71,7 @@
         </a>
       </nav>
 
-      <div class="flex items-center justify-self-end gap-1.5 sm:gap-2">
+      <div class="col-start-3 flex items-center justify-self-end gap-1.5 sm:gap-2">
         <button
           type="button"
           id="language-toggle"

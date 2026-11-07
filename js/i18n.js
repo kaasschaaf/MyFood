@@ -14,7 +14,6 @@ const listeners = new Set();
 
 const DICTIONARY = {
   nl: {
-    'app.tagline': 'Recepten · AH-prijzen · AI-kookhulp',
     'page.title': 'MyFood - Recepten, AH Bonus Prijzen & AI Kookhulp',
     'page.productsTitle': 'Mijn producten vergelijken - MyFood',
     'page.recipesRegion': 'Recepten',
@@ -248,7 +247,6 @@ const DICTIONARY = {
   },
 
   en: {
-    'app.tagline': 'Recipes · AH prices · AI cooking help',
     'page.title': 'MyFood - Recipes, AH Bonus Prices & AI Cooking Help',
     'page.productsTitle': 'Compare my products - MyFood',
     'page.recipesRegion': 'Recipes',
