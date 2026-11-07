@@ -3,9 +3,35 @@
 	"tasks": [
 		{
 			"label": "MyFood: Start local server",
+			"detail": "npm start — serves the app locally with `npx serve`",
 			"type": "shell",
-			"command": "python3 -m http.server 8000",
-			"group": "build"
+			"command": "npm start",
+			"isBackground": true,
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"clear": true
+			},
+			"problemMatcher": {
+				"owner": "myfood-serve",
+				"pattern": {
+					"regexp": "^\\s*(.+?):(\\d+):(\\d+):\\s+(error|warning)\\s+(.*)$",
+					"file": 1,
+					"line": 2,
+					"column": 3,
+					"severity": 4,
+					"message": 5
+				},
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": "(> myfood@|Serving!)",
+					"endsPattern": "(Accepting connections|Local:\\s+http)"
+				}
+			}
 		}
 	]
 }
