@@ -2,7 +2,7 @@
 
 A modern, fast, and mobile-friendly recipe web app for finding dishes, checking current **Albert Heijn prices and bonus deals** (calculated for **2 people by default**), viewing visual **protein and health indicators**, and asking the integrated **Gemini AI cooking assistant** your cooking questions.
 
-Recipes are sourced from the built-in MyFood collection, up to 250 recipes from [TheMealDB](https://www.themealdb.com/), and up to 250 genuine recipes listed in the official [Allerhande recipe sitemap](https://www.ah.nl/sitemaps/entities/allerhande/recipes.xml). Allerhande recipes link directly to AH for their ingredients and instructions. AH product search uses the anonymous, unofficial Albert Heijn mobile API; no AH account or login is needed. Live product results, recipe catalogues, recipe details, and product choices are cached in IndexedDB in your browser and refreshed as they expire.
+Recipes are sourced from the built-in MyFood collection, up to 250 recipes from [TheMealDB](https://www.themealdb.com/), and up to 250 genuine recipes listed in the official [Allerhande recipe sitemap](https://www.ah.nl/sitemaps/entities/allerhande/recipes.xml). Allerhande recipes link directly to AH for their ingredients and instructions. AH product search uses the anonymous, unofficial Albert Heijn mobile API; no AH account or login is needed. Every recipe — including the built-in MyFood collection — is priced from the same live AH product results, so prices and bonus deals are always current. Live product results, recipe catalogues, recipe details, and product choices are cached in IndexedDB in your browser and refreshed as they expire; the price cache always expires at local midnight so the day's new bonus deals are fetched automatically.
 
 ---
 
@@ -28,13 +28,12 @@ Recipes are sourced from the built-in MyFood collection, up to 250 recipes from 
   - Browse genuine Allerhande recipes alongside the built-in and TheMealDB collections.
 
 - **🛒 Albert Heijn Prices & Bonus Deals (Default: 2 people)**:
-  - Matches external recipe ingredients against live AH product search results.
-  - Choose another AH product when the suggested match is not right.
+  - Matches every recipe's ingredients — built-in and external alike — against live AH product search results.
+  - Shows the suitable AH products per ingredient as clickable links straight to the AH store page, with the current match highlighted.
   - Estimates the cost of the used quantity only when product-pack size and recipe units can be reliably converted. Other products show their pack price without inventing a quantity cost.
-  - External recipe prices are calculated and cached so recipes with complete price data can be sorted by estimated price per person; unpriced recipes appear after priced recipes.
+  - Recipe prices are calculated and cached so recipes with complete price data can be sorted by estimated price per person; unpriced recipes appear after priced recipes.
   - Dynamic portion switcher (`[-] 2 people [+]`): all weights and prices scale in real time from 1 to 8 people.
   - Clear **BONUS** badges, crossed-out regular prices, and exact savings displayed.
-  - Checkable ingredient list with AH product names for convenient shopping.
 
 - **📊 Visual Protein & Health Indicators**:
   - Compact progress bar for **Protein** (with a strong color shift above 30g per person).
@@ -57,7 +56,7 @@ Recipes are sourced from the built-in MyFood collection, up to 250 recipes from 
 
 - **💾 Browser Cache & Anonymous Data**:
   - Recipe catalogues and details, AH product search results, and your product-match selections are stored locally in IndexedDB.
-  - Cached data is shown when available while updates run; if an external source is unavailable, MyFood keeps usable cached results and indicates when AH data is stale.
+  - AH price/search results are cached only within the current day and are re-fetched after local midnight, so daily/weekly bonus changes are always reflected. Cached data is shown immediately while live updates run; if AH is unavailable, MyFood keeps usable cached results and indicates when AH data is stale.
   - Anonymous AH access tokens remain in memory only. MyFood does not use your AH login or store AH credentials.
   - AH's recipe pages do not allow anonymous cross-origin access to recipe details, so Allerhande ingredients and instructions open on AH's own website.
 

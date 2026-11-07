@@ -80,6 +80,10 @@ export class RecipesService {
       const response = await fetch('./data/recipes.json');
       if (!response.ok) throw new Error(`recipes.json laden mislukt (${response.status}).`);
       localRecipes = await response.json();
+      // Eigen recepten worden net als externe recepten live geprijsd via AH-productzoekresultaten.
+      localRecipes.forEach(recipe => {
+        recipe.livePriced = true;
+      });
     } catch (error) {
       console.error('Lokale MyFood-recepten konden niet worden geladen.', error);
     }
@@ -293,8 +297,12 @@ export class RecipesService {
     };
   }
 
+  isLivePricedRecipe(recipe) {
+    return Boolean(recipe && !recipe.ahRecipeOnly && (recipe.external || recipe.livePriced));
+  }
+
   async applyCachedPrices() {
-    await Promise.all(this.recipes.filter(recipe => recipe.external && !recipe.ahRecipeOnly).map(async recipe => {
+    await Promise.all(this.recipes.filter(recipe => this.isLivePricedRecipe(recipe)).map(async recipe => {
       const cached = await this.readCache(`priced-recipe:${recipe.id}`);
       if (!cached?.value) return;
       Object.assign(recipe, cached.value, { priceUpdatedAt: cached.updatedAt });
@@ -318,7 +326,7 @@ export class RecipesService {
   }
 
   async refreshAHMatchesForLoadedRecipes() {
-    const recipes = this.recipes.filter(recipe => recipe.external && !recipe.ahRecipeOnly && recipe.ingredients?.length);
+    const recipes = this.recipes.filter(recipe => this.isLivePricedRecipe(recipe) && recipe.ingredients?.length);
     let completed = 0;
     await this.mapWithConcurrency(recipes, 3, async recipe => {
       await this.loadAHMatches(recipe);
@@ -332,12 +340,12 @@ export class RecipesService {
 
   async refreshPrices(onProgress = () => {}) {
     if (this.priceUpdatePromise) return this.priceUpdatePromise;
-    const externalRecipes = this.recipes.filter(recipe => recipe.external && !recipe.ahRecipeOnly);
+    const externalRecipes = this.recipes.filter(recipe => this.isLivePricedRecipe(recipe));
     let completed = 0;
     this.priceUpdatePromise = (async () => {
       for (const summary of externalRecipes) {
         try {
-          const recipe = await this.loadRecipeDetails(summary);
+          const recipe = summary.external ? await this.loadRecipeDetails(summary) : summary;
           await this.loadAHMatches(recipe);
           recipe.priceEstimate = this.ahService.calculateRecipePrice(recipe, recipe.baseServings);
           const stored = await this.writeCache(`priced-recipe:${recipe.id}`, recipe);
@@ -608,7 +616,15 @@ export class RecipesService {
     const summary = this.getRecipeById(id);
     if (!summary) return null;
     if (summary.ahRecipeOnly) return summary;
-    if (!summary.external || summary.ingredients?.length) return summary;
+    if (!summary.external) {
+      // Eigen recept heeft al ingrediënten; haal alleen live AH-matches op.
+      await this.loadAHMatches(summary);
+      summary.priceEstimate = this.ahService.calculateRecipePrice(summary, summary.baseServings);
+      const stored = await this.writeCache(`priced-recipe:${summary.id}`, summary);
+      summary.priceUpdatedAt = stored?.updatedAt || Date.now();
+      return summary;
+    }
+    if (summary.ingredients?.length) return summary;
 
     const recipe = await this.loadRecipeDetails(summary);
     Object.assign(summary, recipe);

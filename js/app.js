@@ -489,13 +489,13 @@ class MyFoodApp {
 
   async refreshExternalPrices() {
     const status = document.getElementById('catalog-status');
-    const recipeCount = this.recipesService.recipes.filter(recipe => recipe.external).length;
+    const recipeCount = this.recipesService.recipes.filter(recipe => this.recipesService.isLivePricedRecipe(recipe)).length;
     if (recipeCount === 0) {
       if (status) status.textContent = 'Geen externe recepten om AH-prijzen voor op te halen.';
       return;
     }
     if (status) {
-      status.textContent = `Live AH-productprijzen controleren voor ${recipeCount} externe recepten...`;
+      status.textContent = `Live AH-productprijzen controleren voor ${recipeCount} recepten...`;
     }
     let failedRecipes = 0;
     try {
@@ -504,7 +504,7 @@ class MyFoodApp {
         if (status) {
           status.textContent = completed < total
             ? `AH-prijzen gecontroleerd: ${completed}/${total}${failedRecipes ? ` · ${failedRecipes} met zoekfouten` : ''}`
-            : `AH-prijzen gecontroleerd voor ${total} externe recepten${failedRecipes ? ` · ${failedRecipes} met zoekfouten` : ''}`;
+            : `AH-prijzen gecontroleerd voor ${total} recepten${failedRecipes ? ` · ${failedRecipes} met zoekfouten` : ''}`;
         }
         this.render();
         if (recipe.id === this.activeRecipeId) this.refreshModalContent();

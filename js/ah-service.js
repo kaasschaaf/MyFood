@@ -5,6 +5,12 @@ const configuredAHApi = String(globalThis.MYFOOD_AH_API_BASE || '').trim().repla
 const AH_API = configuredAHApi ||
   (LOCAL_HOSTS.has(globalThis.location?.hostname) ? 'https://api.ah.nl' : '');
 const CACHE_TTL = 30 * 60 * 1000;
+// Zoek-/prijscache verloopt automatisch om middernacht (lokale tijd), zodat AH-bonusprijzen
+// na de dag-/weekwissel opnieuw worden opgehaald in plaats van de oude cache te tonen.
+function startOfTodayLocal() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+}
 const NUTRITION_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 const MIN_REQUEST_INTERVAL = 300;
 const PRODUCT_SEARCH_CACHE_PREFIX = 'ah-search-v5:';
@@ -36,7 +42,6 @@ function getAHSoort(category) {
  */
 export class AHService {
   constructor(cache = new BrowserCache()) {
-    this.bonusData = null;
     this.cache = cache;
     this.accessToken = null;
     this.tokenExpiresAt = 0;
@@ -128,13 +133,8 @@ export class AHService {
   }
 
   async init() {
-    try {
-      const response = await fetch('./data/ah-bonus.json');
-      if (!response.ok) throw new Error(`AH bonus-data laden mislukt (${response.status}).`);
-      this.bonusData = await response.json();
-    } catch (error) {
-      console.warn('AH bonus-data niet beschikbaar; eerder opgeslagen receptprijzen blijven bruikbaar.', error);
-    }
+    // Prijzen komen volledig live uit de AH-productzoekresultaten; er is geen
+    // statisch bonusbestand meer nodig. Bewaard als no-op zodat aanroepers ongewijzigd blijven.
   }
 
   async getAnonymousToken() {
@@ -188,7 +188,10 @@ export class AHService {
     const requestKey = `${normalizedQuery}:category:${category || 'all'}:page:${page}`;
     const cacheKey = `${PRODUCT_SEARCH_CACHE_PREFIX}${requestKey}`;
     const cached = await this.readCache(cacheKey);
-    if (!forceRefresh && cached && Date.now() - cached.updatedAt < CACHE_TTL &&
+    // Geldig als de cache nog binnen de TTL valt EN vandaag is opgehaald.
+    // Zo worden prijzen na middernacht automatisch opnieuw opgehaald (nieuwe AH-bonusdag).
+    const cacheIsFromToday = Boolean(cached) && cached.updatedAt >= startOfTodayLocal();
+    if (!forceRefresh && cached && cacheIsFromToday && Date.now() - cached.updatedAt < CACHE_TTL &&
         (!revalidate || this.revalidatedQueries.has(requestKey))) {
       return {
         ...cached.value,
@@ -512,7 +515,7 @@ export class AHService {
     recipe.ingredients.forEach(ingredient => {
       let actualPrice;
       let regularPrice;
-      if (recipe.sourceUrl) {
+      if (recipe.sourceUrl || recipe.livePriced) {
         const product = ingredient.selectedAHProduct;
         if (product) matchedIngredientCount++;
         const quantityCost = product && this.calculateQuantityCost(ingredient, product, scale);
@@ -528,12 +531,7 @@ export class AHService {
           allIngredientsPriced = false;
           return;
         }
-        const discount = this.bonusData?.discounts?.[ingredient.ahProductId];
-        const isBonus = discount?.isBonus ?? ingredient.isBonus;
-        regularPrice = Number(discount?.originalPrice) || regularPrice;
-        actualPrice = isBonus
-          ? Number(discount?.bonusPrice) || Number(ingredient.bonusPrice) || regularPrice
-          : regularPrice;
+        actualPrice = regularPrice;
         actualPrice *= scale;
         regularPrice *= scale;
         matchedIngredientCount++;
