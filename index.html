@@ -12,22 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-          }
-        }
-      }
-    }
-  </script>
-
-  <!-- Custom Styles -->
+  <link rel="stylesheet" href="./css/tailwind.css">
   <link rel="stylesheet" href="./css/style.css">
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col font-sans antialiased transition-colors duration-200">
@@ -47,6 +32,15 @@
             AH Prijzen • Eiwitrijk • Gemini AI
           </p>
         </div>
+        <span
+          id="build-time-badge"
+          class="inline-flex items-center gap-1 px-2 py-0.5 mt-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 whitespace-nowrap"
+          title="Datum waarop deze versie is gebouwd en gepubliceerd"
+          hidden
+        >
+          <span aria-hidden="true">🔨</span>
+          <span id="build-time-label">—</span>
+        </span>
       </div>
 
       <!-- Midden: Portie Schakelaar (Standaard 2 personen) -->
@@ -257,6 +251,7 @@
   </footer>
 
   <!-- Script Modules -->
+  <script src="./js/runtime-config.js"></script>
   <script type="module" src="./js/app.js"></script>
 </body>
 </html>

@@ -5,3 +5,11 @@ node_modules/
 !.vscode/
 !.vscode/tasks.json
 .idea/
+
+# Tool / editor scratch directories
+.continue/
+.playwright-mcp/
+
+# Cloudflare Wrangler local build cache
+worker/.wrangler/
+

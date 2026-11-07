@@ -9,13 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: { extend: { fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] } } }
-    };
-  </script>
+  <link rel="stylesheet" href="./css/tailwind.css">
   <link rel="stylesheet" href="./css/style.css">
   <style>
     #workspace-track[data-active-panel="detail"] { transform: translateX(-50%); }
@@ -127,6 +121,7 @@
   <footer class="border-t border-slate-200 dark:border-slate-800 py-5 text-center text-xs text-slate-500 dark:text-slate-400">
     AH-aanbiedingen kunnen wijzigen en kunnen afhankelijk zijn van winkel, account of actievoorwaarden.
   </footer>
+  <script src="./js/runtime-config.js"></script>
   <script type="module" src="./js/product-comparison.js"></script>
 </body>
 </html>

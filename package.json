@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "npx serve .",
+    "build:css": "tailwindcss -i ./css/tailwind.input.css -o ./css/tailwind.css --minify",
+    "test": "node --test",
     "update-bonus": "node scripts/update_ah_data.js"
   },
   "keywords": [
@@ -16,5 +18,11 @@
     "github-pages"
   ],
   "author": "Jesse Deelstra",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@tailwindcss/cli": "4.3.0",
+    "playwright": "^1.65.0",
+    "tailwindcss": "4.3.0",
+    "wrangler": "^4.149.0"
+  }
 }

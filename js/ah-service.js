@@ -1,6 +1,9 @@
 import { BrowserCache } from './browser-cache.js';
 
-const AH_API = 'https://api.ah.nl';
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1']);
+const configuredAHApi = String(globalThis.MYFOOD_AH_API_BASE || '').trim().replace(/\/+$/, '');
+const AH_API = configuredAHApi ||
+  (LOCAL_HOSTS.has(globalThis.location?.hostname) ? 'https://api.ah.nl' : '');
 const CACHE_TTL = 30 * 60 * 1000;
 const NUTRITION_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 const MIN_REQUEST_INTERVAL = 300;
@@ -136,6 +139,9 @@ export class AHService {
 
   async getAnonymousToken() {
     if (this.accessToken && Date.now() < this.tokenExpiresAt) return this.accessToken;
+    if (!AH_API) {
+      throw new Error('Live AH-productgegevens vereisen de AH-proxy. Stel de GitHub Actions-variabele AH_API_PROXY_URL in en deploy de Cloudflare Worker zoals beschreven in README.md.');
+    }
     const response = await fetch(`${AH_API}/mobile-auth/v1/auth/token/anonymous`, {
       method: 'POST',
       headers: {

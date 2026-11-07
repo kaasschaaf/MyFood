@@ -27,6 +27,7 @@ class MyFoodApp {
     this.initCuisineFilters();
     this.bindEvents();
     this.initTheme();
+    this.initBuildTimeBadge();
     this.render();
     this.refreshExternalPrices();
   }
@@ -423,6 +424,30 @@ class MyFoodApp {
         localStorage.setItem('myfood_theme', currentlyDark ? 'dark' : 'light');
       });
     }
+  }
+
+  initBuildTimeBadge() {
+    const badge = document.getElementById('build-time-badge');
+    const label = document.getElementById('build-time-label');
+    if (!badge || !label) return;
+
+    const buildTime = String(globalThis.MYFOOD_BUILD_TIME || '').trim();
+    if (!buildTime) return;
+
+    const date = new Date(buildTime);
+    if (Number.isNaN(date.getTime())) return;
+
+    const formatted = new Intl.DateTimeFormat('nl-NL', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+
+    label.textContent = formatted;
+    badge.title = `Deze versie is gebouwd en gepubliceerd op ${formatted}`;
+    badge.hidden = false;
   }
 
   render() {
