@@ -34,6 +34,7 @@ export class UIComponents {
       leaf: '<path d="M5 19c8 0 14-4 14-14-8 0-14 4-14 14Z"/><path d="M5 19c2-4 5-7 9-9"/>',
       arrowRight: '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>',
       arrowUpRight: '<path d="M7 17 17 7"/><path d="M8 7h9v9"/>',
+      chevronRight: '<path d="m9 6 6 6-6 6"/>',
       basket: '<path d="M5 9h14l-1 11H6L5 9Z"/><path d="m9 9 3-5 3 5"/><path d="M9.5 13v3M14.5 13v3"/>',
       list: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/>',
       sparkles: '<path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Z"/><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14Z"/>',
@@ -97,7 +98,7 @@ export class UIComponents {
           <a href="${this.escapeHtml(url)}"
             target="_blank" rel="noopener noreferrer"
             title="${this.escapeHtml(option.title)} bekijken bij Albert Heijn"
-            class="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg border text-[11px] transition ${selectedRing}">
+            class="flex items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] text-slate-700 transition dark:text-slate-200 ${selectedRing}">
             <span class="min-w-0 flex flex-col">
               <span class="truncate font-semibold text-slate-700 dark:text-slate-200">
                 ${this.escapeHtml(option.title)} ${badge} ${onlineBadge} ${cacheBadge}
@@ -112,7 +113,7 @@ export class UIComponents {
         `;
       }).join('');
 
-      return `<div class="mt-2 space-y-1.5">${rows}</div>`;
+      return `<div class="space-y-1.5">${rows}</div>`;
     }
 
     if (isExternal) {
@@ -120,7 +121,7 @@ export class UIComponents {
         ? `<span class="block mt-1 text-[10px] text-rose-600 dark:text-rose-400">AH zoeken mislukt: ${this.escapeHtml(ingredient.productLookupError)}</span>`
         : '';
       return `
-        <div class="mt-2 flex items-center justify-between gap-2">
+        <div class="flex items-center justify-between gap-2">
           <span class="text-[11px] text-slate-400">AH-zoekresultaten niet beschikbaar</span>
           <a href="${this.escapeHtml(this.buildAHSearchUrl(ingredient))}"
             target="_blank" rel="noopener noreferrer"
@@ -134,14 +135,14 @@ export class UIComponents {
 
     // Eigen (ingebouwd) recept met vaste AH-productnaam.
     return `
-      <div class="mt-2 flex items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+      <div class="flex items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400">
         <span class="truncate">${this.escapeHtml(ingredient.ahName || 'AH artikel')}</span>
+        <a href="${this.escapeHtml(this.buildAHSearchUrl(ingredient))}"
+          target="_blank" rel="noopener noreferrer"
+          class="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-semibold text-emerald-700 transition hover:border-emerald-300 dark:border-white/10 dark:bg-slate-900 dark:text-emerald-400 dark:hover:border-emerald-700">
+          Shop bij AH ${this.icon('arrowUpRight', 'h-3 w-3')}
+        </a>
       </div>
-      <a href="${this.escapeHtml(this.buildAHSearchUrl(ingredient))}"
-        target="_blank" rel="noopener noreferrer"
-        class="mt-1.5 inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-emerald-700 transition hover:border-emerald-300 dark:border-white/10 dark:bg-slate-900 dark:text-emerald-400 dark:hover:border-emerald-700">
-        Shop bij AH ${this.icon('arrowUpRight', 'h-3 w-3')}
-      </a>
     `;
   }
 
@@ -465,7 +466,7 @@ export class UIComponents {
           <div class="space-y-3 md:col-span-5">
             <h3 class="flex items-center justify-between text-sm font-bold text-slate-800 dark:text-slate-100">
               <span class="inline-flex items-center gap-2">${this.icon('basket', 'h-4 w-4 text-emerald-700 dark:text-emerald-400')} Ingrediënten</span>
-              <span class="text-[11px] font-normal text-slate-400">Klik een product om te shoppen</span>
+              <span class="text-[11px] font-normal text-slate-400">Klik voor AH-opties</span>
             </h3>
             <ul class="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm dark:divide-white/10 dark:border-white/10 dark:bg-slate-800/60">
               ${(recipe.ingredients || []).map(ing => {
@@ -482,25 +483,46 @@ export class UIComponents {
                 const bonusDesc = live
                   ? product?.bonusDescription || 'Bonus'
                   : ing.bonusText || 'Bonus';
+                const optionCount = (ing.ahProductOptions || []).length;
 
                 return `
-                  <li class="p-3 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition">
-                    <div class="flex items-baseline justify-between gap-1">
-                      <span class="font-semibold text-sm text-slate-800 dark:text-slate-200">
-                        ${scaledAmount === null ? '' : `${this.escapeHtml(scaledAmount)} `}${this.escapeHtml(ing.unit)} ${this.escapeHtml(ing.name)}
-                        ${isBonus ? `<span class="ml-1 inline-flex items-center text-[10px] font-extrabold text-amber-600 dark:text-amber-400">★ ${this.escapeHtml(bonusDesc)}</span>` : ''}
-                      </span>
-                      ${live && quantityCost ? `
-                        <span class="text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">
-                          ${this.ahService.formatEuro(quantityCost.current)} gebruikt
+                  <li>
+                    <details class="ingredient-disclosure">
+                      <summary class="flex items-center gap-3 px-3 py-2.5 transition hover:bg-slate-50 dark:hover:bg-white/5">
+                        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-400 dark:bg-white/10 dark:text-slate-500">
+                          ${this.icon('basket', 'h-4 w-4')}
                         </span>
-                      ` : !live && Number.isFinite(price) && price > 0 ? `
-                        <span class="text-xs font-bold text-slate-700 dark:text-slate-300 shrink-0">
-                          ${this.ahService.formatEuro(price * scale)}
+                        <span class="min-w-0 flex-1">
+                          <span class="block truncate text-sm font-semibold text-slate-800 dark:text-slate-100">
+                            ${scaledAmount === null ? '' : `<span class="tabular-nums">${this.escapeHtml(scaledAmount)}</span> `}${this.escapeHtml(ing.unit)} ${this.escapeHtml(ing.name)}
+                          </span>
+                          <span class="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-400">
+                            ${isBonus
+                              ? `<span class="rounded bg-amber-100 px-1.5 py-0.5 font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">${this.escapeHtml(bonusDesc)}</span>`
+                              : ''}
+                            <span>${optionCount > 0
+                              ? `${optionCount} AH-${optionCount === 1 ? 'optie' : 'opties'}`
+                              : 'Bekijk AH-product'}</span>
+                          </span>
                         </span>
-                      ` : ''}
-                    </div>
-                    ${this.renderIngredientProducts(ing, product)}
+                        <span class="flex shrink-0 items-center gap-1.5">
+                          ${live && quantityCost ? `
+                            <span class="text-xs font-bold tabular-nums text-slate-700 dark:text-slate-300">
+                              ${this.ahService.formatEuro(quantityCost.current)}
+                            </span>
+                          ` : !live && Number.isFinite(price) && price > 0 ? `
+                            <span class="text-xs font-bold tabular-nums text-slate-700 dark:text-slate-300">
+                              ${this.ahService.formatEuro(price * scale)}
+                            </span>
+                          ` : ''}
+                          ${this.icon('chevronRight', 'ingredient-chevron h-4 w-4 text-slate-400')}
+                        </span>
+                      </summary>
+                      <div class="border-t border-slate-100 bg-slate-50/40 px-3 py-2.5 dark:border-white/10 dark:bg-black/10">
+                        <p class="mb-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Kies een product en open het bij AH</p>
+                        ${this.renderIngredientProducts(ing, product)}
+                      </div>
+                    </details>
                   </li>
                 `;
               }).join('')}

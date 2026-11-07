@@ -41,20 +41,61 @@ body {
   outline-offset: 2px;
 }
 
-/* Native HTML5 Dialog Styling */
-dialog {
-  border: none;
-  background: transparent;
-  padding: 0;
-  max-width: 100vw;
-  max-height: 100vh;
-  margin: auto;
+/* Native HTML5 Dialog Styling.
+   Wrapped in @layer base so Tailwind utilities (bg-*, max-w-*, p-*)
+   can style each dialog; unlayered rules would win over the utilities layer. */
+@layer base {
+  dialog {
+    border: none;
+    background: Canvas;
+    color: inherit;
+    padding: 0;
+    max-width: 100vw;
+    max-height: 100vh;
+    margin: auto;
+  }
+}
+
+#recipe-modal,
+#settings-modal {
+  background-color: #fff;
+}
+
+html.dark #recipe-modal,
+html.dark #settings-modal {
+  background-color: #0f172a;
 }
 
 dialog::backdrop {
   background: rgb(2 6 23 / 0.6);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+}
+
+/* Ingredient disclosure rows */
+.ingredient-disclosure > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.ingredient-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.ingredient-disclosure > summary .ingredient-chevron {
+  transition: transform 0.2s ease;
+}
+
+.ingredient-disclosure[open] > summary {
+  background-color: rgb(248 250 252);
+}
+
+html.dark .ingredient-disclosure[open] > summary {
+  background-color: rgb(255 255 255 / 0.04);
+}
+
+.ingredient-disclosure[open] > summary .ingredient-chevron {
+  transform: rotate(90deg);
 }
 
 dialog[open] {
