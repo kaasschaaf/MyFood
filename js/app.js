@@ -222,7 +222,7 @@ class MyFoodApp {
     if (recipeModal) {
       recipeModal.addEventListener('click', (e) => {
         // Klik op de achtergrond van het dialoogvenster
-        if (e.target === recipeModal || e.target.closest('#close-modal-btn')) {
+        if (e.target === recipeModal || e.target.closest('#close-modal-btn, [data-close-modal]')) {
           this.closeRecipeModal();
         }
 
@@ -240,7 +240,7 @@ class MyFoodApp {
           }
         }
 
-        // Ingrediënt-opties (slide-over binnen de modal)
+        // Ingrediënt-opties: het hele venster schuift naar een nieuwe pagina
         const ingredientButton = e.target.closest('[data-ingredient-open]');
         if (ingredientButton) {
           this.showIngredientOptions(Number(ingredientButton.dataset.ingredientOpen));
@@ -353,7 +353,7 @@ class MyFoodApp {
     const modal = document.getElementById('recipe-modal');
     if (modal) {
       modal.innerHTML = `
-        <div class="flex flex-col items-center justify-center gap-3 px-8 py-16 text-center">
+        <div class="flex h-full flex-col items-center justify-center gap-3 px-8 py-16 text-center">
           <span class="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-emerald-600 dark:border-neutral-700 dark:border-t-emerald-400" aria-hidden="true"></span>
           <p class="text-sm text-slate-600 dark:text-neutral-300">Receptdetails en AH-producten laden…</p>
         </div>
@@ -369,7 +369,7 @@ class MyFoodApp {
     } catch (error) {
       console.error('Receptdetails laden mislukt.', error);
       if (modal && this.activeRecipeId === recipeId) {
-        modal.innerHTML = `<p class="p-8 text-center text-rose-600">Receptdetails konden niet worden geladen: ${this.ui.escapeHtml(error.message)}</p>`;
+        modal.innerHTML = `<div class="flex h-full items-center justify-center p-8 text-center"><p class="text-sm text-rose-600 dark:text-rose-400">Receptdetails konden niet worden geladen: ${this.ui.escapeHtml(error.message)}</p></div>`;
       }
     }
   }
@@ -394,45 +394,45 @@ class MyFoodApp {
   }
 
   /**
-   * Schuift de ingrediëntenkolom naar de AH-opties van één ingrediënt.
+   * Laat het hele venster naar de AH-opties van één ingrediënt schuiven.
    * @param {number} index
    */
   showIngredientOptions(index) {
     const recipe = this.recipesService.getRecipeById(this.activeRecipeId);
-    const viewport = document.getElementById('ingredient-viewport');
-    const detailPanel = document.getElementById('ingredient-detail-panel');
-    const listPanel = document.getElementById('ingredient-list-panel');
-    if (!recipe || !viewport || !detailPanel || !listPanel || !Number.isInteger(index)) return;
+    const viewport = document.getElementById('recipe-viewport');
+    const ingredientPage = viewport?.querySelector('[data-panel="ingredient"]');
+    const recipePage = viewport?.querySelector('[data-panel="recipe"]');
+    if (!recipe || !viewport || !ingredientPage || !recipePage || !Number.isInteger(index)) return;
     if (!(recipe.ingredients || [])[index]) return;
 
-    detailPanel.innerHTML = this.ui.renderIngredientDetail(recipe, index, this.modalServings);
+    ingredientPage.innerHTML = this.ui.renderIngredientPage(recipe, index, this.modalServings);
     this.activeIngredientIndex = index;
-    viewport.dataset.activePanel = 'detail';
-    detailPanel.removeAttribute('aria-hidden');
-    detailPanel.inert = false;
-    listPanel.setAttribute('aria-hidden', 'true');
-    listPanel.inert = true;
-    detailPanel.querySelector('[data-ingredient-back]')?.focus({ preventScroll: true });
-    viewport.scrollIntoView({ block: 'nearest' });
+    viewport.dataset.activePanel = 'ingredient';
+    ingredientPage.removeAttribute('aria-hidden');
+    ingredientPage.inert = false;
+    recipePage.setAttribute('aria-hidden', 'true');
+    recipePage.inert = true;
+    ingredientPage.scrollTop = 0;
+    ingredientPage.querySelector('[data-ingredient-back]')?.focus({ preventScroll: true });
   }
 
   /**
-   * Schuift terug naar de ingrediëntenlijst.
+   * Schuift het venster terug naar het volledige recept.
    */
   hideIngredientOptions() {
-    const viewport = document.getElementById('ingredient-viewport');
-    const detailPanel = document.getElementById('ingredient-detail-panel');
-    const listPanel = document.getElementById('ingredient-list-panel');
+    const viewport = document.getElementById('recipe-viewport');
+    const ingredientPage = viewport?.querySelector('[data-panel="ingredient"]');
+    const recipePage = viewport?.querySelector('[data-panel="recipe"]');
     const previousIndex = this.activeIngredientIndex;
-    if (!viewport || !detailPanel || !listPanel) return;
+    if (!viewport || !ingredientPage || !recipePage) return;
 
-    viewport.dataset.activePanel = 'list';
-    listPanel.removeAttribute('aria-hidden');
-    listPanel.inert = false;
-    detailPanel.setAttribute('aria-hidden', 'true');
-    detailPanel.inert = true;
+    viewport.dataset.activePanel = 'recipe';
+    recipePage.removeAttribute('aria-hidden');
+    recipePage.inert = false;
+    ingredientPage.setAttribute('aria-hidden', 'true');
+    ingredientPage.inert = true;
     this.activeIngredientIndex = null;
-    listPanel.querySelector(`[data-ingredient-open="${previousIndex}"]`)?.focus({ preventScroll: true });
+    recipePage.querySelector(`[data-ingredient-open="${previousIndex}"]`)?.focus({ preventScroll: true });
   }
 
   async askGemini(question) {

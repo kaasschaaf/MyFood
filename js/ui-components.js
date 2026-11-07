@@ -317,13 +317,13 @@ export class UIComponents {
   }
 
   /**
-   * Rendert de slide-over weergave met AH-productopties voor één ingrediënt.
+   * Rendert de volledige pagina met AH-productopties voor één ingrediënt.
    * @param {Object} recipe
    * @param {number} index
    * @param {number} servings
    * @returns {string} HTML string
    */
-  renderIngredientDetail(recipe, index, servings = 2) {
+  renderIngredientPage(recipe, index, servings = 2) {
     const ingredient = (recipe.ingredients || [])[index];
     if (!ingredient) return '';
 
@@ -348,21 +348,33 @@ export class UIComponents {
     ].filter(part => String(part).length).join(' ');
 
     return `
-      <div class="space-y-3">
-        <button
-          type="button"
-          data-ingredient-back
-          class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/90 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-emerald-200 hover:text-emerald-800 dark:border-white/10 dark:bg-white/5 dark:text-neutral-300 dark:hover:border-emerald-500/30 dark:hover:text-emerald-300"
-        >
-          ${this.icon('chevronLeft', 'h-3.5 w-3.5')} Ingrediënten
-        </button>
+      <div class="mx-auto max-w-4xl space-y-6 p-5 sm:p-7">
+        <!-- Terug & Sluitknop -->
+        <div class="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            data-ingredient-back
+            class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/90 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-emerald-200 hover:text-emerald-800 dark:border-white/10 dark:bg-white/5 dark:text-neutral-300 dark:hover:border-emerald-500/30 dark:hover:text-emerald-300"
+          >
+            ${this.icon('chevronLeft', 'h-3.5 w-3.5')} Terug naar recept
+          </button>
+          <button
+            type="button"
+            data-close-modal
+            class="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-neutral-200"
+            aria-label="Sluiten"
+          >
+            ${this.icon('close', 'h-5 w-5')}
+          </button>
+        </div>
 
+        <!-- Kop -->
         <div>
-          <p class="eyebrow">Nodig voor dit recept</p>
-          <h4 class="font-display mt-1 text-lg font-semibold leading-snug text-slate-900 dark:text-white">
+          <p class="eyebrow">Ingrediënt uit dit recept</p>
+          <h2 class="font-display mt-1.5 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
             ${this.escapeHtml(amountLabel)}
-          </h4>
-          <p class="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500 dark:text-neutral-400">
+          </h2>
+          <p class="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-neutral-400">
             ${isBonus
               ? `<span class="rounded bg-amber-100 px-1.5 py-0.5 font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">${this.escapeHtml(bonusDesc)}</span>`
               : ''}
@@ -373,27 +385,48 @@ export class UIComponents {
           </p>
         </div>
 
-        <div class="max-h-80 overflow-y-auto overscroll-contain rounded-xl border border-slate-200/80 bg-white p-2 shadow-sm dark:border-white/10 dark:bg-neutral-900/40">
-          <p class="sticky top-0 -mx-2 -mt-2 mb-1 bg-white/95 px-3 pb-1.5 pt-2 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 backdrop-blur dark:bg-neutral-900/95">Kies een product en open het bij AH</p>
+        <!-- Opties -->
+        <section class="rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-neutral-900/40 sm:p-4">
+          <p class="px-1 pb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Kies een product en open het bij AH</p>
           ${this.renderIngredientProducts(ingredient, product)}
+        </section>
+      </div>
+    `;
+  }
+
+  /**
+   * Rendert het modale dialoogvenster als twee volledige pagina's die
+   * horizontaal in elkaar schuiven: het recept en de AH-opties van een ingrediënt.
+   * @param {Object} recipe
+   * @param {number} servings
+   * @param {{ ingredientIndex?: number|null }} uiState
+   * @returns {string} HTML string
+   */
+  renderRecipeModal(recipe, servings = 2, uiState = {}) {
+    const activeIngredientIndex = Number.isInteger(uiState.ingredientIndex) ? uiState.ingredientIndex : null;
+    const showsIngredientOptions = activeIngredientIndex !== null;
+    return `
+      <div id="recipe-viewport" class="recipe-viewport" data-active-panel="${showsIngredientOptions ? 'ingredient' : 'recipe'}">
+        <div data-panel="recipe" class="recipe-panel"${showsIngredientOptions ? ' aria-hidden="true" inert' : ''}>
+          ${this.renderRecipePage(recipe, servings)}
+        </div>
+        <div data-panel="ingredient" class="recipe-panel"${showsIngredientOptions ? '' : ' aria-hidden="true" inert'}>
+          ${showsIngredientOptions ? this.renderIngredientPage(recipe, activeIngredientIndex, servings) : ''}
         </div>
       </div>
     `;
   }
 
   /**
-   * Rendert de detailweergave van een recept in het modale dialoogvenster
-   * @param {Object} recipe 
-   * @param {number} servings 
-   * @param {{ ingredientIndex?: number|null }} uiState
+   * Rendert de volledige receptpagina.
+   * @param {Object} recipe
+   * @param {number} servings
    * @returns {string} HTML string
    */
-  renderRecipeModal(recipe, servings = 2, uiState = {}) {
+  renderRecipePage(recipe, servings = 2) {
     const scale = servings / (recipe.baseServings || 2);
     const priceInfo = this.ahService.calculateRecipePrice(recipe, servings);
     const nutrition = recipe.nutrition;
-    const activeIngredientIndex = Number.isInteger(uiState.ingredientIndex) ? uiState.ingredientIndex : null;
-    const showsIngredientOptions = activeIngredientIndex !== null;
 
     return `
       <div class="mx-auto max-w-4xl space-y-6 p-5 sm:p-7">
@@ -537,71 +570,64 @@ export class UIComponents {
               <span class="inline-flex items-center gap-2">${this.icon('basket', 'h-4 w-4 text-emerald-700 dark:text-emerald-400')} Ingrediënten</span>
               <span class="text-[11px] font-normal text-slate-400">Klik voor AH-opties</span>
             </h3>
-            <div id="ingredient-viewport" class="ingredient-viewport" data-active-panel="${showsIngredientOptions ? 'detail' : 'list'}">
-              <div id="ingredient-list-panel" class="ingredient-panel" data-panel="list"${showsIngredientOptions ? ' aria-hidden="true" inert' : ''}>
-                <ul class="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm dark:divide-white/10 dark:border-white/10 dark:bg-neutral-800/60">
-                  ${(recipe.ingredients || []).map((ing, index) => {
-                    const scaledAmount = Number.isFinite(ing.amount)
-                      ? Math.round((ing.amount * scale) * 10) / 10
-                      : null;
-                    const product = ing.selectedAHProduct;
-                    const live = this.isLivePriced(recipe);
-                    const quantityCost = live && product
-                      ? this.ahService.calculateQuantityCost(ing, product, scale)
-                      : null;
-                    const isBonus = live ? Boolean(product?.isBonus) : Boolean(ing.isBonus);
-                    const price = live ? product?.price : ing.standardPrice;
-                    const bonusDesc = live
-                      ? product?.bonusDescription || 'Bonus'
-                      : ing.bonusText || 'Bonus';
-                    const optionCount = (ing.ahProductOptions || []).length;
+            <ul class="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm dark:divide-white/10 dark:border-white/10 dark:bg-neutral-800/60">
+              ${(recipe.ingredients || []).map((ing, index) => {
+                const scaledAmount = Number.isFinite(ing.amount)
+                  ? Math.round((ing.amount * scale) * 10) / 10
+                  : null;
+                const product = ing.selectedAHProduct;
+                const live = this.isLivePriced(recipe);
+                const quantityCost = live && product
+                  ? this.ahService.calculateQuantityCost(ing, product, scale)
+                  : null;
+                const isBonus = live ? Boolean(product?.isBonus) : Boolean(ing.isBonus);
+                const price = live ? product?.price : ing.standardPrice;
+                const bonusDesc = live
+                  ? product?.bonusDescription || 'Bonus'
+                  : ing.bonusText || 'Bonus';
+                const optionCount = (ing.ahProductOptions || []).length;
 
-                    return `
-                      <li>
-                        <button
-                          type="button"
-                          data-ingredient-open="${index}"
-                          aria-label="Bekijk AH-producten voor ${this.escapeHtml(ing.name || 'dit ingrediënt')}"
-                          class="flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-white/5 dark:focus-visible:bg-white/5"
-                        >
-                          <span class="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-400 dark:bg-white/10 dark:text-neutral-500">
-                            ${this.icon('basket', 'h-4 w-4')}
+                return `
+                  <li>
+                    <button
+                      type="button"
+                      data-ingredient-open="${index}"
+                      aria-label="Bekijk AH-producten voor ${this.escapeHtml(ing.name || 'dit ingrediënt')}"
+                      class="flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-white/5 dark:focus-visible:bg-white/5"
+                    >
+                      <span class="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-400 dark:bg-white/10 dark:text-neutral-500">
+                        ${this.icon('basket', 'h-4 w-4')}
+                      </span>
+                      <span class="min-w-0 flex-1">
+                        <span class="block truncate text-sm font-semibold text-slate-800 dark:text-neutral-100">
+                          ${scaledAmount === null ? '' : `<span class="tabular-nums">${this.escapeHtml(scaledAmount)}</span> `}${this.escapeHtml(ing.unit)} ${this.escapeHtml(ing.name)}
+                        </span>
+                        <span class="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-400">
+                          ${isBonus
+                            ? `<span class="rounded bg-amber-100 px-1.5 py-0.5 font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">${this.escapeHtml(bonusDesc)}</span>`
+                            : ''}
+                          <span>${optionCount > 0
+                            ? `${optionCount} AH-${optionCount === 1 ? 'optie' : 'opties'}`
+                            : 'Bekijk AH-product'}</span>
+                        </span>
+                      </span>
+                      <span class="flex shrink-0 items-center gap-1.5">
+                        ${live && quantityCost ? `
+                          <span class="text-xs font-bold tabular-nums text-slate-700 dark:text-neutral-300">
+                            ${this.ahService.formatEuro(quantityCost.current)}
                           </span>
-                          <span class="min-w-0 flex-1">
-                            <span class="block truncate text-sm font-semibold text-slate-800 dark:text-neutral-100">
-                              ${scaledAmount === null ? '' : `<span class="tabular-nums">${this.escapeHtml(scaledAmount)}</span> `}${this.escapeHtml(ing.unit)} ${this.escapeHtml(ing.name)}
-                            </span>
-                            <span class="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-400">
-                              ${isBonus
-                                ? `<span class="rounded bg-amber-100 px-1.5 py-0.5 font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">${this.escapeHtml(bonusDesc)}</span>`
-                                : ''}
-                              <span>${optionCount > 0
-                                ? `${optionCount} AH-${optionCount === 1 ? 'optie' : 'opties'}`
-                                : 'Bekijk AH-product'}</span>
-                            </span>
+                        ` : !live && Number.isFinite(price) && price > 0 ? `
+                          <span class="text-xs font-bold tabular-nums text-slate-700 dark:text-neutral-300">
+                            ${this.ahService.formatEuro(price * scale)}
                           </span>
-                          <span class="flex shrink-0 items-center gap-1.5">
-                            ${live && quantityCost ? `
-                              <span class="text-xs font-bold tabular-nums text-slate-700 dark:text-neutral-300">
-                                ${this.ahService.formatEuro(quantityCost.current)}
-                              </span>
-                            ` : !live && Number.isFinite(price) && price > 0 ? `
-                              <span class="text-xs font-bold tabular-nums text-slate-700 dark:text-neutral-300">
-                                ${this.ahService.formatEuro(price * scale)}
-                              </span>
-                            ` : ''}
-                            ${this.icon('chevronRight', 'h-4 w-4 text-slate-400')}
-                          </span>
-                        </button>
-                      </li>
-                    `;
-                  }).join('')}
-                </ul>
-              </div>
-              <div id="ingredient-detail-panel" class="ingredient-panel" data-panel="detail"${showsIngredientOptions ? '' : ' aria-hidden="true" inert'}>
-                ${showsIngredientOptions ? this.renderIngredientDetail(recipe, activeIngredientIndex, servings) : ''}
-              </div>
-            </div>
+                        ` : ''}
+                        ${this.icon('chevronRight', 'h-4 w-4 text-slate-400')}
+                      </span>
+                    </button>
+                  </li>
+                `;
+              }).join('')}
+            </ul>
           </div>
 
           <!-- Bereidingswijze (7 kolommen op desktop) -->

@@ -72,47 +72,44 @@ dialog::backdrop {
   -webkit-backdrop-filter: blur(8px);
 }
 
-/* Ingredient slide-over: the list and the product options share one viewport.
-   Only the active panel is in normal flow, so the layout never stretches
-   to the taller of the two. */
-.ingredient-viewport {
+/* Recipe dialog pages: the full recipe and the ingredient options are two
+   complete pages that slide over each other inside the dialog. */
+.recipe-viewport {
   position: relative;
+  height: 100%;
   overflow: hidden;
 }
 
-.ingredient-panel {
+.recipe-panel {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   transition:
-    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 0.2s ease;
+    transform 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.24s ease;
 }
 
-.ingredient-viewport[data-active-panel='list'] > [data-panel='list'],
-.ingredient-viewport[data-active-panel='detail'] > [data-panel='detail'] {
-  position: relative;
-  transform: none;
+.recipe-viewport[data-active-panel='recipe'] > [data-panel='recipe'],
+.recipe-viewport[data-active-panel='ingredient'] > [data-panel='ingredient'] {
+  transform: translateX(0);
   opacity: 1;
 }
 
-.ingredient-viewport[data-active-panel='list'] > [data-panel='detail'] {
-  position: absolute;
-  inset: 0;
-  transform: translateX(1.75rem);
+.recipe-viewport[data-active-panel='recipe'] > [data-panel='ingredient'] {
+  transform: translateX(100%);
   opacity: 0;
   pointer-events: none;
-  overflow: hidden;
 }
 
-.ingredient-viewport[data-active-panel='detail'] > [data-panel='list'] {
-  position: absolute;
-  inset: 0;
-  transform: translateX(-1.75rem);
+.recipe-viewport[data-active-panel='ingredient'] > [data-panel='recipe'] {
+  transform: translateX(-100%);
   opacity: 0;
   pointer-events: none;
-  overflow: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ingredient-panel {
+  .recipe-panel {
     transition: none;
   }
 }
