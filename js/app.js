@@ -37,14 +37,14 @@ class MyFoodApp {
 
     const cuisines = this.recipesService.getAvailableCuisines();
     let pillsHtml = `
-      <button type="button" class="cuisine-pill active px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 text-white shadow-sm transition" data-cuisine="all">
+      <button type="button" class="cuisine-pill is-active" data-cuisine="all" aria-pressed="true">
         Alle stijlen
       </button>
     `;
 
     cuisines.forEach(c => {
       pillsHtml += `
-        <button type="button" class="cuisine-pill px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 transition" data-cuisine="${this.ui.escapeHtml(c)}">
+        <button type="button" class="cuisine-pill" data-cuisine="${this.ui.escapeHtml(c)}" aria-pressed="false">
           ${this.ui.escapeHtml(c)}
         </button>
       `;
@@ -105,12 +105,12 @@ class MyFoodApp {
         if (!btn) return;
 
         cuisineContainer.querySelectorAll('.cuisine-pill').forEach(b => {
-          b.classList.remove('active', 'bg-emerald-600', 'text-white');
-          b.classList.add('bg-white', 'dark:bg-slate-800', 'text-slate-700', 'dark:text-slate-300');
+          b.classList.remove('is-active');
+          b.setAttribute('aria-pressed', 'false');
         });
 
-        btn.classList.add('active', 'bg-emerald-600', 'text-white');
-        btn.classList.remove('bg-white', 'dark:bg-slate-800', 'text-slate-700', 'dark:text-slate-300');
+        btn.classList.add('is-active');
+        btn.setAttribute('aria-pressed', 'true');
 
         this.recipesService.setFilters({ cuisine: btn.dataset.cuisine });
         this.render();
@@ -121,14 +121,8 @@ class MyFoodApp {
     const bonusToggle = document.getElementById('filter-bonus');
     if (bonusToggle) {
       bonusToggle.addEventListener('click', () => {
-        const isActive = bonusToggle.classList.toggle('active');
-        if (isActive) {
-          bonusToggle.classList.add('bg-amber-500', 'text-white', 'border-amber-500');
-          bonusToggle.classList.remove('bg-white', 'dark:bg-slate-800', 'text-slate-700', 'dark:text-slate-300');
-        } else {
-          bonusToggle.classList.remove('bg-amber-500', 'text-white', 'border-amber-500');
-          bonusToggle.classList.add('bg-white', 'dark:bg-slate-800', 'text-slate-700', 'dark:text-slate-300');
-        }
+        const isActive = bonusToggle.classList.toggle('is-active');
+        bonusToggle.setAttribute('aria-pressed', String(isActive));
         this.recipesService.setFilters({ bonusOnly: isActive });
         this.render();
       });
@@ -137,14 +131,8 @@ class MyFoodApp {
     const proteinToggle = document.getElementById('filter-protein');
     if (proteinToggle) {
       proteinToggle.addEventListener('click', () => {
-        const isActive = proteinToggle.classList.toggle('active');
-        if (isActive) {
-          proteinToggle.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
-          proteinToggle.classList.remove('bg-white', 'dark:bg-slate-800', 'text-slate-700', 'dark:text-slate-300');
-        } else {
-          proteinToggle.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
-          proteinToggle.classList.add('bg-white', 'dark:bg-slate-800', 'text-slate-700', 'dark:text-slate-300');
-        }
+        const isActive = proteinToggle.classList.toggle('is-active');
+        proteinToggle.setAttribute('aria-pressed', String(isActive));
         this.recipesService.setFilters({ highProteinOnly: isActive });
         this.render();
       });
@@ -153,14 +141,8 @@ class MyFoodApp {
     const quickTimeToggle = document.getElementById('filter-quick');
     if (quickTimeToggle) {
       quickTimeToggle.addEventListener('click', () => {
-        const isActive = quickTimeToggle.classList.toggle('active');
-        if (isActive) {
-          quickTimeToggle.classList.add('bg-slate-900', 'text-white', 'dark:bg-emerald-600');
-          quickTimeToggle.classList.remove('bg-white', 'dark:bg-slate-800', 'text-slate-700', 'dark:text-slate-300');
-        } else {
-          quickTimeToggle.classList.remove('bg-slate-900', 'text-white', 'dark:bg-emerald-600');
-          quickTimeToggle.classList.add('bg-white', 'dark:bg-slate-800', 'text-slate-700', 'dark:text-slate-300');
-        }
+        const isActive = quickTimeToggle.classList.toggle('is-active');
+        quickTimeToggle.setAttribute('aria-pressed', String(isActive));
         this.recipesService.setFilters({ maxTime: isActive ? 25 : 0 });
         this.render();
       });
@@ -346,7 +328,12 @@ class MyFoodApp {
     this.modalServings = this.recipesService.getServings();
     const modal = document.getElementById('recipe-modal');
     if (modal) {
-      modal.innerHTML = '<p class="p-8 text-center text-slate-600 dark:text-slate-300">Receptdetails en AH-producten laden...</p>';
+      modal.innerHTML = `
+        <div class="flex flex-col items-center justify-center gap-3 px-8 py-16 text-center">
+          <span class="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-emerald-600 dark:border-slate-700 dark:border-t-emerald-400" aria-hidden="true"></span>
+          <p class="text-sm text-slate-600 dark:text-slate-300">Receptdetails en AH-producten laden…</p>
+        </div>
+      `;
       modal.showModal();
     }
     try {
@@ -390,7 +377,12 @@ class MyFoodApp {
     if (!responseArea) return;
 
     responseArea.classList.remove('hidden');
-    responseArea.innerHTML = `<span class="text-indigo-600 dark:text-indigo-400 font-medium">🤔 Chef Gemini denkt na over: "${question}"...</span>`;
+    responseArea.innerHTML = `
+      <span class="inline-flex items-center gap-2 font-medium text-indigo-700 dark:text-indigo-300">
+        <span class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600 dark:border-indigo-900 dark:border-t-indigo-400" aria-hidden="true"></span>
+        Chef Gemini denkt na over: “${this.ui.escapeHtml(question)}”…
+      </span>
+    `;
     if (spinner) spinner.classList.remove('hidden');
     if (submitBtn) submitBtn.disabled = true;
 
@@ -405,7 +397,7 @@ class MyFoodApp {
     } catch (err) {
       responseArea.innerHTML = `
         <div class="text-rose-600 dark:text-rose-400 text-xs font-semibold">
-          ⚠️ ${err.message}
+          ${this.ui.escapeHtml(err.message)}
         </div>
       `;
     } finally {
@@ -449,9 +441,18 @@ class MyFoodApp {
     document.documentElement.classList.toggle('dark', isDark);
 
     if (themeBtn) {
+      const syncThemeLabel = () => {
+        const label = document.documentElement.classList.contains('dark')
+          ? 'Schakel naar licht thema'
+          : 'Schakel naar donker thema';
+        themeBtn.setAttribute('aria-label', label);
+        themeBtn.setAttribute('title', label);
+      };
+      syncThemeLabel();
       themeBtn.addEventListener('click', () => {
         const currentlyDark = document.documentElement.classList.toggle('dark');
         this.storeTheme(currentlyDark ? 'dark' : 'light');
+        syncThemeLabel();
       });
     }
   }
@@ -495,10 +496,15 @@ class MyFoodApp {
 
     if (filtered.length === 0) {
       grid.innerHTML = `
-        <div class="col-span-full py-16 text-center">
-          <span class="text-4xl block mb-2">🔍</span>
-          <h3 class="text-lg font-bold text-slate-700 dark:text-slate-200">Geen recepten gevonden</h3>
-          <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Probeer een ander trefwoord of wis je filters.</p>
+        <div class="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white/60 px-6 py-16 text-center dark:border-white/15 dark:bg-white/5">
+          <span class="grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-400 dark:bg-white/10 dark:text-slate-500">
+            <svg aria-hidden="true" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="7"/>
+              <path d="m20 20-3.5-3.5"/>
+            </svg>
+          </span>
+          <h3 class="font-display mt-4 text-lg font-semibold text-slate-800 dark:text-slate-100">Geen recepten gevonden</h3>
+          <p class="mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">Probeer een ander trefwoord of wis je actieve filters.</p>
         </div>
       `;
       return;
@@ -507,10 +513,11 @@ class MyFoodApp {
     grid.innerHTML = visibleRecipes.map(r => this.ui.renderRecipeCard(r, servings)).join('');
     if (filtered.length > visibleRecipes.length) {
       grid.insertAdjacentHTML('beforeend', `
-        <div class="col-span-full text-center py-4">
+        <div class="col-span-full py-4 text-center">
           <button id="load-more-recipes" type="button"
-            class="px-5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-semibold hover:border-emerald-500">
-            Laad meer recepten (${filtered.length - visibleRecipes.length} resterend)
+            class="inline-flex items-center gap-2 rounded-xl border border-slate-200/90 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-800 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:border-emerald-500/30 dark:hover:text-emerald-300">
+            Laad meer recepten
+            <span class="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 dark:bg-white/10 dark:text-slate-400">${filtered.length - visibleRecipes.length}</span>
           </button>
         </div>
       `);
