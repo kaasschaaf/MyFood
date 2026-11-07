@@ -3,6 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+    // Apply the saved theme before the first paint. Modules load asynchronously,
+    // so doing this in app.js meant every page change painted the light canvas
+    // first and then faded to dark.
+    (function () {
+      try {
+        var stored = localStorage.getItem('myfood_theme');
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var dark = stored ? stored === 'dark' : prefersDark;
+        var root = document.documentElement;
+        root.classList.toggle('dark', dark);
+        root.classList.toggle('light', !dark);
+        var lang = localStorage.getItem('myfood_language');
+        if (lang === 'en' || lang === 'nl') root.lang = lang;
+      } catch (error) {
+        // Storage blocked (private mode): fall back to the light theme.
+      }
+    })();
+  </script>
   <meta name="description" content="Vergelijk AH-producten op actuele bonusprijs, prijs per kilo en Nutri-Score.">
   <title>Mijn producten vergelijken - MyFood</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22><rect width=%2224%22 height=%2224%22 rx=%226%22 fill=%22%23047857%22/><path d=%22M6 8h12l1 12H5L6 8Z%22 fill=%22none%22 stroke=%22%23fff%22 stroke-width=%221.5%22 stroke-linejoin=%22round%22/><path d=%22M9 8V6a3 3 0 0 1 6 0v2%22 fill=%22none%22 stroke=%22%23fff%22 stroke-width=%221.5%22 stroke-linecap=%22round%22/></svg>">
