@@ -585,12 +585,13 @@ export class RecipesService {
       const priceA = this.ahService.calculateRecipePrice(a, this.activeServings);
       const priceB = this.ahService.calculateRecipePrice(b, this.activeServings);
       switch (this.filters.sortBy) {
-        case 'price-asc':
+        case 'price-asc': {
           const rankA = priceA.hasPriceData ? 0 : priceA.hasAnyPriceData ? 1 : 2;
           const rankB = priceB.hasPriceData ? 0 : priceB.hasAnyPriceData ? 1 : 2;
           if (rankA !== rankB) return rankA - rankB;
           if (!priceA.hasAnyPriceData && !priceB.hasAnyPriceData) return 0;
           return priceA.pricePerPerson - priceB.pricePerPerson;
+        }
         case 'protein-desc':
           return (b.nutrition?.proteinGrams || 0) - (a.nutrition?.proteinGrams || 0);
         case 'time-asc':

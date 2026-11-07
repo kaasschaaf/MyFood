@@ -16,8 +16,7 @@ class MyFoodApp {
   }
 
   async init() {
-    // 1. Initialiseer AH data & recepten
-    await this.ahService.init();
+    // 1. Laad recepten (AH-prijzen worden live opgehaald)
     await this.recipesService.loadRecipes(() => {
       this.initCuisineFilters();
       this.render();
@@ -182,11 +181,18 @@ class MyFoodApp {
     const mainPortionCount = document.getElementById('main-portion-count');
 
     if (mainPortionMinus && mainPortionPlus && mainPortionCount) {
+      const syncPortionLabels = () => {
+        const label = `${this.recipesService.getServings()} pers.`;
+        mainPortionCount.textContent = label;
+        const mobileLabel = document.getElementById('mobile-portion-label');
+        if (mobileLabel) mobileLabel.textContent = label;
+      };
+
       mainPortionMinus.addEventListener('click', () => {
         const current = this.recipesService.getServings();
         if (current > 1) {
           this.recipesService.setServings(current - 1);
-          mainPortionCount.textContent = `${current - 1} pers.`;
+          syncPortionLabels();
           this.render();
         }
       });
@@ -195,10 +201,20 @@ class MyFoodApp {
         const current = this.recipesService.getServings();
         if (current < 8) {
           this.recipesService.setServings(current + 1);
-          mainPortionCount.textContent = `${current + 1} pers.`;
+          syncPortionLabels();
           this.render();
         }
       });
+
+      const adjustServings = delta => {
+        const next = this.recipesService.getServings() + delta;
+        if (next < 1 || next > 8) return;
+        this.recipesService.setServings(next);
+        syncPortionLabels();
+        this.render();
+      };
+      document.getElementById('mobile-portion-minus')?.addEventListener('click', () => adjustServings(-1));
+      document.getElementById('mobile-portion-plus')?.addEventListener('click', () => adjustServings(1));
     }
 
     // Recept Klik (Kaart openen)
@@ -384,7 +400,7 @@ class MyFoodApp {
         <div class="font-bold text-xs uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-1">
           Antwoord van Chef Gemini:
         </div>
-        <div class="text-slate-800 dark:text-slate-100">${answer}</div>
+        <div class="text-slate-800 dark:text-slate-100 whitespace-pre-line">${this.ui.escapeHtml(answer)}</div>
       `;
     } catch (err) {
       responseArea.innerHTML = `
@@ -407,21 +423,35 @@ class MyFoodApp {
     }
   }
 
+  readStoredTheme() {
+    try {
+      return localStorage.getItem('myfood_theme');
+    } catch (error) {
+      console.warn('Opgeslagen thema kon niet worden gelezen.', error);
+      return null;
+    }
+  }
+
+  storeTheme(theme) {
+    try {
+      localStorage.setItem('myfood_theme', theme);
+    } catch (error) {
+      console.warn('Thema kon niet worden opgeslagen.', error);
+    }
+  }
+
   initTheme() {
     const themeBtn = document.getElementById('theme-toggle');
-    const isDark = localStorage.getItem('myfood_theme') === 'dark' || 
-                   (!localStorage.getItem('myfood_theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const storedTheme = this.readStoredTheme();
+    const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+    const isDark = storedTheme === 'dark' || (!storedTheme && prefersDark);
 
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    document.documentElement.classList.toggle('dark', isDark);
 
     if (themeBtn) {
       themeBtn.addEventListener('click', () => {
         const currentlyDark = document.documentElement.classList.toggle('dark');
-        localStorage.setItem('myfood_theme', currentlyDark ? 'dark' : 'light');
+        this.storeTheme(currentlyDark ? 'dark' : 'light');
       });
     }
   }
@@ -491,7 +521,7 @@ class MyFoodApp {
     const status = document.getElementById('catalog-status');
     const recipeCount = this.recipesService.recipes.filter(recipe => this.recipesService.isLivePricedRecipe(recipe)).length;
     if (recipeCount === 0) {
-      if (status) status.textContent = 'Geen externe recepten om AH-prijzen voor op te halen.';
+      if (status) status.textContent = 'Geen recepten om AH-prijzen voor op te halen.';
       return;
     }
     if (status) {
@@ -519,5 +549,9 @@ class MyFoodApp {
 // Start app wanneer DOM klaar is
 document.addEventListener('DOMContentLoaded', () => {
   const app = new MyFoodApp();
-  app.init();
+  app.init().catch(error => {
+    console.error('MyFood kon niet worden gestart.', error);
+    const status = document.getElementById('catalog-status');
+    if (status) status.textContent = `App starten mislukte: ${error.message}`;
+  });
 });

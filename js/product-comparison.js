@@ -1,4 +1,5 @@
 import { AHService, ONLINE_ONLY_SETTING_KEY, PRODUCT_SEARCH_CATEGORIES } from './ah-service.js';
+import { escapeHtml, formatEuro } from './utils.js';
 
 const LIST_KEY = 'myfood_frequent_products';
 const SORT_KEY = 'myfood_product_comparison_sort';
@@ -29,6 +30,32 @@ function normalizeProductQuery(value) {
   return String(value || '').trim().replace(/\s+/g, ' ');
 }
 
+/**
+ * Extracts the pack count, amount and unit from a product size string.
+ * Handles multipacks ("2 x 250 g") and single packs ("1,5 kg").
+ * @param {string} unitSize
+ * @returns {{ packCount: number, amount: number, unit: 'kg'|'g' }}
+ */
+function parsePackSize(unitSize) {
+  const multipack = unitSize.match(/(\d+)\s*[x×]\s*([\d.,]+)\s*(kg|g)\b/i);
+  if (multipack) {
+    return {
+      packCount: Number(multipack[1]),
+      amount: parseDutchNumber(multipack[2]),
+      unit: multipack[3].toLowerCase()
+    };
+  }
+  const singlePack = unitSize.match(/([\d.,]+)\s*(kg|g)\b/i);
+  if (singlePack) {
+    return {
+      packCount: 1,
+      amount: parseDutchNumber(singlePack[1]),
+      unit: singlePack[2].toLowerCase()
+    };
+  }
+  return { packCount: 1, amount: NaN, unit: 'kg' };
+}
+
 export function getPricePerKg(product) {
   const description = String(product.unitPriceDescription || '');
   const listedUnitPrice = description.match(/(?:prijs\s+)?per\s+(?:(\d+(?:[.,]\d+)?)\s*)?(kg|g)\s*€?\s*([\d.,]+)/i);
@@ -44,14 +71,8 @@ export function getPricePerKg(product) {
   }
 
   const unitSize = String(product.unitSize || '');
-  const multipack = unitSize.match(/(\d+)\s*[x×]\s*([\d.,]+)\s*(kg|g)\b/i);
-  const singlePack = unitSize.match(/([\d.,]+)\s*(kg|g)\b/i);
-  const pack = multipack || (singlePack && [singlePack[0], '1', singlePack[1], singlePack[2]]);
-  if (!pack) return null;
-
-  const packCount = Number(pack[1]);
-  const amount = parseDutchNumber(pack[2]);
-  const unit = pack[3].toLowerCase();
+  const { packCount, amount, unit } = parsePackSize(unitSize);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
   const kilograms = amount * packCount * (unit === 'g' ? 0.001 : 1);
   return kilograms > 0 ? roundMoney(product.price / kilograms) : null;
 }
@@ -88,26 +109,46 @@ export function sortComparedProducts(products, mode = 'balanced', criteria = DEF
   return enriched.sort((a, b) => {
     if (mode === 'price') return compareNullable(a.pricePerKg, b.pricePerKg);
     if (mode === 'health') {
-      const healthOrder = NUTRI_SCORES.indexOf(a.nutriScore) - NUTRI_SCORES.indexOf(b.nutriScore);
-      return compareMissing(a.healthScore, b.healthScore) || healthOrder || compareNullable(a.pricePerKg, b.pricePerKg);
+      return compareNullableDesc(a.healthScore, b.healthScore) ||
+        compareNutriScore(a, b) ||
+        compareNullable(a.pricePerKg, b.pricePerKg);
     }
-    return compareMissing(a.score, b.score) ||
-      (b.score ?? -1) - (a.score ?? -1) ||
+    // Balanced: products with a score first, then highest score, then cheapest per kg,
+    // then best Nutri-Score as a final tie-breaker.
+    return compareNullableDesc(a.score, b.score) ||
       compareNullable(a.pricePerKg, b.pricePerKg) ||
-      (NUTRI_SCORES.indexOf(a.nutriScore) - NUTRI_SCORES.indexOf(b.nutriScore));
+      compareNutriScore(a, b);
   });
 }
 
+/**
+ * Ascending comparator that puts missing (null/undefined) values last.
+ */
 function compareNullable(a, b) {
-  if (a === null || a === undefined) return b === null || b === undefined ? 0 : 1;
-  if (b === null || b === undefined) return -1;
+  const aMissing = a === null || a === undefined;
+  const bMissing = b === null || b === undefined;
+  if (aMissing || bMissing) return aMissing === bMissing ? 0 : aMissing ? 1 : -1;
   return a - b;
 }
 
-function compareMissing(a, b) {
-  if (a === null || a === undefined) return b === null || b === undefined ? 0 : 1;
-  if (b === null || b === undefined) return -1;
-  return 0;
+/**
+ * Descending comparator that puts missing (null/undefined) values last.
+ */
+function compareNullableDesc(a, b) {
+  const aMissing = a === null || a === undefined;
+  const bMissing = b === null || b === undefined;
+  if (aMissing || bMissing) return aMissing === bMissing ? 0 : aMissing ? 1 : -1;
+  return b - a;
+}
+
+/**
+ * Orders by Nutri-Score (A best) with unknown scores last.
+ */
+function compareNutriScore(a, b) {
+  const rankA = NUTRI_SCORES.indexOf(a.nutriScore);
+  const rankB = NUTRI_SCORES.indexOf(b.nutriScore);
+  if (rankA === -1 || rankB === -1) return rankA === rankB ? 0 : rankA === -1 ? 1 : -1;
+  return rankA - rankB;
 }
 
 function parseDutchNumber(value) {
@@ -825,7 +866,7 @@ export class ProductComparisonApp {
   }
 
   formatEuro(amount) {
-    return new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(amount);
+    return formatEuro(amount);
   }
 
   renderLoadingMessage(message, spacing = '') {
@@ -839,9 +880,7 @@ export class ProductComparisonApp {
   }
 
   escape(value) {
-    return String(value ?? '').replace(/[&<>"']/g, character => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    })[character]);
+    return escapeHtml(value);
   }
 
   renderProduct(product) {

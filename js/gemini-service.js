@@ -8,14 +8,24 @@ export class GeminiService {
   }
 
   getApiKey() {
-    return localStorage.getItem(this.storageKey) || '';
+    try {
+      return localStorage.getItem(this.storageKey) || '';
+    } catch (error) {
+      console.warn('Gemini API-sleutel kon niet worden gelezen.', error);
+      return '';
+    }
   }
 
   setApiKey(key) {
-    if (!key) {
-      localStorage.removeItem(this.storageKey);
-    } else {
-      localStorage.setItem(this.storageKey, key.trim());
+    try {
+      if (!key) {
+        localStorage.removeItem(this.storageKey);
+      } else {
+        localStorage.setItem(this.storageKey, key.trim());
+      }
+    } catch (error) {
+      console.error('Gemini API-sleutel kon niet worden opgeslagen.', error);
+      throw new Error('De API-sleutel kon niet worden opgeslagen in deze browser.');
     }
   }
 

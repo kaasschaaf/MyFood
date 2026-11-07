@@ -1,3 +1,5 @@
+import { escapeHtml } from './utils.js';
+
 /**
  * UI Components - Rendert receptenkaarten, modalen, balkjes en interactieve elementen
  */
@@ -9,13 +11,7 @@ export class UIComponents {
   }
 
   escapeHtml(value) {
-    return String(value ?? '').replace(/[&<>"']/g, character => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;'
-    })[character]);
+    return escapeHtml(value);
   }
 
   formatTimestamp(value) {
@@ -453,7 +449,7 @@ export class UIComponents {
               <span class="text-xs font-normal text-slate-400">Klik een product om te shoppen</span>
             </h3>
             <ul class="divide-y divide-slate-100 dark:divide-slate-700/60 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700/60 overflow-hidden shadow-sm">
-              ${(recipe.ingredients || []).map((ing, idx) => {
+              ${(recipe.ingredients || []).map(ing => {
                 const scaledAmount = Number.isFinite(ing.amount)
                   ? Math.round((ing.amount * scale) * 10) / 10
                   : null;

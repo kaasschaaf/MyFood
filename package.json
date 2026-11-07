@@ -1,19 +1,19 @@
 {
   "name": "myfood",
   "version": "1.0.0",
-  "description": "Recepten webapp met AH bonus prijzen en Gemini AI voor GitHub Pages",
+  "description": "Recepten webapp met live Albert Heijn prijzen en Gemini AI voor GitHub Pages",
   "type": "module",
   "scripts": {
     "start": "npx serve .",
     "build:css": "tailwindcss -i ./css/tailwind.input.css -o ./css/tailwind.css --minify",
+    "lint": "eslint .",
     "test": "node --test",
-    "update-bonus": "node scripts/update_ah_data.js"
+    "verify": "npm run lint && npm test"
   },
   "keywords": [
     "recipes",
     "ah",
     "albert-heijn",
-    "bonus",
     "gemini",
     "github-pages"
   ],
@@ -21,6 +21,7 @@
   "license": "MIT",
   "devDependencies": {
     "@tailwindcss/cli": "4.3.0",
+    "eslint": "^9.39.5",
     "playwright": "^1.65.0",
     "tailwindcss": "4.3.0",
     "wrangler": "^4.149.0"

@@ -25,11 +25,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Configure AH API proxy
-        env:
-          AH_API_PROXY_URL: ${{ vars.AH_API_PROXY_URL }}
-        run: |
-          node -e "const fs=require('node:fs');const cfg='// This file is regenerated at deploy time by .github/workflows/deploy.yml.\nglobalThis.MYFOOD_AH_API_BASE = '+JSON.stringify(process.env.AH_API_PROXY_URL || '')+';\nglobalThis.MYFOOD_BUILD_TIME = '+JSON.stringify(new Date().toISOString())+';\n';fs.writeFileSync('js/runtime-config.js',cfg)"
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -38,6 +33,18 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Configure AH API proxy
+        env:
+          AH_API_PROXY_URL: ${{ vars.AH_API_PROXY_URL }}
+        run: |
+          node -e "const fs=require('node:fs');const cfg='// This file is regenerated at deploy time by .github/workflows/deploy.yml.\nglobalThis.MYFOOD_AH_API_BASE = '+JSON.stringify(process.env.AH_API_PROXY_URL || '')+';\nglobalThis.MYFOOD_BUILD_TIME = '+JSON.stringify(new Date().toISOString())+';\n';fs.writeFileSync('js/runtime-config.js',cfg)"
 
       - name: Build Tailwind CSS
         run: npm run build:css
@@ -53,4 +60,5 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
 

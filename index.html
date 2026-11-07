@@ -2,7 +2,7 @@
 <html lang="nl" class="light">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MyFood - Recepten, AH Bonus Prijzen & AI Kookhulp</title>
   <meta name="description" content="Vind heerlijke recepten, bekijk actuele AH prijzen en bonus deals voor 2 personen, en stel vragen aan Gemini AI.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍲</text></svg>">
@@ -90,9 +90,9 @@
   <div class="sm:hidden bg-slate-100/90 dark:bg-slate-800/90 px-4 py-2 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
     <span class="font-semibold text-slate-600 dark:text-slate-300">Porties berekend voor:</span>
     <div class="inline-flex items-center bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 shadow-xs">
-      <button type="button" onclick="document.getElementById('main-portion-minus').click()" class="px-3 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100">-</button>
+      <button type="button" id="mobile-portion-minus" class="px-3 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100" aria-label="1 persoon minder">-</button>
       <span class="px-2 font-extrabold text-emerald-600 dark:text-emerald-400" id="mobile-portion-label">2 pers.</span>
-      <button type="button" onclick="document.getElementById('main-portion-plus').click()" class="px-3 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100">+</button>
+      <button type="button" id="mobile-portion-plus" class="px-3 py-1 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100" aria-label="1 persoon meer">+</button>
     </div>
   </div>
 
@@ -181,7 +181,7 @@
   </main>
 
   <!-- Recept Detail Modal (Native HTML5 Dialog) -->
-  <dialog id="recipe-modal" class="w-11/12 max-w-4xl bg-white dark:bg-slate-850 dark:bg-slate-900 rounded-3xl shadow-2xl overflow-y-auto max-h-[90vh]">
+  <dialog id="recipe-modal" class="w-11/12 max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-y-auto max-h-[90vh]">
     <!-- Dynamisch ingeladen via ui-components.js -->
   </dialog>
 

@@ -1,4 +1,5 @@
 import { BrowserCache } from './browser-cache.js';
+import { formatEuro } from './utils.js';
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1']);
 const configuredAHApi = String(globalThis.MYFOOD_AH_API_BASE || '').trim().replace(/\/+$/, '');
@@ -130,11 +131,6 @@ export class AHService {
       .test(`${category} ${product.description || product.descriptionFull || ''}`);
     return digitalProduct && /\bonline\b|digitale?\s+(?:code|opwaardering|voucher)|e[-\s]?gift/i
       .test(`${product.title || ''} ${product.description || product.descriptionFull || ''}`);
-  }
-
-  async init() {
-    // Prijzen komen volledig live uit de AH-productzoekresultaten; er is geen
-    // statisch bonusbestand meer nodig. Bewaard als no-op zodat aanroepers ongewijzigd blijven.
   }
 
   async getAnonymousToken() {
@@ -612,10 +608,6 @@ export class AHService {
   }
 
   formatEuro(amount) {
-    if (isNaN(amount) || amount === null) return '€ 0,00';
-    return new Intl.NumberFormat('nl-NL', {
-      style: 'currency',
-      currency: 'EUR'
-    }).format(amount);
+    return formatEuro(amount);
   }
 }
