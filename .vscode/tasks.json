@@ -2,7 +2,7 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "MyFood: Start local server",
+			"label": "Kost: Start local server",
 			"detail": "npm start — serves the app locally with `npx serve`",
 			"type": "shell",
 			"command": "npm start",
@@ -28,7 +28,7 @@
 				},
 				"background": {
 					"activeOnStart": true,
-					"beginsPattern": "(> myfood@|Serving!)",
+					"beginsPattern": "(>\\s*\\S+@|Serving!)",
 					"endsPattern": "(Accepting connections|Local:\\s+http)"
 				}
 			}

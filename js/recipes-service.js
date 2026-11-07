@@ -85,7 +85,7 @@ export class RecipesService {
         recipe.livePriced = true;
       });
     } catch (error) {
-      console.error('Lokale MyFood-recepten konden niet worden geladen.', error);
+      console.error('Lokale recepten konden niet worden geladen.', error);
     }
 
     const [cachedCatalog, cachedAHCatalog] = await Promise.all([

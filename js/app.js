@@ -5,7 +5,7 @@ import { UIComponents } from './ui-components.js';
 import { ContentTranslator } from './content-translator.js';
 import { cuisineLabel, getLang, getLocale, initLanguage, t } from './i18n.js';
 
-class MyFoodApp {
+class KostApp {
   constructor() {
     this.ahService = new AHService();
     this.geminiService = new GeminiService();
@@ -695,9 +695,9 @@ class MyFoodApp {
 
 // Start app wanneer DOM klaar is
 document.addEventListener('DOMContentLoaded', () => {
-  const app = new MyFoodApp();
+  const app = new KostApp();
   app.init().catch(error => {
-    console.error('MyFood kon niet worden gestart.', error);
+    console.error('Kost kon niet worden gestart.', error);
     const status = document.getElementById('catalog-status');
     if (status) status.textContent = t('catalog.status.failed', { message: error.message });
   });

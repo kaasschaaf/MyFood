@@ -1,8 +1,8 @@
-# 🍲 MyFood — Smart Recipes & AI Cooking Assistant
+# 🍲 Kost — Smart Recipes & AI Cooking Assistant
 
 A modern, fast, and mobile-friendly recipe web app for finding dishes, checking current **Albert Heijn prices and bonus deals** (calculated for **2 people by default**), viewing visual **protein and health indicators**, and asking the integrated **Gemini AI cooking assistant** your cooking questions.
 
-Recipes are sourced from the built-in MyFood collection, up to 250 recipes from [TheMealDB](https://www.themealdb.com/), and up to 250 genuine recipes listed in the official [Allerhande recipe sitemap](https://www.ah.nl/sitemaps/entities/allerhande/recipes.xml). Allerhande recipes link directly to AH for their ingredients and instructions. AH product search uses the anonymous, unofficial Albert Heijn mobile API; no AH account or login is needed. Every recipe — including the built-in MyFood collection — is priced from the same live AH product results, so prices and bonus deals are always current. Live product results, recipe catalogues, recipe details, and product choices are cached in IndexedDB in your browser and refreshed as they expire; the price cache always expires at local midnight so the day's new bonus deals are fetched automatically.
+Recipes are sourced from the built-in Kost collection, up to 250 recipes from [TheMealDB](https://www.themealdb.com/), and up to 250 genuine recipes listed in the official [Allerhande recipe sitemap](https://www.ah.nl/sitemaps/entities/allerhande/recipes.xml). Allerhande recipes link directly to AH for their ingredients and instructions. AH product search uses the anonymous, unofficial Albert Heijn mobile API; no AH account or login is needed. Every recipe — including the built-in Kost collection — is priced from the same live AH product results, so prices and bonus deals are always current. Live product results, recipe catalogues, recipe details, and product choices are cached in IndexedDB in your browser and refreshed as they expire; the price cache always expires at local midnight so the day's new bonus deals are fetched automatically.
 
 ---
 
@@ -56,8 +56,8 @@ Recipes are sourced from the built-in MyFood collection, up to 250 recipes from 
 
 - **💾 Browser Cache & Anonymous Data**:
   - Recipe catalogues and details, AH product search results, and your product-match selections are stored locally in IndexedDB.
-  - AH price/search results are cached only within the current day and are re-fetched after local midnight, so daily/weekly bonus changes are always reflected. Cached data is shown immediately while live updates run; if AH is unavailable, MyFood keeps usable cached results and indicates when AH data is stale.
-  - Anonymous AH access tokens remain in memory only. MyFood does not use your AH login or store AH credentials.
+  - AH price/search results are cached only within the current day and are re-fetched after local midnight, so daily/weekly bonus changes are always reflected. Cached data is shown immediately while live updates run; if AH is unavailable, Kost keeps usable cached results and indicates when AH data is stale.
+  - Anonymous AH access tokens remain in memory only. Kost does not use your AH login or store AH credentials.
   - AH's recipe pages do not allow anonymous cross-origin access to recipe details, so Allerhande ingredients and instructions open on AH's own website.
 
 ---
@@ -66,7 +66,7 @@ Recipes are sourced from the built-in MyFood collection, up to 250 recipes from 
 
 1. Go to [Google AI Studio](https://aistudio.google.com/app/apikey).
 2. Click **Create API key**.
-3. Open your MyFood app, click **🔑 Gemini AI** in the top-right corner, paste your key, and click **Save**.
+3. Open your Kost app, click **🔑 Gemini AI** in the top-right corner, paste your key, and click **Save**.
 4. You can now ask questions directly about any recipe.
 
 ---

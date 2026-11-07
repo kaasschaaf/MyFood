@@ -1,5 +1,5 @@
 /**
- * Lightweight internationalisation for the MyFood interface.
+ * Lightweight internationalisation for the Kost interface.
  *
  * The interface is fully translated through a static dictionary. Recipe
  * content itself comes from Allerhande/TheMealDB and is translated on demand
@@ -14,13 +14,13 @@ const listeners = new Set();
 
 const DICTIONARY = {
   nl: {
-    'page.title': 'MyFood - Recepten, AH Bonus Prijzen & AI Kookhulp',
-    'page.productsTitle': 'Mijn producten vergelijken - MyFood',
+    'page.title': 'Kost - Recepten, AH Bonus Prijzen & AI Kookhulp',
+    'page.productsTitle': 'Mijn producten vergelijken - Kost',
     'page.recipesRegion': 'Recepten',
     'page.productsRegion': 'Mijn producten',
     'page.detailRegion': 'Productdetails',
     'app.productsSubtitle': 'Productvergelijker',
-    'nav.label': 'Onderdelen van MyFood',
+    'nav.label': 'Onderdelen van Kost',
     'nav.recipes': 'Recepten',
     'nav.products': 'Producten',
     'nav.settings': 'Gemini AI-instellingen',
@@ -247,13 +247,13 @@ const DICTIONARY = {
   },
 
   en: {
-    'page.title': 'MyFood - Recipes, AH Bonus Prices & AI Cooking Help',
-    'page.productsTitle': 'Compare my products - MyFood',
+    'page.title': 'Kost - Recipes, AH Bonus Prices & AI Cooking Help',
+    'page.productsTitle': 'Compare my products - Kost',
     'page.recipesRegion': 'Recipes',
     'page.productsRegion': 'My products',
     'page.detailRegion': 'Product details',
     'app.productsSubtitle': 'Product comparison',
-    'nav.label': 'Sections of MyFood',
+    'nav.label': 'Sections of Kost',
     'nav.recipes': 'Recipes',
     'nav.products': 'Products',
     'nav.settings': 'Gemini AI settings',

@@ -52,7 +52,7 @@ export class GeminiService {
       return `- ${amount} ${i.unit} ${i.name}`;
     }).join('\n');
 
-    const systemInstruction = `Je bent een vriendelijke, deskundige Nederlandse chef-kok en voedingsdeskundige in de MyFood webapp.
+    const systemInstruction = `Je bent een vriendelijke, deskundige Nederlandse chef-kok en voedingsdeskundige in de Kost webapp.
 De gebruiker bekijkt momenteel dit recept:
 - Naam: "${recipe.title}"
 - Stijl / Keuken: ${recipe.cuisine}

@@ -1,3 +1,5 @@
+// Kept as 'myfood-cache' on purpose: renaming the database would discard every
+// cached recipe and price the visitor already has.
 const DATABASE_NAME = 'myfood-cache';
 const DATABASE_VERSION = 1;
 const STORE_NAME = 'entries';
@@ -22,8 +24,8 @@ export class BrowserCache {
         }
       };
       request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error || new Error('De MyFood-cache kon niet worden geopend.'));
-      request.onblocked = () => reject(new Error('De MyFood-cache is geblokkeerd door een ander tabblad.'));
+      request.onerror = () => reject(request.error || new Error('De Kost-cache kon niet worden geopend.'));
+      request.onblocked = () => reject(new Error('De Kost-cache is geblokkeerd door een ander tabblad.'));
     });
 
     return this.databasePromise;
