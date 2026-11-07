@@ -2,13 +2,16 @@ import { AHService, ONLINE_ONLY_SETTING_KEY } from './ah-service.js';
 import { GeminiService } from './gemini-service.js';
 import { RecipesService } from './recipes-service.js';
 import { UIComponents } from './ui-components.js';
+import { ContentTranslator } from './content-translator.js';
+import { cuisineLabel, getLang, getLocale, initLanguage, t } from './i18n.js';
 
 class MyFoodApp {
   constructor() {
     this.ahService = new AHService();
     this.geminiService = new GeminiService();
     this.recipesService = new RecipesService(this.ahService);
-    this.ui = new UIComponents(this.ahService, this.geminiService, this.recipesService);
+    this.translator = new ContentTranslator(this.geminiService);
+    this.ui = new UIComponents(this.ahService, this.geminiService, this.recipesService, this.translator);
     
     this.activeRecipeId = null;
     this.activeIngredientIndex = null;
@@ -17,6 +20,8 @@ class MyFoodApp {
   }
 
   async init() {
+    this.initLanguage();
+
     // 1. Laad recepten (AH-prijzen worden live opgehaald)
     await this.recipesService.loadRecipes(() => {
       this.initCuisineFilters();
@@ -29,7 +34,11 @@ class MyFoodApp {
     this.initTheme();
     this.initBuildTimeBadge();
     this.render();
+    this.translateVisibleRecipes();
     this.refreshExternalPrices();
+
+    // Recipes were rendered in Dutch first; cached translations or a fresh
+    // Gemini pass repaint the grid as English when that language is active.
   }
 
   initCuisineFilters() {
@@ -39,14 +48,14 @@ class MyFoodApp {
     const cuisines = this.recipesService.getAvailableCuisines();
     let pillsHtml = `
       <button type="button" class="cuisine-pill is-active" data-cuisine="all" aria-pressed="true">
-        Alle stijlen
+        ${this.ui.escapeHtml(t('catalog.allCuisines'))}
       </button>
     `;
 
     cuisines.forEach(c => {
       pillsHtml += `
         <button type="button" class="cuisine-pill" data-cuisine="${this.ui.escapeHtml(c)}" aria-pressed="false">
-          ${this.ui.escapeHtml(c)}
+          ${this.ui.escapeHtml(cuisineLabel(c))}
         </button>
       `;
     });
@@ -165,7 +174,7 @@ class MyFoodApp {
 
     if (mainPortionMinus && mainPortionPlus && mainPortionCount) {
       const syncPortionLabels = () => {
-        const label = `${this.recipesService.getServings()} pers.`;
+        const label = t('portions.people', { count: this.recipesService.getServings() });
         mainPortionCount.textContent = label;
         const mobileLabel = document.getElementById('mobile-portion-label');
         if (mobileLabel) mobileLabel.textContent = label;
@@ -198,6 +207,8 @@ class MyFoodApp {
       };
       document.getElementById('mobile-portion-minus')?.addEventListener('click', () => adjustServings(-1));
       document.getElementById('mobile-portion-plus')?.addEventListener('click', () => adjustServings(1));
+      this.syncPortionLabels = syncPortionLabels;
+      syncPortionLabels();
     }
 
     // Recept Klik (Kaart openen)
@@ -338,7 +349,7 @@ class MyFoodApp {
   showOnlineOnlySettingError(error) {
     console.error('AH-matches voor de online-only instelling konden niet worden bijgewerkt.', error);
     const status = document.getElementById('catalog-status');
-    if (status) status.textContent = `Productinstelling opslaan of toepassen is mislukt: ${error.message}`;
+    if (status) status.textContent = t('products.settingsFailed', { message: error.message });
   }
 
   async openRecipeModal(recipeId) {
@@ -355,7 +366,7 @@ class MyFoodApp {
       modal.innerHTML = `
         <div class="flex h-full flex-col items-center justify-center gap-3 px-8 py-16 text-center">
           <span class="h-6 w-6 animate-spin rounded-full border-2 border-slate-200 border-t-emerald-600 dark:border-neutral-700 dark:border-t-emerald-400" aria-hidden="true"></span>
-          <p class="text-sm text-slate-600 dark:text-neutral-300">Receptdetails en AH-producten laden…</p>
+          <p class="text-sm text-slate-600 dark:text-neutral-300">${this.ui.escapeHtml(t('recipe.loading'))}</p>
         </div>
       `;
       modal.showModal();
@@ -369,7 +380,7 @@ class MyFoodApp {
     } catch (error) {
       console.error('Receptdetails laden mislukt.', error);
       if (modal && this.activeRecipeId === recipeId) {
-        modal.innerHTML = `<div class="flex h-full items-center justify-center p-8 text-center"><p class="text-sm text-rose-600 dark:text-rose-400">Receptdetails konden niet worden geladen: ${this.ui.escapeHtml(error.message)}</p></div>`;
+        modal.innerHTML = `<div class="flex h-full items-center justify-center p-8 text-center"><p class="text-sm text-rose-600 dark:text-rose-400">${this.ui.escapeHtml(t('recipe.loadFailed', { message: error.message }))}</p></div>`;
       }
     }
   }
@@ -449,7 +460,7 @@ class MyFoodApp {
     responseArea.innerHTML = `
       <span class="inline-flex items-center gap-2 font-medium text-indigo-700 dark:text-indigo-300">
         <span class="h-3.5 w-3.5 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600 dark:border-indigo-900 dark:border-t-indigo-400" aria-hidden="true"></span>
-        Chef Gemini denkt na over: “${this.ui.escapeHtml(question)}”…
+        ${this.ui.escapeHtml(t('ai.thinking', { question }))}
       </span>
     `;
     if (spinner) spinner.classList.remove('hidden');
@@ -459,7 +470,7 @@ class MyFoodApp {
       const answer = await this.geminiService.askAboutRecipe(recipe, question, this.modalServings);
       responseArea.innerHTML = `
         <div class="font-bold text-xs uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-1">
-          Antwoord van Chef Gemini:
+          ${this.ui.escapeHtml(t('ai.answer'))}
         </div>
         <div class="text-slate-800 dark:text-neutral-100 whitespace-pre-line">${this.ui.escapeHtml(answer)}</div>
       `;
@@ -526,6 +537,66 @@ class MyFoodApp {
     }
   }
 
+  initLanguage() {
+    initLanguage({ onChange: () => this.onLanguageChanged() });
+    this.initBuildTimeBadge();
+  }
+
+  /**
+   * Re-renders the interface and translates recipe content after a switch.
+   */
+  async onLanguageChanged() {
+    this.initCuisineFilters();
+    this.syncPortionLabels?.();
+    this.render();
+    if (this.activeRecipeId) {
+      await this.translateActiveRecipe();
+      this.refreshModalContent();
+      this.render();
+    }
+    this.translateVisibleRecipes();
+  }
+
+  /**
+   * Shows or hides the notice explaining that recipe text stays Dutch
+   * until a Gemini key is configured.
+   */
+  syncTranslationNotice() {
+    const notice = document.getElementById('translation-notice');
+    const text = document.getElementById('translation-notice-text');
+    if (!notice || !text) return;
+    const show = getLang() === 'en' && !this.translator.canTranslate();
+    text.textContent = show ? t('recipe.translateNeedsKey') : '';
+    notice.classList.toggle('hidden', !show);
+    notice.classList.toggle('flex', show);
+  }
+
+  /**
+   * Translates the recipes currently on screen, then repaints the grid.
+   */
+  async translateVisibleRecipes() {
+    this.syncTranslationNotice();
+    if (getLang() !== 'en') return;
+    if (!this.translator.canTranslate()) return;
+    const visible = this.recipesService.getFilteredRecipes().slice(0, this.visibleRecipeCount);
+    await this.translator.applyCachedSummaries(visible);
+    this.render();
+    const translated = await this.translator.translateSummaries(visible);
+    if (translated > 0) this.render();
+  }
+
+  /**
+   * Translates the open recipe's full content.
+   */
+  async translateActiveRecipe() {
+    const recipe = this.recipesService.getRecipeById(this.activeRecipeId);
+    if (!recipe) return;
+    if (getLang() !== 'en') return;
+    if (this.translator.canTranslate()) {
+      await this.translator.translateRecipe(recipe);
+    }
+  }
+
   initBuildTimeBadge() {
     const badge = document.getElementById('build-time-badge');
     const label = document.getElementById('build-time-label');
@@ -537,7 +608,7 @@ class MyFoodApp {
     const date = new Date(buildTime);
     if (Number.isNaN(date.getTime())) return;
 
-    const formatted = new Intl.DateTimeFormat('nl-NL', {
+    const formatted = new Intl.DateTimeFormat(getLocale(), {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
@@ -560,7 +631,7 @@ class MyFoodApp {
     const visibleRecipes = filtered.slice(0, this.visibleRecipeCount);
 
     if (countEl) {
-      countEl.textContent = `${filtered.length} recepten gevonden`;
+      countEl.textContent = t('catalog.results', { count: filtered.length });
     }
 
     if (filtered.length === 0) {
@@ -572,8 +643,8 @@ class MyFoodApp {
               <path d="m20 20-3.5-3.5"/>
             </svg>
           </span>
-          <h3 class="font-display mt-4 text-lg font-semibold text-slate-800 dark:text-neutral-100">Geen recepten gevonden</h3>
-          <p class="mt-1 max-w-sm text-sm text-slate-500 dark:text-neutral-400">Probeer een ander trefwoord of wis je actieve filters.</p>
+          <h3 class="font-display mt-4 text-lg font-semibold text-slate-800 dark:text-neutral-100">${this.ui.escapeHtml(t('catalog.emptyTitle'))}</h3>
+          <p class="mt-1 max-w-sm text-sm text-slate-500 dark:text-neutral-400">${this.ui.escapeHtml(t('catalog.emptyBody'))}</p>
         </div>
       `;
       return;
@@ -585,7 +656,7 @@ class MyFoodApp {
         <div class="col-span-full py-4 text-center">
           <button id="load-more-recipes" type="button"
             class="inline-flex items-center gap-2 rounded-xl border border-slate-200/90 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-300 hover:text-emerald-800 dark:border-white/10 dark:bg-white/5 dark:text-neutral-200 dark:hover:border-emerald-500/30 dark:hover:text-emerald-300">
-            Laad meer recepten
+            ${this.ui.escapeHtml(t('catalog.loadMore'))}
             <span class="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 dark:bg-white/10 dark:text-neutral-400">${filtered.length - visibleRecipes.length}</span>
           </button>
         </div>
@@ -597,11 +668,11 @@ class MyFoodApp {
     const status = document.getElementById('catalog-status');
     const recipeCount = this.recipesService.recipes.filter(recipe => this.recipesService.isLivePricedRecipe(recipe)).length;
     if (recipeCount === 0) {
-      if (status) status.textContent = 'Geen recepten om AH-prijzen voor op te halen.';
+      if (status) status.textContent = t('catalog.status.none');
       return;
     }
     if (status) {
-      status.textContent = `Live AH-productprijzen controleren voor ${recipeCount} recepten...`;
+      status.textContent = t('catalog.status.checking', { count: recipeCount });
     }
     let failedRecipes = 0;
     try {
@@ -609,15 +680,15 @@ class MyFoodApp {
         if (recipe.priceError) failedRecipes++;
         if (status) {
           status.textContent = completed < total
-            ? `AH-prijzen gecontroleerd: ${completed}/${total}${failedRecipes ? ` · ${failedRecipes} met zoekfouten` : ''}`
-            : `AH-prijzen gecontroleerd voor ${total} recepten${failedRecipes ? ` · ${failedRecipes} met zoekfouten` : ''}`;
+            ? t('catalog.status.progress', { done: completed, total }) + (failedRecipes ? t('catalog.status.withErrors', { count: failedRecipes }) : '')
+            : t('catalog.status.done', { total }) + (failedRecipes ? t('catalog.status.withErrors', { count: failedRecipes }) : '');
         }
         this.render();
         if (recipe.id === this.activeRecipeId) this.refreshModalContent();
       });
     } catch (error) {
       console.error('Externe AH-prijzen konden niet worden bijgewerkt.', error);
-      if (status) status.textContent = `AH-prijzen bijwerken is mislukt: ${error.message}`;
+      if (status) status.textContent = t('catalog.status.failed', { message: error.message });
     }
   }
 }
@@ -628,6 +699,6 @@ document.addEventListener('DOMContentLoaded', () => {
   app.init().catch(error => {
     console.error('MyFood kon niet worden gestart.', error);
     const status = document.getElementById('catalog-status');
-    if (status) status.textContent = `App starten mislukte: ${error.message}`;
+    if (status) status.textContent = t('catalog.status.failed', { message: error.message });
   });
 });

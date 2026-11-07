@@ -1,13 +1,16 @@
 import { escapeHtml } from './utils.js';
+import { cuisineLabel, getLang, getLocale, t } from './i18n.js';
+import { ContentTranslator } from './content-translator.js';
 
 /**
  * UI Components - Rendert receptenkaarten, modalen, balkjes en interactieve elementen
  */
 export class UIComponents {
-  constructor(ahService, geminiService, recipesService) {
+  constructor(ahService, geminiService, recipesService, translator) {
     this.ahService = ahService;
     this.geminiService = geminiService;
     this.recipesService = recipesService;
+    this.translator = translator || new ContentTranslator(geminiService);
   }
 
   escapeHtml(value) {
@@ -15,11 +18,47 @@ export class UIComponents {
   }
 
   formatTimestamp(value) {
-    if (!value) return 'nog niet opgehaald';
-    return new Intl.DateTimeFormat('nl-NL', {
+    if (!value) return t('recipe.updatedAt', { date: '—' });
+    return new Intl.DateTimeFormat(getLocale(), {
       dateStyle: 'short',
       timeStyle: 'short'
     }).format(new Date(value));
+  }
+
+  /** Recipe title in the active language. */
+  title(recipe) {
+    return this.translator.title(recipe);
+  }
+
+  /** Recipe description in the active language. */
+  description(recipe) {
+    return this.translator.description(recipe);
+  }
+
+  /** Ingredient name for display only; AH lookups keep the Dutch name. */
+  ingredientName(ingredient) {
+    return this.translator.ingredientName(ingredient);
+  }
+
+  /** Cooking steps in the active language. */
+  instructions(recipe) {
+    return this.translator.instructions(recipe);
+  }
+
+  /**
+   * Returns the translated field when English content is available.
+   * @param {Object} recipe
+   * @param {string} translatedKey
+   * @param {string} sourceKey
+   * @returns {string}
+   */
+  translated(recipe, translatedKey, sourceKey) {
+    if (getLang() === 'en' && recipe?.[translatedKey]) return recipe[translatedKey];
+    return recipe?.[sourceKey] || '';
+  }
+
+  cuisine(recipe) {
+    return cuisineLabel(this.translated(recipe, 'displayCuisine', 'cuisine'));
   }
 
   isLivePriced(recipe) {
@@ -82,13 +121,13 @@ export class UIComponents {
         const url = option.productUrl || this.buildAHSearchUrl(ingredient);
         const bonusDescription = String(option.bonusDescription || '').trim();
         const bonusLabel = bonusDescription
-          ? bonusDescription.charAt(0).toLocaleUpperCase('nl-NL') + bonusDescription.slice(1)
-          : 'Bonus';
+          ? bonusDescription.charAt(0).toLocaleUpperCase(getLocale()) + bonusDescription.slice(1)
+          : t('recipe.options.bonus');
         const regularPrice = Number(option.regularPrice);
         const hasDiscount = Boolean(option.isBonus) &&
           Number.isFinite(regularPrice) && regularPrice > option.price;
         const savings = hasDiscount ? Math.round((regularPrice - option.price) * 100) / 100 : 0;
-        const metaParts = [option.unitSize, option.isOnlineOnly ? 'alleen online' : '', option.cachedMatch ? 'cache' : '']
+        const metaParts = [option.unitSize, option.isOnlineOnly ? t('recipe.options.onlineOnly') : '', option.cachedMatch ? t('recipe.options.cache') : '']
           .filter(Boolean)
           .map(part => this.escapeHtml(part));
         const selectedRing = isSelected
@@ -97,13 +136,13 @@ export class UIComponents {
         return `
           <a href="${this.escapeHtml(url)}"
             target="_blank" rel="noopener noreferrer"
-            title="${this.escapeHtml(option.title)} bekijken bij Albert Heijn"
+            title="${this.escapeHtml(t('recipe.viewAt', { title: option.title }))}"
             class="block rounded-xl border px-3 py-2.5 transition ${selectedRing}">
             <span class="flex items-start justify-between gap-2">
               <span class="min-w-0 flex-1">
                 <span class="flex items-center gap-1.5">
                   <span class="truncate text-xs font-semibold text-slate-800 dark:text-neutral-100">${this.escapeHtml(option.title)}</span>
-                  ${isSelected ? '<span class="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">Gekozen</span>' : ''}
+                  ${isSelected ? `<span class="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">${this.escapeHtml(t('recipe.options.chosen'))}</span>` : ''}
                 </span>
                 <span class="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[10px] text-slate-400 dark:text-neutral-400">
                   ${metaParts.length ? `<span>${metaParts.join(' · ')}</span>` : ''}
@@ -135,15 +174,15 @@ export class UIComponents {
 
     if (isExternal) {
       const errorBlock = ingredient.productLookupError
-        ? `<span class="block mt-1 text-[10px] text-rose-600 dark:text-rose-400">AH zoeken mislukt: ${this.escapeHtml(ingredient.productLookupError)}</span>`
+        ? `<span class="block mt-1 text-[10px] text-rose-600 dark:text-rose-400">${this.escapeHtml(t('recipe.ahSearchFailed', { message: ingredient.productLookupError }))}</span>`
         : '';
       return `
         <div class="flex items-center justify-between gap-2">
-          <span class="text-[11px] text-slate-400 dark:text-neutral-400">AH-zoekresultaten niet beschikbaar</span>
+          <span class="text-[11px] text-slate-400 dark:text-neutral-400">${this.escapeHtml(t('recipe.ahUnavailable'))}</span>
           <a href="${this.escapeHtml(this.buildAHSearchUrl(ingredient))}"
             target="_blank" rel="noopener noreferrer"
             class="inline-flex items-center gap-1 whitespace-nowrap text-[11px] text-emerald-700 hover:underline dark:text-emerald-400">
-            Zoek bij AH ${this.icon('arrowUpRight', 'h-3 w-3')}
+            ${this.escapeHtml(t('recipe.searchAtAH'))} ${this.icon('arrowUpRight', 'h-3 w-3')}
           </a>
         </div>
         ${errorBlock}
@@ -153,11 +192,11 @@ export class UIComponents {
     // Eigen (ingebouwd) recept met vaste AH-productnaam.
     return `
       <div class="flex items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-neutral-400">
-        <span class="truncate">${this.escapeHtml(ingredient.ahName || 'AH artikel')}</span>
+        <span class="truncate">${this.escapeHtml(ingredient.ahName || t('recipe.ahArticle'))}</span>
         <a href="${this.escapeHtml(this.buildAHSearchUrl(ingredient))}"
           target="_blank" rel="noopener noreferrer"
           class="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-semibold text-emerald-700 transition hover:border-emerald-300 dark:border-white/10 dark:bg-neutral-900 dark:text-emerald-400 dark:hover:border-emerald-700">
-          Shop bij AH ${this.icon('arrowUpRight', 'h-3 w-3')}
+          ${this.escapeHtml(t('recipe.shopAtAH'))} ${this.icon('arrowUpRight', 'h-3 w-3')}
         </a>
       </div>
     `;
@@ -186,7 +225,7 @@ export class UIComponents {
         <div class="relative aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-neutral-800">
           <img 
             src="${this.escapeHtml(recipe.image)}"
-            alt="${this.escapeHtml(recipe.title)}"
+            alt="${this.escapeHtml(this.title(recipe))}"
             loading="lazy"
             class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
             onerror="this.src='https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=800&q=80'"
@@ -199,7 +238,7 @@ export class UIComponents {
               ${this.icon('clock', 'h-3.5 w-3.5')} ${this.escapeHtml(recipe.prepTimeMinutes || '—')} min
             </span>
             <span class="inline-flex items-center rounded-md bg-slate-950/45 px-2 py-1 text-[11px] font-semibold text-white ring-1 ring-inset ring-white/20 backdrop-blur-sm">
-              ${this.escapeHtml(recipe.cuisine)}
+              ${this.escapeHtml(this.cuisine(recipe))}
             </span>
             ${recipe.sourceName ? `
               <span class="inline-flex items-center rounded-md bg-white/15 px-2 py-1 text-[11px] font-semibold text-white ring-1 ring-inset ring-white/20 backdrop-blur-sm">
@@ -212,7 +251,7 @@ export class UIComponents {
           ${priceInfo.hasAnyPriceData && priceInfo.hasBonus ? `
             <div class="absolute right-3 top-3">
               <span class="inline-flex items-center gap-1 rounded-md bg-amber-400 px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-950 shadow-sm">
-                ${this.icon('flame', 'h-3.5 w-3.5')} AH Bonus
+                ${this.icon('flame', 'h-3.5 w-3.5')} ${this.escapeHtml(t('catalog.card.bonus'))}
               </span>
             </div>
           ` : ''}
@@ -221,30 +260,30 @@ export class UIComponents {
           ${priceInfo.hasAnyPriceData ? `
             <div class="absolute inset-x-3 bottom-3 flex items-end justify-between gap-2 text-white">
               <div>
-                <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/70">Prijsindicatie</p>
+                <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/70">${this.escapeHtml(t('catalog.card.priceEstimate'))}</p>
                 <p class="mt-0.5 flex items-baseline gap-1.5">
                   <span class="text-xl font-bold tracking-tight">${this.ahService.formatEuro(priceInfo.totalPrice)}</span>
-                  <span class="text-[11px] font-medium text-white/75">${!priceInfo.hasPriceData ? 'gedeeltelijk · ' : ''}${this.ahService.formatEuro(priceInfo.pricePerPerson)} p.p.</span>
+                  <span class="text-[11px] font-medium text-white/75">${!priceInfo.hasPriceData ? this.escapeHtml(t('catalog.card.partial')) : ''}${this.escapeHtml(t('catalog.card.perPerson', { price: this.ahService.formatEuro(priceInfo.pricePerPerson) }))}</span>
                 </p>
               </div>
               ${!priceInfo.hasPriceData ? `
                 <span class="rounded-md bg-white/15 px-2 py-1 text-[10px] font-semibold text-white ring-1 ring-inset ring-white/20 backdrop-blur-sm">
-                  Match ${priceInfo.matchedIngredientCount}/${priceInfo.ingredientCount}
+                  ${this.escapeHtml(t('catalog.card.match', { matched: priceInfo.matchedIngredientCount, total: priceInfo.ingredientCount }))}
                 </span>
               ` : ''}
               ${priceInfo.hasPriceData && priceInfo.totalSavings > 0 ? `
                 <span class="rounded-md bg-amber-400 px-2 py-1 text-[10px] font-extrabold uppercase tracking-wide text-amber-950 shadow-sm">
-                  −${this.ahService.formatEuro(priceInfo.totalSavings)} voordeel
+                  ${this.escapeHtml(t('catalog.card.saving', { amount: this.ahService.formatEuro(priceInfo.totalSavings) }))}
                 </span>
               ` : ''}
             </div>
           ` : `
             <div class="absolute inset-x-3 bottom-3 text-xs font-semibold text-white drop-shadow">
               ${recipe.ahRecipeOnly
-                ? 'Open bij Allerhande voor ingrediënten en prijzen'
+                ? this.escapeHtml(t('catalog.card.noPriceAllerhande'))
                 : this.isLivePriced(recipe) && !recipe.ingredients?.length
-                  ? 'AH-prijzen worden berekend'
-                  : 'AH-prijs niet beschikbaar'}
+                  ? this.escapeHtml(t('catalog.card.pricing'))
+                  : this.escapeHtml(t('catalog.card.noPrice'))}
             </div>
           `}
         </div>
@@ -253,10 +292,10 @@ export class UIComponents {
         <div class="flex flex-1 flex-col p-4 sm:p-5">
           <div class="flex-1">
             <h3 class="font-display line-clamp-1 text-lg font-semibold leading-snug tracking-tight text-slate-900 transition-colors group-hover:text-emerald-700 dark:text-white dark:group-hover:text-emerald-400">
-              ${this.escapeHtml(recipe.title)}
+              ${this.escapeHtml(this.title(recipe))}
             </h3>
             <p class="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-slate-500 dark:text-neutral-400">
-              ${this.escapeHtml(recipe.description)}
+              ${this.escapeHtml(this.description(recipe))}
             </p>
           </div>
 
@@ -269,7 +308,7 @@ export class UIComponents {
                 </dt>
                 <dd class="mt-1 flex items-baseline gap-1">
                   <span class="text-sm font-bold text-slate-800 dark:text-neutral-100">${this.escapeHtml(nutrition.proteinGrams)} g</span>
-                  <span class="text-[10px] text-slate-400 dark:text-neutral-400">/ p.p.</span>
+                  <span class="text-[10px] text-slate-400 dark:text-neutral-400">${this.escapeHtml(t('catalog.card.perPortion'))}</span>
                   ${isHighProtein ? '<span class="ml-auto rounded bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-700 dark:bg-blue-950 dark:text-blue-300">Hoog</span>' : ''}
                 </dd>
                 <div class="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
@@ -303,7 +342,7 @@ export class UIComponents {
           <!-- Actieknop -->
           <div class="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-3 dark:border-white/10">
             <span class="text-[11px] font-medium text-slate-400 dark:text-neutral-500">
-              Berekend voor ${servings} personen
+              ${this.escapeHtml(t('catalog.card.ingredientsFor', { count: servings }))}
             </span>
             ${recipe.ahRecipeOnly ? `
               <a
@@ -312,7 +351,7 @@ export class UIComponents {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Bekijk op Allerhande
+                ${this.escapeHtml(t('catalog.card.allerhande'))}
                 ${this.icon('arrowUpRight', 'h-3.5 w-3.5')}
               </a>
             ` : `
@@ -321,7 +360,7 @@ export class UIComponents {
                 class="open-recipe-btn inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-800"
                 data-recipe-id="${this.escapeHtml(recipe.id)}"
               >
-                Kookhulp &amp; details
+                ${this.escapeHtml(t('catalog.card.details'))}
                 ${this.icon('arrowRight', 'h-3.5 w-3.5')}
               </button>
             `}
@@ -354,8 +393,8 @@ export class UIComponents {
       : null;
     const isBonus = live ? Boolean(product?.isBonus) : Boolean(ingredient.isBonus);
     const bonusDesc = live
-      ? product?.bonusDescription || 'Bonus'
-      : ingredient.bonusText || 'Bonus';
+      ? product?.bonusDescription || t('recipe.options.bonus')
+      : ingredient.bonusText || t('recipe.options.bonus');
     const optionCount = (ingredient.ahProductOptions || []).length;
     const bonusCount = (ingredient.ahProductOptions || []).filter(option => option.isBonus).length;
     const selectedRegularPrice = Number(product?.regularPrice);
@@ -377,13 +416,13 @@ export class UIComponents {
             data-ingredient-back
             class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/90 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-emerald-200 hover:text-emerald-800 dark:border-white/10 dark:bg-white/5 dark:text-neutral-300 dark:hover:border-emerald-500/30 dark:hover:text-emerald-300"
           >
-            ${this.icon('chevronLeft', 'h-3.5 w-3.5')} Terug naar recept
+            ${this.icon('chevronLeft', 'h-3.5 w-3.5')} ${this.escapeHtml(t('recipe.options.back'))}
           </button>
           <button
             type="button"
             data-close-modal
             class="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-400 dark:text-neutral-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-neutral-200"
-            aria-label="Sluiten"
+            aria-label="${this.escapeHtml(t('recipe.close'))}"
           >
             ${this.icon('close', 'h-5 w-5')}
           </button>
@@ -391,7 +430,7 @@ export class UIComponents {
 
         <!-- Kop -->
         <div>
-          <p class="eyebrow">Ingrediënt uit dit recept</p>
+          <p class="eyebrow">${this.escapeHtml(t('recipe.options.eyebrow'))}</p>
           <h2 class="font-display mt-1.5 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
             ${this.escapeHtml(amountLabel)}
           </h2>
@@ -400,19 +439,19 @@ export class UIComponents {
               ? `<span class="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-1 font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">${this.icon('flame', 'h-3 w-3')} ${this.escapeHtml(bonusDesc)}${selectedSavings > 0 ? ` · −${this.ahService.formatEuro(selectedSavings)}` : ''}</span>`
               : ''}
             <span>${optionCount > 0
-              ? `${optionCount} AH-${optionCount === 1 ? 'optie' : 'opties'} beschikbaar`
-              : 'Bekijk beschikbare AH-producten'}</span>
-            ${bonusCount > 0 ? `<span aria-hidden="true">·</span><span class="font-semibold text-amber-700 dark:text-amber-300">${bonusCount} met bonus</span>` : ''}
-            ${quantityCost ? `<span aria-hidden="true">·</span><span class="tabular-nums">${this.ahService.formatEuro(quantityCost.current)} gebruikt</span>` : ''}
+              ? this.escapeHtml(t(optionCount === 1 ? 'recipe.options.availableOne' : 'recipe.options.availableMany', { count: optionCount }))
+              : this.escapeHtml(t('recipe.options.none'))}</span>
+            ${bonusCount > 0 ? `<span aria-hidden="true">·</span><span class="font-semibold text-amber-700 dark:text-amber-300">${this.escapeHtml(t('recipe.options.withBonus', { count: bonusCount }))}</span>` : ''}
+            ${quantityCost ? `<span aria-hidden="true">·</span><span class="tabular-nums">${this.escapeHtml(t('recipe.options.used', { amount: this.ahService.formatEuro(quantityCost.current) }))}</span>` : ''}
           </p>
         </div>
 
         <!-- Opties -->
         <section class="rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-neutral-900/40 sm:p-4">
           <p class="flex items-center justify-between gap-2 px-1 pb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-neutral-400">
-            <span>Kies een product en open het bij AH</span>
+            <span>${this.escapeHtml(t('recipe.options.choose'))}</span>
             <span class="inline-flex items-center gap-1 normal-case tracking-normal text-amber-700 dark:text-amber-300">
-              ${this.icon('flame', 'h-3 w-3')} bonus getoond
+              ${this.icon('flame', 'h-3 w-3')} ${this.escapeHtml(t('recipe.options.bonusShown'))}
             </span>
           </p>
           ${this.renderIngredientProducts(ingredient, product)}
@@ -462,30 +501,30 @@ export class UIComponents {
           <div>
             <div class="mb-2 flex flex-wrap items-center gap-2">
               <span class="rounded-md bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-200/70 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-800/60">
-                ${this.escapeHtml(recipe.cuisine)}
+                ${this.escapeHtml(this.cuisine(recipe))}
               </span>
               <span class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:bg-white/5 dark:text-neutral-300">
-                ${this.icon('clock', 'h-3.5 w-3.5')} ${this.escapeHtml(recipe.prepTimeMinutes || '—')} minuten
+                ${this.icon('clock', 'h-3.5 w-3.5')} ${this.escapeHtml(t('recipe.minutes', { count: recipe.prepTimeMinutes || '—' }))}
               </span>
               <span class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:bg-white/5 dark:text-neutral-300">
-                ${this.icon('star', 'h-3.5 w-3.5')} ${this.escapeHtml(recipe.difficulty)}
+                ${this.icon('star', 'h-3.5 w-3.5')} ${this.escapeHtml(this.translated(recipe, 'displayDifficulty', 'difficulty'))}
               </span>
               ${priceInfo.hasPriceData && priceInfo.hasBonus ? `
                 <span class="inline-flex items-center gap-1 rounded-md bg-amber-400 px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-950 shadow-sm">
-                  ${this.icon('flame', 'h-3.5 w-3.5')} Bonus deal
+                  ${this.icon('flame', 'h-3.5 w-3.5')} ${this.escapeHtml(t('catalog.card.bonus'))}
                 </span>
               ` : ''}
             </div>
             <h2 class="font-display text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
-              ${this.escapeHtml(recipe.title)}
+              ${this.escapeHtml(this.title(recipe))}
             </h2>
             <p class="text-sm text-slate-600 dark:text-neutral-300 mt-1">
-              ${this.escapeHtml(recipe.description)}
+              ${this.escapeHtml(this.description(recipe))}
             </p>
             ${recipe.sourceUrl ? `
               <a href="${this.escapeHtml(recipe.sourceUrl)}" target="_blank" rel="noopener noreferrer"
                 class="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 hover:underline dark:text-emerald-400">
-                Bekijk het originele recept op ${this.escapeHtml(recipe.sourceName || 'de bron')}
+                ${this.escapeHtml(t('recipe.originalOn', { source: recipe.sourceName || '' }))}
                 ${this.icon('arrowUpRight', 'h-3.5 w-3.5')}
               </a>
             ` : ''}
@@ -494,7 +533,7 @@ export class UIComponents {
             type="button" 
             id="close-modal-btn" 
             class="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-slate-400 dark:text-neutral-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-white/10 dark:hover:text-neutral-200"
-            aria-label="Sluiten"
+            aria-label="${this.escapeHtml(t('recipe.close'))}"
           >
             ${this.icon('close', 'h-5 w-5')}
           </button>
@@ -505,7 +544,7 @@ export class UIComponents {
           <!-- Portie selector -->
           <div class="flex w-full items-center justify-between gap-3 sm:w-auto sm:justify-start">
             <span class="text-sm font-semibold text-slate-700 dark:text-neutral-200">
-              Aantal personen
+              ${this.escapeHtml(t('recipe.persons'))}
             </span>
             <div class="inline-flex items-center overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm dark:border-white/15 dark:bg-neutral-900">
               <button 
@@ -513,19 +552,19 @@ export class UIComponents {
                 id="modal-portion-minus" 
                 class="px-3.5 py-1.5 font-bold text-slate-700 transition hover:bg-slate-100 disabled:opacity-40 dark:text-neutral-200 dark:hover:bg-neutral-800"
                 ${servings <= 1 ? 'disabled' : ''}
-                aria-label="1 persoon minder"
+                aria-label="${this.escapeHtml(t('portions.less'))}"
               >
                 −
               </button>
               <span id="modal-portion-count" class="min-w-[3rem] px-4 py-1.5 text-center text-sm font-bold text-emerald-700 dark:text-emerald-400">
-                ${servings} pers.
+                ${this.escapeHtml(t('recipe.personsShort', { count: servings }))}
               </span>
               <button 
                 type="button" 
                 id="modal-portion-plus" 
                 class="px-3.5 py-1.5 font-bold text-slate-700 transition hover:bg-slate-100 disabled:opacity-40 dark:text-neutral-200 dark:hover:bg-neutral-800"
                 ${servings >= 8 ? 'disabled' : ''}
-                aria-label="1 persoon meer"
+                aria-label="${this.escapeHtml(t('portions.more'))}"
               >
                 +
               </button>
@@ -538,32 +577,36 @@ export class UIComponents {
             <div class="text-right">
               <div class="text-[11px] font-medium text-slate-500 dark:text-neutral-400">
                 ${priceInfo.hasPriceData
-                  ? `AH-prijsindicatie (${servings} pers.)`
-                  : `Gedeeltelijke prijs · ${priceInfo.matchedIngredientCount}/${priceInfo.ingredientCount} matches, ${priceInfo.pricedIngredientCount} berekend`}
+                  ? this.escapeHtml(t('recipe.priceEstimate', { count: servings }))
+                  : this.escapeHtml(t('recipe.partialPrice', {
+                    matched: priceInfo.matchedIngredientCount,
+                    total: priceInfo.ingredientCount,
+                    priced: priceInfo.pricedIngredientCount
+                  }))}
               </div>
               <div class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
                 ${this.ahService.formatEuro(priceInfo.totalPrice)}
-                <span class="text-xs font-medium text-slate-500 dark:text-neutral-400">(${this.ahService.formatEuro(priceInfo.pricePerPerson)} p.p.)</span>
+                <span class="text-xs font-medium text-slate-500 dark:text-neutral-400">${this.escapeHtml(t('catalog.card.perPerson', { price: this.ahService.formatEuro(priceInfo.pricePerPerson) }))}</span>
               </div>
             </div>
             ${priceInfo.hasPriceData && priceInfo.totalSavings > 0 ? `
               <div class="rounded-xl border border-amber-300 bg-amber-100 px-3 py-1.5 text-right dark:border-amber-700 dark:bg-amber-950/70">
-                <div class="text-[10px] font-bold uppercase tracking-wide text-amber-800 dark:text-amber-300">Bonusvoordeel</div>
+                <div class="text-[10px] font-bold uppercase tracking-wide text-amber-800 dark:text-amber-300">${this.escapeHtml(t('recipe.bonusSaving'))}</div>
                 <div class="text-sm font-extrabold text-amber-700 dark:text-amber-400">−${this.ahService.formatEuro(priceInfo.totalSavings)}</div>
               </div>
             ` : ''}
           </div>
           ` : `
           <p class="w-full text-sm text-slate-500 dark:text-neutral-400 sm:w-auto">
-            AH-prijzen zijn niet beschikbaar voor dit externe recept.
+            ${this.escapeHtml(t('recipe.noPrice'))}
           </p>
           `}
         </div>
         ${this.isLivePriced(recipe) && recipe.priceUpdatedAt ? `
           <p class="text-xs text-slate-500 dark:text-neutral-400 -mt-4">
             ${recipe.ingredients?.some(ingredient => ingredient.productLookupStale)
-              ? 'AH was niet bereikbaar; deels getoonde productgegevens komen uit de cache.'
-              : 'Laatst bijgewerkt: ' + this.formatTimestamp(recipe.priceUpdatedAt)}
+              ? this.escapeHtml(t('recipe.stalePrices'))
+              : this.escapeHtml(t('recipe.updatedAt', { date: this.formatTimestamp(recipe.priceUpdatedAt) }))}
           </p>
         ` : ''}
 
@@ -571,19 +614,19 @@ export class UIComponents {
         ${nutrition ? `
         <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           <div class="surface-inset p-3 text-center">
-            <span class="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-neutral-400">Calorieën p.p.</span>
+            <span class="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-neutral-400">${this.escapeHtml(t('recipe.calories'))}</span>
             <span class="mt-1 block text-lg font-bold text-slate-800 dark:text-neutral-100">${this.escapeHtml(nutrition.calories)} <span class="text-xs font-normal text-slate-400 dark:text-neutral-400">kcal</span></span>
           </div>
           <div class="rounded-[0.875rem] border border-blue-100/80 bg-blue-50/50 p-3 text-center dark:border-blue-900/40 dark:bg-blue-950/30">
-            <span class="block text-[10px] font-bold uppercase tracking-[0.12em] text-blue-600 dark:text-blue-400">Eiwit p.p.</span>
+            <span class="block text-[10px] font-bold uppercase tracking-[0.12em] text-blue-600 dark:text-blue-400">${this.escapeHtml(t('recipe.protein'))}</span>
             <span class="mt-1 block text-lg font-bold text-blue-700 dark:text-blue-300">${this.escapeHtml(nutrition.proteinGrams)} g</span>
           </div>
           <div class="surface-inset p-3 text-center">
-            <span class="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-neutral-400">Koolhydraten p.p.</span>
+            <span class="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-neutral-400">${this.escapeHtml(t('recipe.carbs'))}</span>
             <span class="mt-1 block text-lg font-bold text-slate-800 dark:text-neutral-100">${this.escapeHtml(nutrition.carbsGrams)} g</span>
           </div>
           <div class="surface-inset p-3 text-center">
-            <span class="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-neutral-400">Vetten p.p.</span>
+            <span class="block text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-neutral-400">${this.escapeHtml(t('recipe.fat'))}</span>
             <span class="mt-1 block text-lg font-bold text-slate-800 dark:text-neutral-100">${this.escapeHtml(nutrition.fatGrams)} g</span>
           </div>
         </div>
@@ -594,8 +637,8 @@ export class UIComponents {
           <!-- Ingrediëntenlijst (5 kolommen op desktop) -->
           <div class="space-y-3 md:col-span-5">
             <h3 class="flex items-center justify-between text-sm font-bold text-slate-800 dark:text-neutral-100">
-              <span class="inline-flex items-center gap-2">${this.icon('basket', 'h-4 w-4 text-emerald-700 dark:text-emerald-400')} Ingrediënten</span>
-              <span class="text-[11px] font-normal text-slate-400 dark:text-neutral-400">Klik voor AH-opties</span>
+              <span class="inline-flex items-center gap-2">${this.icon('basket', 'h-4 w-4 text-emerald-700 dark:text-emerald-400')} ${this.escapeHtml(t('recipe.ingredients'))}</span>
+              <span class="text-[11px] font-normal text-slate-400 dark:text-neutral-400">${this.escapeHtml(t('recipe.ingredientsHint'))}</span>
             </h3>
             <ul class="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm dark:divide-white/10 dark:border-white/10 dark:bg-neutral-800/60">
               ${(recipe.ingredients || []).map((ing, index) => {
@@ -610,8 +653,8 @@ export class UIComponents {
                 const isBonus = live ? Boolean(product?.isBonus) : Boolean(ing.isBonus);
                 const price = live ? product?.price : ing.standardPrice;
                 const bonusDesc = live
-                  ? product?.bonusDescription || 'Bonus'
-                  : ing.bonusText || 'Bonus';
+                  ? product?.bonusDescription || t('recipe.options.bonus')
+                  : ing.bonusText || t('recipe.options.bonus');
                 const optionCount = (ing.ahProductOptions || []).length;
                 const rowSavings = isBonus && quantityCost && Number.isFinite(quantityCost.regular) &&
                   quantityCost.regular > quantityCost.current
@@ -631,15 +674,15 @@ export class UIComponents {
                       </span>
                       <span class="min-w-0 flex-1">
                         <span class="block truncate text-sm font-semibold text-slate-800 dark:text-neutral-100">
-                          ${scaledAmount === null ? '' : `<span class="tabular-nums">${this.escapeHtml(scaledAmount)}</span> `}${this.escapeHtml(ing.unit)} ${this.escapeHtml(ing.name)}
+                          ${scaledAmount === null ? '' : `<span class="tabular-nums">${this.escapeHtml(scaledAmount)}</span> `}${this.escapeHtml(ing.unit)} ${this.escapeHtml(this.ingredientName(ing))}
                         </span>
                         <span class="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400 dark:text-neutral-400">
                           ${isBonus
                             ? `<span class="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">${this.icon('flame', 'h-3 w-3')} ${this.escapeHtml(bonusDesc)}${rowSavings > 0 ? ` · −${this.ahService.formatEuro(rowSavings)}` : ''}</span>`
                             : ''}
                           <span>${optionCount > 0
-                            ? `${optionCount} AH-${optionCount === 1 ? 'optie' : 'opties'}`
-                            : 'Bekijk AH-product'}</span>
+                            ? this.escapeHtml(t(optionCount === 1 ? 'recipe.options.optionsOne' : 'recipe.options.optionsMany', { count: optionCount }))
+                            : this.escapeHtml(t('recipe.options.viewProduct'))}</span>
                         </span>
                       </span>
                       <span class="flex shrink-0 items-center gap-1.5">
@@ -667,11 +710,11 @@ export class UIComponents {
           <!-- Bereidingswijze (7 kolommen op desktop) -->
           <div class="space-y-3 md:col-span-7">
             <h3 class="flex items-center justify-between text-sm font-bold text-slate-800 dark:text-neutral-100">
-              <span class="inline-flex items-center gap-2">${this.icon('list', 'h-4 w-4 text-emerald-700 dark:text-emerald-400')} Bereidingswijze</span>
-              <span class="text-[11px] font-normal text-slate-400 dark:text-neutral-400">Stap voor stap koken</span>
+              <span class="inline-flex items-center gap-2">${this.icon('list', 'h-4 w-4 text-emerald-700 dark:text-emerald-400')} ${this.escapeHtml(t('recipe.instructions'))}</span>
+              <span class="text-[11px] font-normal text-slate-400 dark:text-neutral-400">${this.escapeHtml(t('recipe.instructionsHint'))}</span>
             </h3>
             <ol class="space-y-2.5">
-              ${(recipe.instructions || []).map((step, idx) => `
+              ${this.instructions(recipe).map((step, idx) => `
                 <li class="flex items-start gap-3 rounded-xl border border-slate-200/80 bg-white p-3.5 text-sm leading-relaxed text-slate-700 shadow-sm dark:border-white/10 dark:bg-neutral-800/60 dark:text-neutral-300">
                   <span class="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-50 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-200/70 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-800/60">
                     ${idx + 1}
@@ -692,10 +735,10 @@ export class UIComponents {
               </span>
               <div>
                 <h4 class="text-sm font-bold text-slate-900 dark:text-white sm:text-base">
-                  Vraag Gemini Kookassistent
+                  ${this.escapeHtml(t('ai.title'))}
                 </h4>
                 <p class="text-xs text-slate-500 dark:text-neutral-400">
-                  Stel een vraag over ingrediënten vervangen, bereiding of tips
+                  ${this.escapeHtml(t('ai.subtitle'))}
                 </p>
               </div>
             </div>
@@ -704,7 +747,7 @@ export class UIComponents {
                 type="button" 
                 class="open-settings-btn inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-[11px] font-semibold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/80 dark:text-indigo-300"
               >
-                ${this.icon('key', 'h-3.5 w-3.5')} API-sleutel
+                ${this.icon('key', 'h-3.5 w-3.5')} ${this.escapeHtml(t('ai.keyButton'))}
               </button>
             ` : ''}
           </div>
@@ -712,16 +755,16 @@ export class UIComponents {
           <!-- Snelkeuze vragen knoppen -->
           <div class="mb-3 flex flex-wrap gap-1.5">
             <button type="button" class="gemini-quick-btn rounded-lg border border-slate-200/90 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-800 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-indigo-900/50" data-prompt="Hoe kan ik dit gerecht nóg eiwitrijker maken zonder veel extra calorieën?">
-              Eiwitrijker maken
+              ${this.escapeHtml(t('ai.quick.protein'))}
             </button>
             <button type="button" class="gemini-quick-btn rounded-lg border border-slate-200/90 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-800 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-indigo-900/50" data-prompt="Wat kan ik vervangen als ik bepaalde ingrediënten niet lust of in huis heb?">
-              Ingrediënten vervangen
+              ${this.escapeHtml(t('ai.quick.replace'))}
             </button>
             <button type="button" class="gemini-quick-btn rounded-lg border border-slate-200/90 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-800 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-indigo-900/50" data-prompt="Welke wijn, bier of alcoholvrije drank past perfect bij de smaken van dit gerecht?">
-              Wijn- &amp; drankparing
+              ${this.escapeHtml(t('ai.quick.wine'))}
             </button>
             <button type="button" class="gemini-quick-btn rounded-lg border border-slate-200/90 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-800 dark:border-white/10 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-indigo-900/50" data-prompt="Hoe kan ik dit recept het makkelijkst omtoveren tot een 100% vegetarische of plantaardige variant?">
-              Vegetarische variant
+              ${this.escapeHtml(t('ai.quick.veg'))}
             </button>
           </div>
 
@@ -730,11 +773,11 @@ export class UIComponents {
 
           <!-- Chat invoer veld -->
           <form id="gemini-ask-form" class="flex gap-2">
-            <label for="gemini-question-input" class="sr-only">Stel een vraag aan Gemini</label>
+            <label for="gemini-question-input" class="sr-only">${this.escapeHtml(t('ai.label'))}</label>
             <input 
               type="text" 
               id="gemini-question-input" 
-              placeholder="${this.geminiService.hasApiKey() ? 'Stel een vraag over dit gerecht aan Gemini…' : 'Vul eerst je Gemini API-key in om vragen te stellen…'}"
+              placeholder="${this.escapeHtml(this.geminiService.hasApiKey() ? t('ai.placeholder') : t('ai.placeholderDisabled'))}"
               class="flex-1 rounded-xl border border-slate-200/90 bg-white px-3.5 py-2 text-sm text-slate-800 transition placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/10 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-100"
               ${!this.geminiService.hasApiKey() ? 'disabled' : ''}
             />
@@ -744,7 +787,7 @@ export class UIComponents {
               class="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
               ${!this.geminiService.hasApiKey() ? 'disabled' : ''}
             >
-              <span>Vraag</span>
+              <span>${this.escapeHtml(t('ai.ask'))}</span>
               <span id="gemini-spinner" class="hidden h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true"></span>
             </button>
           </form>

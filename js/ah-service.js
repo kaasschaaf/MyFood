@@ -1,5 +1,6 @@
 import { BrowserCache } from './browser-cache.js';
 import { formatEuro } from './utils.js';
+import { getLocale } from './i18n.js';
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1']);
 const configuredAHApi = String(globalThis.MYFOOD_AH_API_BASE || '').trim().replace(/\/+$/, '');
@@ -608,6 +609,6 @@ export class AHService {
   }
 
   formatEuro(amount) {
-    return formatEuro(amount);
+    return formatEuro(amount, getLocale());
   }
 }

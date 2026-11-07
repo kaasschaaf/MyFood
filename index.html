@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="nl" class="light">
+<html lang="nl" class="light" data-i18n-title="page.title">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -40,25 +40,25 @@
               <span id="build-time-label">—</span>
             </span>
           </span>
-          <span class="mt-1 block text-[11px] font-medium tracking-wide text-slate-500 dark:text-neutral-400">Recepten · AH-prijzen · AI-kookhulp</span>
+          <span class="mt-1 block text-[11px] font-medium tracking-wide text-slate-500 dark:text-neutral-400"><span data-i18n="app.tagline">Recepten · AH-prijzen · AI-kookhulp</span></span>
         </span>
       </a>
 
       <!-- Feature-switcher: Recepten en Producten zijn gelijkwaardige onderdelen -->
-      <nav class="feature-nav hidden sm:inline-flex" aria-label="Onderdelen van MyFood">
+      <nav class="feature-nav hidden sm:inline-flex" data-i18n-attr="aria-label:nav.label" aria-label="Onderdelen van MyFood">
         <a href="./index.html" class="feature-tab" aria-current="page">
           <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5V5.5Z"/>
             <path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5"/>
           </svg>
-          Recepten
+          <span data-i18n="nav.recipes">Recepten</span>
         </a>
         <a href="./producten.html" class="feature-tab">
           <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <path d="M6 8h12l1 12H5L6 8Z"/>
             <path d="M9 8V6a3 3 0 0 1 6 0v2"/>
           </svg>
-          Producten
+          <span data-i18n="nav.products">Producten</span>
         </a>
       </nav>
 
@@ -66,33 +66,56 @@
       <div class="flex items-center gap-1.5 sm:gap-2">
         <!-- Portie Schakelaar (Standaard 2 personen) -->
         <div class="hidden items-center gap-2 rounded-full border border-slate-200/80 bg-white/70 px-2 py-1 shadow-sm dark:border-white/10 dark:bg-white/5 sm:flex">
-          <span class="pl-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-neutral-400">Porties</span>
+          <span class="pl-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-neutral-400" data-i18n="portions.label">Porties</span>
           <div class="inline-flex items-center rounded-full bg-slate-100/80 p-0.5 dark:bg-neutral-900/70">
-            <button type="button" id="main-portion-minus" class="grid h-7 w-7 place-items-center rounded-full text-sm font-bold text-slate-600 transition hover:bg-white hover:text-slate-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white" title="1 persoon minder" aria-label="1 persoon minder">−</button>
-            <span id="main-portion-count" class="min-w-14 px-2 text-center text-xs font-bold text-emerald-700 dark:text-emerald-400" aria-live="polite">2 pers.</span>
-            <button type="button" id="main-portion-plus" class="grid h-7 w-7 place-items-center rounded-full text-sm font-bold text-slate-600 transition hover:bg-white hover:text-slate-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white" title="1 persoon meer" aria-label="1 persoon meer">+</button>
+            <button type="button" id="main-portion-minus" class="grid h-7 w-7 place-items-center rounded-full text-sm font-bold text-slate-600 transition hover:bg-white hover:text-slate-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white" title="1 persoon minder" aria-label="1 persoon minder" data-i18n-attr="title:portions.less|aria-label:portions.less">−</button>
+            <span id="main-portion-count" class="min-w-14 px-2 text-center text-xs font-bold text-emerald-700 dark:text-emerald-400" aria-live="polite">2<//span>
+            <button type="button" id="main-portion-plus" class="grid h-7 w-7 place-items-center rounded-full text-sm font-bold text-slate-600 transition hover:bg-white hover:text-slate-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white" title="1 persoon meer" aria-label="1 persoon meer" data-i18n-attr="title:portions.more|aria-label:portions.more">+</button>
           </div>
         </div>
 
         <button
           type="button"
           id="nav-settings-btn"
+          data-i18n-attr="aria-label:nav.settings|title:nav.settings"
           aria-label="Gemini AI-instellingen"
-          class="inline-flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/70 px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-emerald-200 hover:text-emerald-800 dark:border-white/10 dark:bg-white/5 dark:text-neutral-300 dark:hover:border-emerald-500/30 dark:hover:text-emerald-300"
+          class="inline-flex shrink-0 items-center gap-2 rounded-xl border border-slate-200/80 bg-white/70 px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-emerald-200 hover:text-emerald-800 dark:border-white/10 dark:bg-white/5 dark:text-neutral-300 dark:hover:border-emerald-500/30 dark:hover:text-emerald-300"
           title="Instellingen en Gemini API key"
         >
           <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Z"/>
             <path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14Z"/>
           </svg>
-          <span class="hidden lg:inline">Gemini AI</span>
+          <span class="hidden lg:inline" data-i18n="nav.settingsShort">Gemini AI</span>
+        </button>
+
+        <button
+          type="button"
+          id="language-toggle"
+          data-language-toggle
+          class="icon-button shrink-0"
+          aria-label="Wissel taal"
+          title="Wissel taal"
+        >
+          <svg data-language-flag="en" class="h-4 w-6 rounded-[2px] ring-1 ring-inset ring-black/10" viewBox="0 0 60 40" aria-hidden="true">
+            <rect width="60" height="40" fill="#012169"/>
+            <path d="M0 0 60 40M60 0 0 40" stroke="#fff" stroke-width="8"/>
+            <path d="M0 0 60 40M60 0 0 40" stroke="#c8102e" stroke-width="4"/>
+            <path d="M30 0v40M0 20h60" stroke="#fff" stroke-width="14"/>
+            <path d="M30 0v40M0 20h60" stroke="#c8102e" stroke-width="8"/>
+          </svg>
+          <svg data-language-flag="nl" hidden class="h-4 w-6 rounded-[2px] ring-1 ring-inset ring-black/10" viewBox="0 0 60 40" aria-hidden="true">
+            <rect width="60" height="40" fill="#fff"/>
+            <rect width="60" height="13.34" fill="#ae1c28"/>
+            <rect y="26.66" width="60" height="13.34" fill="#21468b"/>
+          </svg>
         </button>
 
         <button
           type="button"
           id="theme-toggle"
-          class="icon-button"
-          aria-label="Wissel thema"
+          class="icon-button shrink-0"
+          data-i18n-attr="aria-label:nav.theme" aria-label="Wissel thema"
         >
           <svg aria-hidden="true" class="h-5 w-5 dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"/>
@@ -109,31 +132,31 @@
 
   <!-- Mobiele feature-switcher -->
   <div class="border-b border-slate-200/70 bg-white/60 px-4 py-2 dark:border-white/10 dark:bg-white/5 sm:hidden">
-    <nav class="feature-nav flex w-full" aria-label="Onderdelen van MyFood">
+    <nav class="feature-nav flex w-full" data-i18n-attr="aria-label:nav.label" aria-label="Onderdelen van MyFood">
       <a href="./index.html" class="feature-tab flex-1" aria-current="page">
         <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5V5.5Z"/>
           <path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5"/>
         </svg>
-        Recepten
+        <span data-i18n="nav.recipes">Recepten</span>
       </a>
       <a href="./producten.html" class="feature-tab flex-1">
         <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M6 8h12l1 12H5L6 8Z"/>
           <path d="M9 8V6a3 3 0 0 1 6 0v2"/>
         </svg>
-        Producten
+        <span data-i18n="nav.products">Producten</span>
       </a>
     </nav>
   </div>
 
   <!-- Mobiele Portie Selector Bar -->
   <div class="flex items-center justify-between border-b border-slate-200/70 bg-white/60 px-4 py-2 text-xs dark:border-white/10 dark:bg-white/5 sm:hidden">
-    <span class="font-semibold text-slate-500 dark:text-neutral-400">Porties berekend voor</span>
+    <span class="font-semibold text-slate-500 dark:text-neutral-400" data-i18n="portions.for">Porties berekend voor</span>
     <div class="inline-flex items-center rounded-full border border-slate-200/80 bg-white p-0.5 dark:border-white/10 dark:bg-neutral-900">
-      <button type="button" id="mobile-portion-minus" class="grid h-7 w-7 place-items-center rounded-full text-sm font-bold text-slate-600 transition hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-800" aria-label="1 persoon minder">−</button>
-      <span class="min-w-12 px-2 text-center text-xs font-bold text-emerald-700 dark:text-emerald-400" id="mobile-portion-label" aria-live="polite">2 pers.</span>
-      <button type="button" id="mobile-portion-plus" class="grid h-7 w-7 place-items-center rounded-full text-sm font-bold text-slate-600 transition hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-800" aria-label="1 persoon meer">+</button>
+      <button type="button" id="mobile-portion-minus" class="grid h-7 w-7 place-items-center rounded-full text-sm font-bold text-slate-600 transition hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-800" data-i18n-attr="aria-label:portions.less" aria-label="1 persoon minder">−</button>
+      <span class="min-w-12 px-2 text-center text-xs font-bold text-emerald-700 dark:text-emerald-400" id="mobile-portion-label" aria-live="polite">2<//span>
+      <button type="button" id="mobile-portion-plus" class="grid h-7 w-7 place-items-center rounded-full text-sm font-bold text-slate-600 transition hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-800" data-i18n-attr="aria-label:portions.more" aria-label="1 persoon meer">+</button>
     </div>
   </div>
 
@@ -151,18 +174,26 @@
             </svg>
           </span>
           <div>
-            <p class="eyebrow">Recepten</p>
-            <h1 id="catalog-heading" class="font-display mt-1.5 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-[1.75rem]">Wat kook je vandaag?</h1>
-            <p class="mt-1.5 max-w-xl text-sm text-slate-500 dark:text-neutral-400">Kies een gerecht en bekijk direct wat de ingrediënten bij Albert Heijn kosten.</p>
+            <p class="eyebrow" data-i18n="catalog.eyebrow">Recepten</p>
+            <h1 id="catalog-heading" class="font-display mt-1.5 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-[1.75rem]" data-i18n="catalog.title">Wat kook je vandaag?</h1>
+            <p class="mt-1.5 max-w-xl text-sm text-slate-500 dark:text-neutral-400" data-i18n="catalog.subtitle">Kies een gerecht en bekijk direct wat de ingrediënten bij Albert Heijn kosten.</p>
           </div>
         </div>
-        <span id="results-count" class="inline-flex items-center rounded-full border border-slate-200/80 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-neutral-400" aria-live="polite">Recepten laden…</span>
+        <span id="results-count" class="inline-flex items-center rounded-full border border-slate-200/80 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-neutral-400" aria-live="polite" data-i18n="catalog.loading">Recepten laden…</span>
       </div>
+
+      <p id="translation-notice" class="mb-4 hidden items-start gap-2 rounded-xl border border-amber-200/80 bg-amber-50/70 p-3 text-xs leading-relaxed text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/25 dark:text-amber-200" role="status">
+        <svg aria-hidden="true" class="mt-0.5 h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M12 8h.01M11 12h1v4h1"/>
+        </svg>
+        <span id="translation-notice-text"></span>
+      </p>
 
       <!-- Zoekveld & Sorteren -->
       <div class="flex flex-col gap-3 sm:flex-row">
         <div class="relative flex-1">
-          <label for="search-input" class="sr-only">Zoek recepten</label>
+          <label for="search-input" class="sr-only" data-i18n="catalog.searchLabel">Zoek recepten</label>
           <svg aria-hidden="true" class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-neutral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="7"/>
             <path d="m20 20-3.5-3.5"/>
@@ -170,54 +201,54 @@
           <input
             type="text"
             id="search-input"
-            placeholder="Zoek op gerecht, keuken of trefwoord…"
+            data-i18n-attr="placeholder:catalog.searchPlaceholder" placeholder="Zoek op gerecht, keuken of trefwoord…"
             class="w-full rounded-xl border border-slate-200/90 bg-slate-50/80 py-2.5 pl-10 pr-4 text-sm text-slate-800 transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 dark:border-white/10 dark:bg-white/5 dark:text-neutral-100 dark:focus:bg-neutral-900"
           />
         </div>
 
         <!-- Sorteren -->
         <div class="shrink-0 sm:w-64">
-          <label for="sort-select" class="sr-only">Sorteer recepten</label>
+          <label for="sort-select" class="sr-only" data-i18n="catalog.sortLabel">Sorteer recepten</label>
           <select
             id="sort-select"
             class="w-full cursor-pointer rounded-xl border border-slate-200/90 bg-slate-50/80 px-3.5 py-2.5 text-sm text-slate-700 transition focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 dark:border-white/10 dark:bg-white/5 dark:text-neutral-200 dark:focus:bg-neutral-900"
           >
-            <option value="default">Sortering: Aanbevolen</option>
-            <option value="price-asc">Goedkoopst per persoon</option>
-            <option value="bonus-desc">Meeste bonusvoordeel</option>
-            <option value="protein-desc">Meeste proteïne (g)</option>
-            <option value="health-desc">Hoogste gezondheidsscore</option>
-            <option value="time-asc">Kortste bereidingstijd</option>
+            <option value="default" data-i18n="catalog.sort.default">Sortering: Aanbevolen</option>
+            <option value="price-asc" data-i18n="catalog.sort.priceAsc">Goedkoopst per persoon</option>
+            <option value="bonus-desc" data-i18n="catalog.sort.bonusDesc">Meeste bonusvoordeel</option>
+            <option value="protein-desc" data-i18n="catalog.sort.proteinDesc">Meeste proteïne (g)</option>
+            <option value="health-desc" data-i18n="catalog.sort.healthDesc">Hoogste gezondheidsscore</option>
+            <option value="time-asc" data-i18n="catalog.sort.timeAsc">Kortste bereidingstijd</option>
           </select>
         </div>
       </div>
 
       <div class="mt-4 space-y-3">
         <!-- Keukenstijl Horizontale Scrollbar -->
-        <div id="cuisine-pills" class="horizontal-scroll-hide-bar flex items-center gap-1.5 overflow-x-auto pb-1" role="group" aria-label="Filter op keukenstijl">
+        <div id="cuisine-pills" class="horizontal-scroll-hide-bar flex items-center gap-1.5 overflow-x-auto pb-1" role="group" data-i18n-attr="aria-label:catalog.filtersLabel" aria-label="Filter op keukenstijl">
           <!-- Dynamisch gevuld via JS -->
         </div>
 
         <!-- Snelle Toggles (Bonus, Eiwit, Snel) -->
-        <div class="flex flex-wrap items-center gap-2" role="group" aria-label="Snelfilters">
+        <div class="flex flex-wrap items-center gap-2" role="group" data-i18n-attr="aria-label:catalog.quickFilters" aria-label="Snelfilters">
           <button type="button" id="filter-bonus" class="filter-toggle filter-toggle--bonus" aria-pressed="false">
             <svg aria-hidden="true" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 3c.5 3.2-2.4 4.5-2.4 7.2 0 1.1.7 2 1.8 2.2-.2-1.6.7-2.6 1.5-3.4.2 2.4 3.1 3 3.1 5.9A4 4 0 0 1 12 19a5 5 0 0 1-5-5c0-4 3.2-6.8 5-11Z"/>
             </svg>
-            AH Bonus deals
+            <span data-i18n="catalog.bonusOnly">AH Bonus deals</span>
           </button>
           <button type="button" id="filter-protein" class="filter-toggle filter-toggle--protein" aria-pressed="false">
             <svg aria-hidden="true" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
               <path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/>
             </svg>
-            Eiwitrijk (&gt;30 g)
+            <span data-i18n="catalog.highProtein">Eiwitrijk (&gt;30 g)</span>
           </button>
           <button type="button" id="filter-quick" class="filter-toggle filter-toggle--quick" aria-pressed="false">
             <svg aria-hidden="true" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="9"/>
               <path d="M12 7v5l3 2"/>
             </svg>
-            Snel (&lt;25 min)
+            <span data-i18n="catalog.quick">Snel (&lt;25 min)</span>
           </button>
         </div>
       </div>
@@ -226,7 +257,7 @@
     </section>
 
     <!-- Recepten Raster -->
-    <section aria-label="Recepten">
+    <section aria-label="Recepten" data-i18n-attr="aria-label:page.recipesRegion">
       <div id="recipes-grid" class="grid grid-cols-1 gap-5 md:grid-cols-2 sm:gap-6 lg:grid-cols-3">
         <!-- Receptkaarten worden dynamisch ingeladen via UIComponents -->
       </div>
@@ -251,32 +282,32 @@
             </svg>
           </span>
           <div>
-            <h3 id="settings-title" class="font-display text-lg font-semibold text-slate-900 dark:text-white">Instellingen</h3>
-            <p class="mt-0.5 text-xs text-slate-500 dark:text-neutral-400">AI-kookhulp en productvoorkeuren</p>
+            <h3 id="settings-title" class="font-display text-lg font-semibold text-slate-900 dark:text-white" data-i18n="settings.title">Instellingen</h3>
+            <p class="mt-0.5 text-xs text-slate-500 dark:text-neutral-400" data-i18n="settings.subtitle">AI-kookhulp en productvoorkeuren</p>
           </div>
         </div>
-        <button type="button" id="close-settings-btn" class="grid h-8 w-8 place-items-center rounded-lg text-slate-400 dark:text-neutral-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-200" aria-label="Sluiten">
+        <button type="button" id="close-settings-btn" class="grid h-8 w-8 place-items-center rounded-lg text-slate-400 dark:text-neutral-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-200" data-i18n-attr="aria-label:recipe.close" aria-label="Sluiten">
           <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M18 6 6 18M6 6l12 12"/>
           </svg>
         </button>
       </div>
 
-      <p class="text-xs leading-relaxed text-slate-600 dark:text-neutral-300">
+      <p class="text-xs leading-relaxed text-slate-600 dark:text-neutral-300" data-i18n-html="settings.intro">
         Om vragen over recepten te stellen aan Chef Gemini heb je een gratis Google Gemini API key nodig. Deze wordt uitsluitend lokaal in je eigen browser (<code class="rounded bg-slate-100 px-1 py-0.5 text-[11px] dark:bg-neutral-800">localStorage</code>) bewaard en nooit gedeeld.
       </p>
 
       <label for="ignore-online-only-products" class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200/80 bg-slate-50 p-3 dark:border-white/10 dark:bg-white/5">
         <input type="checkbox" id="ignore-online-only-products" class="mt-0.5 accent-emerald-600">
         <span>
-          <span class="block text-sm font-semibold text-slate-800 dark:text-neutral-100">Negeer producten die alleen online verkrijgbaar zijn</span>
-          <span class="mt-0.5 block text-xs text-slate-500 dark:text-neutral-400">Geldt overal voor receptmatches en productvergelijkingen.</span>
+          <span class="block text-sm font-semibold text-slate-800 dark:text-neutral-100" data-i18n="settings.ignoreOnline">Negeer producten die alleen online verkrijgbaar zijn</span>
+          <span class="mt-0.5 block text-xs text-slate-500 dark:text-neutral-400" data-i18n="settings.ignoreOnlineHelp">Geldt overal voor receptmatches en productvergelijkingen.</span>
         </span>
       </label>
 
       <div class="space-y-1.5">
         <label for="api-key-input" class="text-xs font-semibold text-slate-700 dark:text-neutral-200">
-          Google Gemini API-sleutel
+          <span data-i18n="settings.apiKey">Google Gemini API-sleutel</span>
         </label>
         <input
           type="password"
@@ -287,7 +318,7 @@
       </div>
 
       <div class="rounded-xl border border-indigo-100 bg-indigo-50/70 p-3 text-xs leading-relaxed text-indigo-800 dark:border-indigo-900/60 dark:bg-indigo-950/40 dark:text-indigo-300">
-        <strong class="font-semibold">Nog geen sleutel?</strong> Maak er in één minuut gratis eentje aan via
+        <strong class="font-semibold" data-i18n="settings.noKeyTitle">Nog geen sleutel?</strong> <span data-i18n="settings.noKeyBody">Maak er in één minuut gratis eentje aan via</span>
         <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="font-semibold underline decoration-indigo-300 underline-offset-2 transition hover:text-indigo-600 dark:hover:text-indigo-200">
           Google AI Studio ↗
         </a>.
@@ -298,7 +329,7 @@
         id="save-settings-btn"
         class="w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
       >
-        Opslaan &amp; activeren
+        <span data-i18n="settings.save">Opslaan &amp; activeren</span>
       </button>
     </div>
   </dialog>
@@ -313,9 +344,9 @@
             <path d="M7 16h10"/>
           </svg>
         </span>
-        <p><strong class="font-semibold text-slate-700 dark:text-neutral-200">MyFood</strong> — Jouw persoonlijke kookassistent.</p>
+        <p><strong class="font-semibold text-slate-700 dark:text-neutral-200">MyFood</strong> — <span data-i18n="footer.tagline">Jouw persoonlijke kookassistent.</span></p>
       </div>
-      <p class="max-w-md text-[11px] leading-relaxed text-slate-400 dark:text-neutral-500">
+      <p class="max-w-md text-[11px] leading-relaxed text-slate-400 dark:text-neutral-500" data-i18n="footer.note">
         AH-productgegevens worden anoniem opgehaald en lokaal gecachet. Recepten: Allerhande en TheMealDB. AI: Google Gemini.
       </p>
     </div>
