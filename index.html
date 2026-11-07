@@ -44,29 +44,36 @@
         </span>
       </a>
 
-      <!-- Midden: Portie Schakelaar (Standaard 2 personen) -->
-      <div class="hidden items-center gap-2 rounded-full border border-slate-200/80 bg-white/70 px-2 py-1 shadow-sm dark:border-white/10 dark:bg-white/5 sm:flex">
-        <span class="pl-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-neutral-400">Porties</span>
-        <div class="inline-flex items-center rounded-full bg-slate-100/80 p-0.5 dark:bg-neutral-900/70">
-          <button type="button" id="main-portion-minus" class="grid h-7 w-7 place-items-center rounded-full text-sm font-bold text-slate-600 transition hover:bg-white hover:text-slate-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white" title="1 persoon minder" aria-label="1 persoon minder">−</button>
-          <span id="main-portion-count" class="min-w-14 px-2 text-center text-xs font-bold text-emerald-700 dark:text-emerald-400" aria-live="polite">2 pers.</span>
-          <button type="button" id="main-portion-plus" class="grid h-7 w-7 place-items-center rounded-full text-sm font-bold text-slate-600 transition hover:bg-white hover:text-slate-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white" title="1 persoon meer" aria-label="1 persoon meer">+</button>
-        </div>
-      </div>
-
-      <!-- Knoppen Rechts (Producten, Settings, Thema) -->
-      <div class="flex items-center gap-1.5 sm:gap-2">
-        <a
-          href="./producten.html"
-          aria-label="Mijn producten"
-          class="inline-flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/70 px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-emerald-200 hover:text-emerald-800 dark:border-white/10 dark:bg-white/5 dark:text-neutral-300 dark:hover:border-emerald-500/30 dark:hover:text-emerald-300"
-        >
+      <!-- Feature-switcher: Recepten en Producten zijn gelijkwaardige onderdelen -->
+      <nav class="feature-nav hidden sm:inline-flex" aria-label="Onderdelen van MyFood">
+        <a href="./index.html" class="feature-tab" aria-current="page">
+          <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5V5.5Z"/>
+            <path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5"/>
+          </svg>
+          Recepten
+        </a>
+        <a href="./producten.html" class="feature-tab">
           <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <path d="M6 8h12l1 12H5L6 8Z"/>
             <path d="M9 8V6a3 3 0 0 1 6 0v2"/>
           </svg>
-          <span class="hidden sm:inline">Mijn producten</span>
+          Producten
         </a>
+      </nav>
+
+      <!-- Knoppen Rechts (Settings, Thema) -->
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <!-- Portie Schakelaar (Standaard 2 personen) -->
+        <div class="hidden items-center gap-2 rounded-full border border-slate-200/80 bg-white/70 px-2 py-1 shadow-sm dark:border-white/10 dark:bg-white/5 sm:flex">
+          <span class="pl-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-neutral-400">Porties</span>
+          <div class="inline-flex items-center rounded-full bg-slate-100/80 p-0.5 dark:bg-neutral-900/70">
+            <button type="button" id="main-portion-minus" class="grid h-7 w-7 place-items-center rounded-full text-sm font-bold text-slate-600 transition hover:bg-white hover:text-slate-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white" title="1 persoon minder" aria-label="1 persoon minder">−</button>
+            <span id="main-portion-count" class="min-w-14 px-2 text-center text-xs font-bold text-emerald-700 dark:text-emerald-400" aria-live="polite">2 pers.</span>
+            <button type="button" id="main-portion-plus" class="grid h-7 w-7 place-items-center rounded-full text-sm font-bold text-slate-600 transition hover:bg-white hover:text-slate-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white" title="1 persoon meer" aria-label="1 persoon meer">+</button>
+          </div>
+        </div>
+
         <button
           type="button"
           id="nav-settings-btn"
@@ -78,7 +85,7 @@
             <path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Z"/>
             <path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14Z"/>
           </svg>
-          <span class="hidden sm:inline">Gemini AI</span>
+          <span class="hidden lg:inline">Gemini AI</span>
         </button>
 
         <button
@@ -100,6 +107,26 @@
     </div>
   </header>
 
+  <!-- Mobiele feature-switcher -->
+  <div class="border-b border-slate-200/70 bg-white/60 px-4 py-2 dark:border-white/10 dark:bg-white/5 sm:hidden">
+    <nav class="feature-nav flex w-full" aria-label="Onderdelen van MyFood">
+      <a href="./index.html" class="feature-tab flex-1" aria-current="page">
+        <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5V5.5Z"/>
+          <path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5"/>
+        </svg>
+        Recepten
+      </a>
+      <a href="./producten.html" class="feature-tab flex-1">
+        <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 8h12l1 12H5L6 8Z"/>
+          <path d="M9 8V6a3 3 0 0 1 6 0v2"/>
+        </svg>
+        Producten
+      </a>
+    </nav>
+  </div>
+
   <!-- Mobiele Portie Selector Bar -->
   <div class="flex items-center justify-between border-b border-slate-200/70 bg-white/60 px-4 py-2 text-xs dark:border-white/10 dark:bg-white/5 sm:hidden">
     <span class="font-semibold text-slate-500 dark:text-neutral-400">Porties berekend voor</span>
@@ -115,10 +142,19 @@
 
     <!-- Zoekbalk & Snelfilters -->
     <section class="surface-card p-4 sm:p-6" aria-labelledby="catalog-heading">
-      <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p class="eyebrow">Receptencatalogus</p>
-          <h1 id="catalog-heading" class="font-display mt-1.5 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-[1.75rem]">Wat kook je vandaag?</h1>
+      <div class="mb-5 flex flex-wrap items-end justify-between gap-4">
+        <div class="flex items-start gap-3">
+          <span class="feature-icon" aria-hidden="true">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5V5.5Z"/>
+              <path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5"/>
+            </svg>
+          </span>
+          <div>
+            <p class="eyebrow">Recepten</p>
+            <h1 id="catalog-heading" class="font-display mt-1.5 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-[1.75rem]">Wat kook je vandaag?</h1>
+            <p class="mt-1.5 max-w-xl text-sm text-slate-500 dark:text-neutral-400">Kies een gerecht en bekijk direct wat de ingrediënten bij Albert Heijn kosten.</p>
+          </div>
         </div>
         <span id="results-count" class="inline-flex items-center rounded-full border border-slate-200/80 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-neutral-400" aria-live="polite">Recepten laden…</span>
       </div>

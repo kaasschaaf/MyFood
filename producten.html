@@ -31,16 +31,28 @@
         </span>
         <span class="min-w-0">
           <span class="font-display block text-xl font-semibold leading-none tracking-tight text-slate-900 dark:text-white">MyFood</span>
-          <span class="mt-1 block text-[11px] font-medium tracking-wide text-slate-500 dark:text-neutral-400">Mijn vaste producten</span>
+          <span class="mt-1 block text-[11px] font-medium tracking-wide text-slate-500 dark:text-neutral-400">Productvergelijker</span>
         </span>
       </a>
-      <div class="flex items-center gap-1.5 sm:gap-2">
-        <a href="./index.html" aria-label="Terug naar recepten" class="inline-flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white/70 px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-emerald-200 hover:text-emerald-800 dark:border-white/10 dark:bg-white/5 dark:text-neutral-300 dark:hover:border-emerald-500/30 dark:hover:text-emerald-300">
+
+      <nav class="feature-nav hidden sm:inline-flex" aria-label="Onderdelen van MyFood">
+        <a href="./index.html" class="feature-tab">
           <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 12H5M11 18l-6-6 6-6"/>
+            <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5V5.5Z"/>
+            <path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5"/>
           </svg>
-          <span class="hidden sm:inline">Recepten</span>
+          Recepten
         </a>
+        <a href="./producten.html" class="feature-tab" aria-current="page">
+          <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 8h12l1 12H5L6 8Z"/>
+            <path d="M9 8V6a3 3 0 0 1 6 0v2"/>
+          </svg>
+          Producten
+        </a>
+      </nav>
+
+      <div class="flex items-center gap-1.5 sm:gap-2">
         <button id="theme-toggle" type="button" class="icon-button" aria-label="Wissel thema">
           <svg aria-hidden="true" class="h-5 w-5 dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z"/>
@@ -54,20 +66,48 @@
     </div>
   </header>
 
+  <!-- Mobiele feature-switcher -->
+  <div class="border-b border-slate-200/70 bg-white/60 px-4 py-2 dark:border-white/10 dark:bg-white/5 sm:hidden">
+    <nav class="feature-nav flex w-full" aria-label="Onderdelen van MyFood">
+      <a href="./index.html" class="feature-tab flex-1">
+        <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5V5.5Z"/>
+          <path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5"/>
+        </svg>
+        Recepten
+      </a>
+      <a href="./producten.html" class="feature-tab flex-1" aria-current="page">
+        <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 8h12l1 12H5L6 8Z"/>
+          <path d="M9 8V6a3 3 0 0 1 6 0v2"/>
+        </svg>
+        Producten
+      </a>
+    </nav>
+  </div>
+
   <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
     <p id="page-status" class="mb-4 text-sm leading-relaxed text-slate-600 dark:text-neutral-300" aria-live="polite"></p>
     <div id="workspace-viewport" class="overflow-hidden">
       <div id="workspace-track" class="grid w-[200%] grid-cols-2 transition-transform duration-300 ease-out" data-active-panel="overview">
         <section id="overview-panel" class="min-w-0 pr-3 sm:pr-5" aria-label="Mijn producten">
           <section class="mb-6 flex flex-wrap items-end justify-between gap-4">
-            <div class="max-w-2xl">
-              <p class="eyebrow">Jouw AH-vergelijkers</p>
-              <h1 class="font-display mt-1.5 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-4xl">Mijn vaste producten</h1>
-              <p class="mt-2 text-sm text-slate-500 dark:text-neutral-400 sm:text-base">
-                Vergelijk AH-opties op actuele prijs, bonus, Nutri-Score en eiwit.
-              </p>
+            <div class="flex max-w-2xl items-start gap-3">
+              <span class="feature-icon" aria-hidden="true">
+                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M6 8h12l1 12H5L6 8Z"/>
+                  <path d="M9 8V6a3 3 0 0 1 6 0v2"/>
+                </svg>
+              </span>
+              <div>
+                <p class="eyebrow">Productvergelijker</p>
+                <h1 class="font-display mt-1.5 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-4xl">Mijn vaste producten</h1>
+                <p class="mt-2 text-sm text-slate-500 dark:text-neutral-400 sm:text-base">
+                  Vergelijk AH-opties op actuele prijs, bonus, Nutri-Score en eiwit.
+                </p>
+              </div>
             </div>
-            <button id="open-add-panel" type="button" class="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800">
+            <button id="open-add-panel" type="button" class="btn-ink inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm transition">
               <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
@@ -95,7 +135,7 @@
               </button>
               <button id="edit-selected-product" type="button" class="rounded-lg border border-slate-200/90 bg-white px-2.5 py-2 text-xs font-semibold text-slate-600 transition hover:border-emerald-200 hover:text-emerald-800 dark:border-white/10 dark:bg-white/5 dark:text-neutral-300 dark:hover:border-emerald-500/30 dark:hover:text-emerald-300 sm:text-sm">Aanpassen</button>
               <button id="cancel-edit-product" type="button" class="hidden rounded-lg border border-slate-200/90 bg-white px-2.5 py-2 text-xs font-semibold text-slate-600 transition hover:border-rose-200 hover:text-rose-700 dark:border-white/10 dark:bg-white/5 dark:text-neutral-300 sm:text-sm">Annuleren</button>
-              <button id="save-edit-product" type="button" disabled class="hidden rounded-lg bg-emerald-700 px-2.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-50 sm:text-sm">Opslaan</button>
+              <button id="save-edit-product" type="button" disabled class="btn-ink hidden rounded-lg px-2.5 py-2 text-xs font-semibold shadow-sm transition disabled:opacity-50 sm:text-sm">Opslaan</button>
             </div>
           </div>
           <form id="add-product-form" class="surface-card mb-4 hidden grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_14rem] sm:p-5">
