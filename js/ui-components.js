@@ -35,6 +35,7 @@ export class UIComponents {
       arrowRight: '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>',
       arrowUpRight: '<path d="M7 17 17 7"/><path d="M8 7h9v9"/>',
       chevronRight: '<path d="m9 6 6 6-6 6"/>',
+      chevronLeft: '<path d="m15 6-6 6 6 6"/>',
       basket: '<path d="M5 9h14l-1 11H6L5 9Z"/><path d="m9 9 3-5 3 5"/><path d="M9.5 13v3M14.5 13v3"/>',
       list: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/>',
       sparkles: '<path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Z"/><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14Z"/>',
@@ -316,15 +317,83 @@ export class UIComponents {
   }
 
   /**
+   * Rendert de slide-over weergave met AH-productopties voor één ingrediënt.
+   * @param {Object} recipe
+   * @param {number} index
+   * @param {number} servings
+   * @returns {string} HTML string
+   */
+  renderIngredientDetail(recipe, index, servings = 2) {
+    const ingredient = (recipe.ingredients || [])[index];
+    if (!ingredient) return '';
+
+    const scale = servings / (recipe.baseServings || 2);
+    const scaledAmount = Number.isFinite(ingredient.amount)
+      ? Math.round((ingredient.amount * scale) * 10) / 10
+      : null;
+    const product = ingredient.selectedAHProduct;
+    const live = this.isLivePriced(recipe);
+    const quantityCost = live && product
+      ? this.ahService.calculateQuantityCost(ingredient, product, scale)
+      : null;
+    const isBonus = live ? Boolean(product?.isBonus) : Boolean(ingredient.isBonus);
+    const bonusDesc = live
+      ? product?.bonusDescription || 'Bonus'
+      : ingredient.bonusText || 'Bonus';
+    const optionCount = (ingredient.ahProductOptions || []).length;
+    const amountLabel = [
+      scaledAmount === null ? '' : scaledAmount,
+      ingredient.unit || '',
+      ingredient.name || ''
+    ].filter(part => String(part).length).join(' ');
+
+    return `
+      <div class="space-y-3">
+        <button
+          type="button"
+          data-ingredient-back
+          class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/90 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-emerald-200 hover:text-emerald-800 dark:border-white/10 dark:bg-white/5 dark:text-neutral-300 dark:hover:border-emerald-500/30 dark:hover:text-emerald-300"
+        >
+          ${this.icon('chevronLeft', 'h-3.5 w-3.5')} Ingrediënten
+        </button>
+
+        <div>
+          <p class="eyebrow">Nodig voor dit recept</p>
+          <h4 class="font-display mt-1 text-lg font-semibold leading-snug text-slate-900 dark:text-white">
+            ${this.escapeHtml(amountLabel)}
+          </h4>
+          <p class="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500 dark:text-neutral-400">
+            ${isBonus
+              ? `<span class="rounded bg-amber-100 px-1.5 py-0.5 font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">${this.escapeHtml(bonusDesc)}</span>`
+              : ''}
+            <span>${optionCount > 0
+              ? `${optionCount} AH-${optionCount === 1 ? 'optie' : 'opties'} beschikbaar`
+              : 'Bekijk beschikbare AH-producten'}</span>
+            ${quantityCost ? `<span aria-hidden="true">·</span><span class="tabular-nums">${this.ahService.formatEuro(quantityCost.current)} gebruikt</span>` : ''}
+          </p>
+        </div>
+
+        <div class="max-h-80 overflow-y-auto overscroll-contain rounded-xl border border-slate-200/80 bg-white p-2 shadow-sm dark:border-white/10 dark:bg-neutral-900/40">
+          <p class="sticky top-0 -mx-2 -mt-2 mb-1 bg-white/95 px-3 pb-1.5 pt-2 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 backdrop-blur dark:bg-neutral-900/95">Kies een product en open het bij AH</p>
+          ${this.renderIngredientProducts(ingredient, product)}
+        </div>
+      </div>
+    `;
+  }
+
+  /**
    * Rendert de detailweergave van een recept in het modale dialoogvenster
    * @param {Object} recipe 
    * @param {number} servings 
+   * @param {{ ingredientIndex?: number|null }} uiState
    * @returns {string} HTML string
    */
-  renderRecipeModal(recipe, servings = 2) {
+  renderRecipeModal(recipe, servings = 2, uiState = {}) {
     const scale = servings / (recipe.baseServings || 2);
     const priceInfo = this.ahService.calculateRecipePrice(recipe, servings);
     const nutrition = recipe.nutrition;
+    const activeIngredientIndex = Number.isInteger(uiState.ingredientIndex) ? uiState.ingredientIndex : null;
+    const showsIngredientOptions = activeIngredientIndex !== null;
 
     return `
       <div class="mx-auto max-w-4xl space-y-6 p-5 sm:p-7">
@@ -468,65 +537,71 @@ export class UIComponents {
               <span class="inline-flex items-center gap-2">${this.icon('basket', 'h-4 w-4 text-emerald-700 dark:text-emerald-400')} Ingrediënten</span>
               <span class="text-[11px] font-normal text-slate-400">Klik voor AH-opties</span>
             </h3>
-            <ul class="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm dark:divide-white/10 dark:border-white/10 dark:bg-neutral-800/60">
-              ${(recipe.ingredients || []).map(ing => {
-                const scaledAmount = Number.isFinite(ing.amount)
-                  ? Math.round((ing.amount * scale) * 10) / 10
-                  : null;
-                const product = ing.selectedAHProduct;
-                const live = this.isLivePriced(recipe);
-                const quantityCost = live && product
-                  ? this.ahService.calculateQuantityCost(ing, product, scale)
-                  : null;
-                const isBonus = live ? Boolean(product?.isBonus) : Boolean(ing.isBonus);
-                const price = live ? product?.price : ing.standardPrice;
-                const bonusDesc = live
-                  ? product?.bonusDescription || 'Bonus'
-                  : ing.bonusText || 'Bonus';
-                const optionCount = (ing.ahProductOptions || []).length;
+            <div id="ingredient-viewport" class="ingredient-viewport" data-active-panel="${showsIngredientOptions ? 'detail' : 'list'}">
+              <div id="ingredient-list-panel" class="ingredient-panel" data-panel="list"${showsIngredientOptions ? ' aria-hidden="true" inert' : ''}>
+                <ul class="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm dark:divide-white/10 dark:border-white/10 dark:bg-neutral-800/60">
+                  ${(recipe.ingredients || []).map((ing, index) => {
+                    const scaledAmount = Number.isFinite(ing.amount)
+                      ? Math.round((ing.amount * scale) * 10) / 10
+                      : null;
+                    const product = ing.selectedAHProduct;
+                    const live = this.isLivePriced(recipe);
+                    const quantityCost = live && product
+                      ? this.ahService.calculateQuantityCost(ing, product, scale)
+                      : null;
+                    const isBonus = live ? Boolean(product?.isBonus) : Boolean(ing.isBonus);
+                    const price = live ? product?.price : ing.standardPrice;
+                    const bonusDesc = live
+                      ? product?.bonusDescription || 'Bonus'
+                      : ing.bonusText || 'Bonus';
+                    const optionCount = (ing.ahProductOptions || []).length;
 
-                return `
-                  <li>
-                    <details class="ingredient-disclosure">
-                      <summary class="flex items-center gap-3 px-3 py-2.5 transition hover:bg-slate-50 dark:hover:bg-white/5">
-                        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-400 dark:bg-white/10 dark:text-neutral-500">
-                          ${this.icon('basket', 'h-4 w-4')}
-                        </span>
-                        <span class="min-w-0 flex-1">
-                          <span class="block truncate text-sm font-semibold text-slate-800 dark:text-neutral-100">
-                            ${scaledAmount === null ? '' : `<span class="tabular-nums">${this.escapeHtml(scaledAmount)}</span> `}${this.escapeHtml(ing.unit)} ${this.escapeHtml(ing.name)}
+                    return `
+                      <li>
+                        <button
+                          type="button"
+                          data-ingredient-open="${index}"
+                          aria-label="Bekijk AH-producten voor ${this.escapeHtml(ing.name || 'dit ingrediënt')}"
+                          class="flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-slate-50 focus-visible:bg-slate-50 dark:hover:bg-white/5 dark:focus-visible:bg-white/5"
+                        >
+                          <span class="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-400 dark:bg-white/10 dark:text-neutral-500">
+                            ${this.icon('basket', 'h-4 w-4')}
                           </span>
-                          <span class="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-400">
-                            ${isBonus
-                              ? `<span class="rounded bg-amber-100 px-1.5 py-0.5 font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">${this.escapeHtml(bonusDesc)}</span>`
-                              : ''}
-                            <span>${optionCount > 0
-                              ? `${optionCount} AH-${optionCount === 1 ? 'optie' : 'opties'}`
-                              : 'Bekijk AH-product'}</span>
+                          <span class="min-w-0 flex-1">
+                            <span class="block truncate text-sm font-semibold text-slate-800 dark:text-neutral-100">
+                              ${scaledAmount === null ? '' : `<span class="tabular-nums">${this.escapeHtml(scaledAmount)}</span> `}${this.escapeHtml(ing.unit)} ${this.escapeHtml(ing.name)}
+                            </span>
+                            <span class="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-400">
+                              ${isBonus
+                                ? `<span class="rounded bg-amber-100 px-1.5 py-0.5 font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">${this.escapeHtml(bonusDesc)}</span>`
+                                : ''}
+                              <span>${optionCount > 0
+                                ? `${optionCount} AH-${optionCount === 1 ? 'optie' : 'opties'}`
+                                : 'Bekijk AH-product'}</span>
+                            </span>
                           </span>
-                        </span>
-                        <span class="flex shrink-0 items-center gap-1.5">
-                          ${live && quantityCost ? `
-                            <span class="text-xs font-bold tabular-nums text-slate-700 dark:text-neutral-300">
-                              ${this.ahService.formatEuro(quantityCost.current)}
-                            </span>
-                          ` : !live && Number.isFinite(price) && price > 0 ? `
-                            <span class="text-xs font-bold tabular-nums text-slate-700 dark:text-neutral-300">
-                              ${this.ahService.formatEuro(price * scale)}
-                            </span>
-                          ` : ''}
-                          ${this.icon('chevronRight', 'ingredient-chevron h-4 w-4 text-slate-400')}
-                        </span>
-                      </summary>
-                      <div class="border-t border-slate-100 bg-slate-50/40 px-3 py-2.5 dark:border-white/10 dark:bg-black/10">
-                        <p class="mb-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Kies een product en open het bij AH</p>
-                        ${this.renderIngredientProducts(ing, product)}
-                      </div>
-                    </details>
-                  </li>
-                `;
-              }).join('')}
-            </ul>
+                          <span class="flex shrink-0 items-center gap-1.5">
+                            ${live && quantityCost ? `
+                              <span class="text-xs font-bold tabular-nums text-slate-700 dark:text-neutral-300">
+                                ${this.ahService.formatEuro(quantityCost.current)}
+                              </span>
+                            ` : !live && Number.isFinite(price) && price > 0 ? `
+                              <span class="text-xs font-bold tabular-nums text-slate-700 dark:text-neutral-300">
+                                ${this.ahService.formatEuro(price * scale)}
+                              </span>
+                            ` : ''}
+                            ${this.icon('chevronRight', 'h-4 w-4 text-slate-400')}
+                          </span>
+                        </button>
+                      </li>
+                    `;
+                  }).join('')}
+                </ul>
+              </div>
+              <div id="ingredient-detail-panel" class="ingredient-panel" data-panel="detail"${showsIngredientOptions ? '' : ' aria-hidden="true" inert'}>
+                ${showsIngredientOptions ? this.renderIngredientDetail(recipe, activeIngredientIndex, servings) : ''}
+              </div>
+            </div>
           </div>
 
           <!-- Bereidingswijze (7 kolommen op desktop) -->

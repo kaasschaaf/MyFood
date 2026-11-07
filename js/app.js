@@ -11,6 +11,7 @@ class MyFoodApp {
     this.ui = new UIComponents(this.ahService, this.geminiService, this.recipesService);
     
     this.activeRecipeId = null;
+    this.activeIngredientIndex = null;
     this.modalServings = 2;
     this.visibleRecipeCount = 30;
   }
@@ -239,6 +240,15 @@ class MyFoodApp {
           }
         }
 
+        // Ingrediënt-opties (slide-over binnen de modal)
+        const ingredientButton = e.target.closest('[data-ingredient-open]');
+        if (ingredientButton) {
+          this.showIngredientOptions(Number(ingredientButton.dataset.ingredientOpen));
+        }
+        if (e.target.closest('[data-ingredient-back]')) {
+          this.hideIngredientOptions();
+        }
+
         // Gemini Quick knoppen
         const quickBtn = e.target.closest('.gemini-quick-btn');
         if (quickBtn) {
@@ -280,6 +290,19 @@ class MyFoodApp {
             input.value = '';
           }
         }
+      });
+
+      // Escape gaat eerst terug naar de ingrediëntenlijst
+      recipeModal.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape' || this.activeIngredientIndex === null) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this.hideIngredientOptions();
+      });
+      recipeModal.addEventListener('cancel', (e) => {
+        if (this.activeIngredientIndex === null) return;
+        e.preventDefault();
+        this.hideIngredientOptions();
       });
     }
 
@@ -325,6 +348,7 @@ class MyFoodApp {
       return;
     }
     this.activeRecipeId = recipeId;
+    this.activeIngredientIndex = null;
     this.modalServings = this.recipesService.getServings();
     const modal = document.getElementById('recipe-modal');
     if (modal) {
@@ -356,14 +380,59 @@ class MyFoodApp {
       modal.close();
     }
     this.activeRecipeId = null;
+    this.activeIngredientIndex = null;
   }
 
   refreshModalContent() {
     const modal = document.getElementById('recipe-modal');
     const recipe = this.recipesService.getRecipeById(this.activeRecipeId);
     if (modal && recipe) {
-      modal.innerHTML = this.ui.renderRecipeModal(recipe, this.modalServings);
+      modal.innerHTML = this.ui.renderRecipeModal(recipe, this.modalServings, {
+        ingredientIndex: this.activeIngredientIndex
+      });
     }
+  }
+
+  /**
+   * Schuift de ingrediëntenkolom naar de AH-opties van één ingrediënt.
+   * @param {number} index
+   */
+  showIngredientOptions(index) {
+    const recipe = this.recipesService.getRecipeById(this.activeRecipeId);
+    const viewport = document.getElementById('ingredient-viewport');
+    const detailPanel = document.getElementById('ingredient-detail-panel');
+    const listPanel = document.getElementById('ingredient-list-panel');
+    if (!recipe || !viewport || !detailPanel || !listPanel || !Number.isInteger(index)) return;
+    if (!(recipe.ingredients || [])[index]) return;
+
+    detailPanel.innerHTML = this.ui.renderIngredientDetail(recipe, index, this.modalServings);
+    this.activeIngredientIndex = index;
+    viewport.dataset.activePanel = 'detail';
+    detailPanel.removeAttribute('aria-hidden');
+    detailPanel.inert = false;
+    listPanel.setAttribute('aria-hidden', 'true');
+    listPanel.inert = true;
+    detailPanel.querySelector('[data-ingredient-back]')?.focus({ preventScroll: true });
+    viewport.scrollIntoView({ block: 'nearest' });
+  }
+
+  /**
+   * Schuift terug naar de ingrediëntenlijst.
+   */
+  hideIngredientOptions() {
+    const viewport = document.getElementById('ingredient-viewport');
+    const detailPanel = document.getElementById('ingredient-detail-panel');
+    const listPanel = document.getElementById('ingredient-list-panel');
+    const previousIndex = this.activeIngredientIndex;
+    if (!viewport || !detailPanel || !listPanel) return;
+
+    viewport.dataset.activePanel = 'list';
+    listPanel.removeAttribute('aria-hidden');
+    listPanel.inert = false;
+    detailPanel.setAttribute('aria-hidden', 'true');
+    detailPanel.inert = true;
+    this.activeIngredientIndex = null;
+    listPanel.querySelector(`[data-ingredient-open="${previousIndex}"]`)?.focus({ preventScroll: true });
   }
 
   async askGemini(question) {
