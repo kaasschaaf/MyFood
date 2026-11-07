@@ -37,10 +37,10 @@
 
   <!-- Navigatiebalk -->
   <header class="sticky top-0 z-40 border-b border-slate-200/70 bg-[#f7f8f6]/85 backdrop-blur-xl transition-colors dark:border-white/10 dark:bg-[#141414]/85">
-    <div class="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+    <div class="mx-auto grid h-16 max-w-7xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-4 sm:px-6 lg:px-8">
 
       <!-- Logo & Titel -->
-      <a href="./index.html" class="group flex min-w-0 items-center gap-3">
+      <a href="./index.html" class="group flex min-w-0 items-center gap-3 justify-self-start">
         <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-emerald-600 to-teal-500 text-white shadow-sm shadow-emerald-900/20 ring-1 ring-inset ring-white/20">
           <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <path d="M7 13a4 4 0 1 1 1.2-7.8A4 4 0 0 1 16 6a4 4 0 1 1 .8 7.1V19H7v-6Z"/>
@@ -64,7 +64,7 @@
       </a>
 
       <!-- Feature-switcher: Recepten en Producten zijn gelijkwaardige onderdelen -->
-      <nav class="feature-nav hidden sm:inline-flex" data-i18n-attr="aria-label:nav.label" aria-label="Onderdelen van MyFood">
+      <nav class="feature-nav hidden justify-self-center sm:inline-flex" data-i18n-attr="aria-label:nav.label" aria-label="Onderdelen van MyFood">
         <a href="./index.html" class="feature-tab" aria-current="page">
           <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5V5.5Z"/>
@@ -82,9 +82,9 @@
       </nav>
 
       <!-- Knoppen Rechts (Settings, Thema) -->
-      <div class="flex items-center gap-1.5 sm:gap-2">
+      <div class="flex items-center justify-self-end gap-1.5 sm:gap-2">
         <!-- Portie Schakelaar (Standaard 2 personen) -->
-        <div class="hidden items-center gap-2 rounded-full border border-slate-200/80 bg-white/70 px-2 py-1 shadow-sm dark:border-white/10 dark:bg-white/5 sm:flex">
+        <div class="hidden items-center gap-2 rounded-full border border-slate-200/80 bg-white/70 px-2 py-1 shadow-sm dark:border-white/10 dark:bg-white/5 lg:flex">
           <span class="pl-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-neutral-400" data-i18n="portions.label">Porties</span>
           <div class="inline-flex items-center rounded-full bg-slate-100/80 p-0.5 dark:bg-neutral-900/70">
             <button type="button" id="main-portion-minus" class="grid h-7 w-7 place-items-center rounded-full text-sm font-bold text-slate-600 transition hover:bg-white hover:text-slate-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white" title="1 persoon minder" aria-label="1 persoon minder" data-i18n-attr="title:portions.less|aria-label:portions.less">−</button>
@@ -105,7 +105,7 @@
             <path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3Z"/>
             <path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14Z"/>
           </svg>
-          <span class="hidden lg:inline" data-i18n="nav.settingsShort">Gemini AI</span>
+          <span class="hidden xl:inline" data-i18n="nav.settingsShort">Gemini AI</span>
         </button>
 
         <button
@@ -170,7 +170,7 @@
   </div>
 
   <!-- Mobiele Portie Selector Bar -->
-  <div class="flex items-center justify-between border-b border-slate-200/70 bg-white/60 px-4 py-2 text-xs dark:border-white/10 dark:bg-white/5 sm:hidden">
+  <div class="flex items-center justify-between border-b border-slate-200/70 bg-white/60 px-4 py-2 text-xs dark:border-white/10 dark:bg-white/5 lg:hidden">
     <span class="font-semibold text-slate-500 dark:text-neutral-400" data-i18n="portions.for">Porties berekend voor</span>
     <div class="inline-flex items-center rounded-full border border-slate-200/80 bg-white p-0.5 dark:border-white/10 dark:bg-neutral-900">
       <button type="button" id="mobile-portion-minus" class="grid h-7 w-7 place-items-center rounded-full text-sm font-bold text-slate-600 transition hover:bg-slate-100 dark:text-neutral-300 dark:hover:bg-neutral-800" data-i18n-attr="aria-label:portions.less" aria-label="1 persoon minder">−</button>

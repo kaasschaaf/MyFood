@@ -29,6 +29,10 @@ html {
   /* Matches the page canvas so overscroll and the gap during navigation never
      show the browser's default white. */
   background-color: #f7f8f6;
+  /* Keep the scrollbar allocated so the centred header does not shift between a
+     long page (recipes) and a short one (products). */
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
 }
 
 body {
