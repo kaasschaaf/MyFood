@@ -61,6 +61,20 @@ export class UIComponents {
     return cuisineLabel(this.translated(recipe, 'displayCuisine', 'cuisine'));
   }
 
+  /**
+   * Externe bronnen vullen geen bereidingstijd of moeilijkheid in; toon dan
+   * geen "— min" of de Engelse tekst "Not listed".
+   */
+  difficulty(recipe) {
+    const value = this.translated(recipe, 'displayDifficulty', 'difficulty');
+    if (!value || /^(not listed|onbekend)$/i.test(value)) return t('recipe.notListed');
+    return value;
+  }
+
+  hasPrepTime(recipe) {
+    return Number(recipe?.prepTimeMinutes) > 0;
+  }
+
   isLivePriced(recipe) {
     return Boolean(recipe && !recipe.ahRecipeOnly && (recipe.external || recipe.livePriced));
   }
@@ -203,12 +217,58 @@ export class UIComponents {
   }
 
   /**
+   * Allerhande-sitemapregels bevatten alleen een titel en een link. Ze krijgen
+   * daarom een compacte kaart zonder nepfoto, zodat ze niet als recept met
+   * ontbrekende gegevens lezen.
+   * @param {Object} recipe
+   * @returns {string} HTML string
+   */
+  renderAllerhandeLinkCard(recipe) {
+    return `
+      <a
+        href="${this.escapeHtml(recipe.sourceUrl)}"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="recipe-card group flex flex-col justify-between gap-4 rounded-2xl border border-dashed border-slate-300/80 bg-white/70 p-5 transition-colors hover:border-emerald-300 hover:bg-white dark:border-white/15 dark:bg-white/5 dark:hover:border-emerald-500/30 dark:hover:bg-neutral-900/70"
+      >
+        <div>
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="inline-flex items-center rounded-md bg-orange-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-orange-800 ring-1 ring-inset ring-orange-200/70 dark:bg-orange-950/40 dark:text-orange-300 dark:ring-orange-900/50">
+              ${this.escapeHtml(t('catalog.card.allerhandeBadge'))}
+            </span>
+            <span class="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-500 dark:bg-white/10 dark:text-neutral-400">
+              ${this.escapeHtml(t('catalog.card.external'))}
+            </span>
+          </div>
+          <h3 class="font-display mt-3 line-clamp-2 text-base font-semibold leading-snug tracking-tight text-slate-900 transition-colors group-hover:text-emerald-700 dark:text-white dark:group-hover:text-emerald-400">
+            ${this.escapeHtml(this.title(recipe))}
+          </h3>
+          <p class="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-slate-500 dark:text-neutral-400">
+            ${this.escapeHtml(this.description(recipe))}
+          </p>
+        </div>
+        <div class="flex items-center justify-between gap-3 border-t border-slate-100 pt-3 dark:border-white/10">
+          <span class="text-[11px] font-medium text-slate-400 dark:text-neutral-500">
+            ${this.escapeHtml(t('catalog.card.noIngredients'))}
+          </span>
+          <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+            ${this.escapeHtml(t('catalog.card.allerhande'))}
+            ${this.icon('arrowUpRight', 'h-3.5 w-3.5')}
+          </span>
+        </div>
+      </a>
+    `;
+  }
+
+  /**
    * Rendert de receptenkaart in het hoofdraster
    * @param {Object} recipe 
    * @param {number} servings 
    * @returns {string} HTML string
    */
   renderRecipeCard(recipe, servings = 2) {
+    if (recipe.ahRecipeOnly) return this.renderAllerhandeLinkCard(recipe);
+
     const priceInfo = this.ahService.calculateRecipePrice(recipe, servings);
     const nutrition = recipe.nutrition;
     
@@ -234,9 +294,11 @@ export class UIComponents {
           
           <!-- Badges bovenin -->
           <div class="absolute left-3 top-3 flex max-w-[calc(100%_-_5.5rem)] flex-wrap items-center gap-1.5">
-            <span class="inline-flex items-center gap-1 rounded-md bg-white/95 px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-sm backdrop-blur dark:bg-neutral-950/80 dark:text-neutral-200">
-              ${this.icon('clock', 'h-3.5 w-3.5')} ${this.escapeHtml(recipe.prepTimeMinutes || '—')} min
-            </span>
+            ${this.hasPrepTime(recipe) ? `
+              <span class="inline-flex items-center gap-1 rounded-md bg-white/95 px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-sm backdrop-blur dark:bg-neutral-950/80 dark:text-neutral-200">
+                ${this.icon('clock', 'h-3.5 w-3.5')} ${this.escapeHtml(t('recipe.minutes', { count: recipe.prepTimeMinutes }))}
+              </span>
+            ` : ''}
             <span class="inline-flex items-center rounded-md bg-slate-950/45 px-2 py-1 text-[11px] font-semibold text-white ring-1 ring-inset ring-white/20 backdrop-blur-sm">
               ${this.escapeHtml(this.cuisine(recipe))}
             </span>
@@ -342,7 +404,9 @@ export class UIComponents {
           <!-- Actieknop -->
           <div class="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-3 dark:border-white/10">
             <span class="text-[11px] font-medium text-slate-400 dark:text-neutral-500">
-              ${this.escapeHtml(t('catalog.card.ingredientsFor', { count: servings }))}
+              ${recipe.ingredients?.length
+                ? this.escapeHtml(t('catalog.card.ingredientsCount', { count: recipe.ingredients.length }))
+                : this.escapeHtml(t('catalog.card.ingredientsFor', { count: servings }))}
             </span>
             ${recipe.ahRecipeOnly ? `
               <a
@@ -503,11 +567,13 @@ export class UIComponents {
               <span class="rounded-md bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-200/70 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-800/60">
                 ${this.escapeHtml(this.cuisine(recipe))}
               </span>
+              ${this.hasPrepTime(recipe) ? `
+                <span class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:bg-white/5 dark:text-neutral-300">
+                  ${this.icon('clock', 'h-3.5 w-3.5')} ${this.escapeHtml(t('recipe.minutes', { count: recipe.prepTimeMinutes }))}
+                </span>
+              ` : ''}
               <span class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:bg-white/5 dark:text-neutral-300">
-                ${this.icon('clock', 'h-3.5 w-3.5')} ${this.escapeHtml(t('recipe.minutes', { count: recipe.prepTimeMinutes || '—' }))}
-              </span>
-              <span class="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:bg-white/5 dark:text-neutral-300">
-                ${this.icon('star', 'h-3.5 w-3.5')} ${this.escapeHtml(this.translated(recipe, 'displayDifficulty', 'difficulty'))}
+                ${this.icon('star', 'h-3.5 w-3.5')} ${this.escapeHtml(this.difficulty(recipe))}
               </span>
               ${priceInfo.hasPriceData && priceInfo.hasBonus ? `
                 <span class="inline-flex items-center gap-1 rounded-md bg-amber-400 px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-950 shadow-sm">

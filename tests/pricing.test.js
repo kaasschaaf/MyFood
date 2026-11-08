@@ -23,7 +23,28 @@ test('normalizeQuantity converts between units of the same dimension', () => {
   assert.deepEqual(ah.normalizeQuantity(500, 'g'), { amount: 500, unit: 'weight' });
   assert.deepEqual(ah.normalizeQuantity(1, 'l'), { amount: 1000, unit: 'volume' });
   assert.deepEqual(ah.normalizeQuantity(2, 'stuks'), { amount: 2, unit: 'count' });
-  assert.equal(ah.normalizeQuantity(1, 'eetlepel'), null);
+  assert.equal(ah.normalizeQuantity(1, 'handje'), null);
+});
+
+test('normalizeQuantity understands imperial and Dutch cooking units', () => {
+  const ah = makeService();
+  assert.deepEqual(ah.normalizeQuantity(1, 'lb'), { amount: 453.592, unit: 'weight' });
+  assert.deepEqual(ah.normalizeQuantity(4, 'oz'), { amount: 113.398, unit: 'weight' });
+  assert.deepEqual(ah.normalizeQuantity(0.5, 'cup'), { amount: 120, unit: 'volume' });
+  assert.deepEqual(ah.normalizeQuantity(2, 'tbsp'), { amount: 30, unit: 'volume' });
+  assert.deepEqual(ah.normalizeQuantity(2, 'tl'), { amount: 10, unit: 'volume' });
+  assert.deepEqual(ah.normalizeQuantity(1, 'eetlepel'), { amount: 15, unit: 'volume' });
+  assert.deepEqual(ah.normalizeQuantity(2, ''), { amount: 2, unit: 'count' });
+});
+
+test('calculateQuantityCost prices a US measure against a metric pack', () => {
+  const ah = makeService();
+  const cost = ah.calculateQuantityCost(
+    { amount: 1, unit: 'lb' },
+    { price: 4, regularPrice: 4, unitSize: '1 kg' },
+    1
+  );
+  assert.ok(Math.abs(cost.current - 1.814368) < 1e-6);
 });
 
 test('calculateQuantityCost prorates price by used quantity vs pack size', () => {

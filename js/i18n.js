@@ -41,6 +41,7 @@ const DICTIONARY = {
     'catalog.subtitle': 'Kies een gerecht en bekijk direct wat de ingrediënten bij Albert Heijn kosten.',
     'catalog.loading': 'Recepten laden…',
     'catalog.results': '{count} recepten gevonden',
+    'catalog.resultsWithLinks': '{count} recepten · {links} Allerhande-links',
     'catalog.searchLabel': 'Zoek recepten',
     'catalog.searchPlaceholder': 'Zoek op gerecht, keuken of trefwoord…',
     'catalog.sortLabel': 'Sorteer recepten',
@@ -61,6 +62,10 @@ const DICTIONARY = {
     'catalog.loadMore': 'Laad meer recepten',
     'catalog.card.ingredientsFor': 'Berekend voor {count} personen',
     'catalog.card.allerhande': 'Bekijk op Allerhande',
+    'catalog.card.allerhandeBadge': 'Allerhande',
+    'catalog.card.external': 'Externe link',
+    'catalog.card.noIngredients': 'Ingrediënten op Allerhande',
+    'catalog.card.ingredientsCount': '{count} ingrediënten',
     'catalog.card.details': 'Kookhulp & details',
     'catalog.card.priceEstimate': 'Prijsindicatie',
     'catalog.card.partial': 'gedeeltelijk · ',
@@ -75,7 +80,8 @@ const DICTIONARY = {
     'catalog.card.noPriceAllerhande': 'Open bij Allerhande voor ingrediënten en prijzen',
     'catalog.card.pricing': 'AH-prijzen worden berekend',
     'catalog.card.noPrice': 'AH-prijs niet beschikbaar',
-    'catalog.status.checking': 'Live AH-productprijzen controleren voor {count} recepten…',
+    'catalog.status.checking': 'Live AH-prijzen ophalen voor {count} recepten op deze pagina…',
+    'catalog.status.details': 'Receptgegevens opgehaald: {done}/{total}',
     'catalog.status.progress': 'AH-prijzen gecontroleerd: {done}/{total}',
     'catalog.status.done': 'AH-prijzen gecontroleerd voor {total} recepten',
     'catalog.status.withErrors': ' · {count} met zoekfouten',
@@ -86,6 +92,7 @@ const DICTIONARY = {
     'recipe.loadFailed': 'Receptdetails konden niet worden geladen: {message}',
     'recipe.close': 'Sluiten',
     'recipe.minutes': '{count} minuten',
+    'recipe.notListed': 'Niet vermeld',
     'recipe.persons': 'Aantal personen',
     'recipe.personsShort': '{count} pers.',
     'recipe.priceEstimate': 'AH-prijsindicatie ({count} pers.)',
@@ -274,6 +281,7 @@ const DICTIONARY = {
     'catalog.subtitle': 'Pick a dish and see instantly what its ingredients cost at Albert Heijn.',
     'catalog.loading': 'Loading recipes…',
     'catalog.results': '{count} recipes found',
+    'catalog.resultsWithLinks': '{count} recipes · {links} Allerhande links',
     'catalog.searchLabel': 'Search recipes',
     'catalog.searchPlaceholder': 'Search by dish, cuisine or keyword…',
     'catalog.sortLabel': 'Sort recipes',
@@ -294,6 +302,10 @@ const DICTIONARY = {
     'catalog.loadMore': 'Load more recipes',
     'catalog.card.ingredientsFor': 'Calculated for {count} people',
     'catalog.card.allerhande': 'View on Allerhande',
+    'catalog.card.allerhandeBadge': 'Allerhande',
+    'catalog.card.external': 'External link',
+    'catalog.card.noIngredients': 'Ingredients on Allerhande',
+    'catalog.card.ingredientsCount': '{count} ingredients',
     'catalog.card.details': 'Cooking help & details',
     'catalog.card.priceEstimate': 'Price estimate',
     'catalog.card.partial': 'partial · ',
@@ -308,7 +320,8 @@ const DICTIONARY = {
     'catalog.card.noPriceAllerhande': 'Open on Allerhande for ingredients and prices',
     'catalog.card.pricing': 'AH prices are being calculated',
     'catalog.card.noPrice': 'AH price unavailable',
-    'catalog.status.checking': 'Checking live AH product prices for {count} recipes…',
+    'catalog.status.checking': 'Fetching live AH prices for {count} recipes on this page…',
+    'catalog.status.details': 'Fetching recipe details: {done}/{total}',
     'catalog.status.progress': 'AH prices checked: {done}/{total}',
     'catalog.status.done': 'AH prices checked for {total} recipes',
     'catalog.status.withErrors': ' · {count} with lookup errors',
@@ -319,6 +332,7 @@ const DICTIONARY = {
     'recipe.loadFailed': 'Recipe details could not be loaded: {message}',
     'recipe.close': 'Close',
     'recipe.minutes': '{count} minutes',
+    'recipe.notListed': 'Not listed',
     'recipe.persons': 'Number of people',
     'recipe.personsShort': '{count} people',
     'recipe.priceEstimate': 'AH price estimate ({count} people)',
@@ -519,10 +533,13 @@ export function isEnglish() {
   return currentLanguage === 'en';
 }
 
-// Recipe cuisines arrive from mixed sources: local recipes are Dutch, curated
-// sources are already English. Map the Dutch ones so the filter pills and the
-// recipe cards read consistently in English mode.
-const CUISINE_LABELS = {
+// Recipe cuisines arrive from mixed sources: the built-in recipes use Dutch
+// names, TheMealDB reports countries ("Netherlands") or English adjectives
+// ("Dutch"). Everything is normalised to one canonical English name so a
+// single filter value matches all of them, and the Dutch label is rendered
+// from a separate map (so "Dutch" shows as "Nederlands", not "Netherlands").
+const CUISINE_CANONICAL = {
+  // Dutch names from the built-in collection
   Italiaans: 'Italian',
   Aziatisch: 'Asian',
   Mexicaans: 'Mexican',
@@ -545,22 +562,146 @@ const CUISINE_LABELS = {
   Thais: 'Thai',
   Indonesisch: 'Indonesian',
   Amerikaans: 'American',
-  Engels: 'English',
+  Engels: 'British',
   Iers: 'Irish',
   Scandinavisch: 'Scandinavian',
   Afrikaans: 'African',
-  'Midden-Oosters': 'Middle Eastern'
+  'Midden-Oosters': 'Middle Eastern',
+  // Country names as reported by TheMealDB
+  Italy: 'Italian',
+  Italy_and_USA: 'Italian',
+  Netherlands: 'Dutch',
+  Holland: 'Dutch',
+  Belgium: 'Belgian',
+  France: 'French',
+  Germany: 'German',
+  Spain: 'Spanish',
+  Portugal: 'Portuguese',
+  Greece: 'Greek',
+  Turkey: 'Turkish',
+  Morocco: 'Moroccan',
+  Japan: 'Japanese',
+  China: 'Chinese',
+  Korea: 'Korean',
+  Vietnam: 'Vietnamese',
+  Thailand: 'Thai',
+  Indonesia: 'Indonesian',
+  'United States': 'American',
+  USA: 'American',
+  America: 'American',
+  'United Kingdom': 'British',
+  UK: 'British',
+  England: 'British',
+  Scotland: 'British',
+  Wales: 'British',
+  Ireland: 'Irish',
+  Mexico: 'Mexican',
+  India: 'Indian',
+  'Sri Lanka': 'Sri Lankan',
+  Malaysia: 'Malaysian',
+  Philippines: 'Filipino',
+  Jamaica: 'Jamaican',
+  Argentina: 'Argentine',
+  Australia: 'Australian',
+  Canada: 'Canadian',
+  Poland: 'Polish',
+  Russia: 'Russian',
+  Ukraine: 'Ukrainian',
+  Croatia: 'Croatian',
+  Serbia: 'Serbian',
+  Slovakia: 'Slovak',
+  Norway: 'Norwegian',
+  Sweden: 'Swedish',
+  Denmark: 'Danish',
+  Finland: 'Finnish',
+  Hungary: 'Hungarian',
+  Romania: 'Romanian',
+  Bulgaria: 'Bulgarian',
+  Tunisia: 'Tunisian',
+  Egypt: 'Egyptian',
+  Kenya: 'Kenyan',
+  Syria: 'Syrian',
+  Uruguay: 'Uruguayan',
+  Venezuela: 'Venezuelan',
+  Brazil: 'Brazilian',
+  Peru: 'Peruvian',
+  Colombia: 'Colombian'
 };
 
+// Canonieke naam -> Nederlandse weergave.
+const CUISINE_DUTCH = {
+  Italian: 'Italiaans',
+  Asian: 'Aziatisch',
+  Mexican: 'Mexicaans',
+  Mediterranean: 'Mediterraans',
+  Indian: 'Indiaas',
+  Dutch: 'Nederlands',
+  Belgian: 'Belgisch',
+  French: 'Frans',
+  German: 'Duits',
+  Spanish: 'Spaans',
+  Portuguese: 'Portugees',
+  Greek: 'Grieks',
+  Turkish: 'Turks',
+  Moroccan: 'Marokkaans',
+  Japanese: 'Japans',
+  Chinese: 'Chinees',
+  Korean: 'Koreaans',
+  Vietnamese: 'Vietnamees',
+  Thai: 'Thais',
+  Indonesian: 'Indonesisch',
+  American: 'Amerikaans',
+  British: 'Brits',
+  Irish: 'Iers',
+  Scandinavian: 'Scandinavisch',
+  African: 'Afrikaans',
+  'Middle Eastern': 'Midden-Oosters',
+  Argentine: 'Argentijns',
+  Australian: 'Australisch',
+  Canadian: 'Canadees',
+  Polish: 'Pools',
+  Russian: 'Russisch',
+  Swedish: 'Zweeds',
+  Danish: 'Deens',
+  Norwegian: 'Noors',
+  Brazilian: 'Braziliaans',
+  Jamaican: 'Jamaicaans',
+  Filipino: 'Filipijns',
+  Malaysian: 'Maleisisch',
+  Egyptian: 'Egyptisch',
+  Tunisian: 'Tunesisch',
+  Peruvian: 'Peruaans',
+  Colombian: 'Colombiaans'
+};
+
+const normalizeCuisineKey = name => String(name).trim().toLowerCase().replace(/[_-]+/g, ' ');
+
+const CUISINE_BY_KEY = new Map(
+  Object.entries(CUISINE_CANONICAL).map(([source, canonical]) => [normalizeCuisineKey(source), canonical])
+);
+
 /**
- * Localizes a cuisine name for display. Filter values keep the source name.
+ * Normalises a cuisine name to its canonical (English) form so recipes from
+ * mixed sources can be filtered and grouped together.
+ * @param {string} name
+ * @returns {string}
+ */
+export function canonicalCuisine(name) {
+  if (!name) return '';
+  const value = String(name).trim();
+  return CUISINE_BY_KEY.get(normalizeCuisineKey(value)) || value;
+}
+
+/**
+ * Localizes a cuisine name for display.
  * @param {string} name
  * @returns {string}
  */
 export function cuisineLabel(name) {
   if (!name) return '';
-  if (currentLanguage !== 'en') return name;
-  return CUISINE_LABELS[name] || name;
+  const canonical = canonicalCuisine(name);
+  if (currentLanguage === 'en') return canonical;
+  return CUISINE_DUTCH[canonical] || canonical;
 }
 
 /**

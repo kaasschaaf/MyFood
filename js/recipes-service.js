@@ -1,4 +1,5 @@
 import { BrowserCache } from './browser-cache.js';
+import { canonicalCuisine } from './i18n.js';
 
 const THEMEALDB_API = 'https://www.themealdb.com/api/json/v1/1';
 const RECIPE_CATALOG_KEY = 'recipes:catalog';
@@ -6,7 +7,12 @@ const AH_RECIPE_CATALOG_KEY = 'recipes:ah-catalog';
 const AH_RECIPE_SITEMAP = 'https://www.ah.nl/sitemaps/entities/allerhande/recipes.xml';
 const RECIPE_CATALOG_TTL = 24 * 60 * 60 * 1000;
 const RECIPE_DETAIL_TTL = 7 * 24 * 60 * 60 * 1000;
+// Ophogen zodra de prijsberekening verandert: oude schattingen (zonder bijv.
+// ondersteuning voor tl/oz/cup) mogen niet blijven hangen.
+const PRICE_CACHE_VERSION = 2;
 const RECIPE_LIMIT = 250;
+// Hoeveel recepten er tegelijk worden verrijkt met details en AH-prijzen.
+const HYDRATE_CONCURRENCY = 3;
 
 const AH_SEARCH_ALIASES = [
   [/\b(chicken breast|chicken)\b/, 'kipfilet'],
@@ -70,6 +76,7 @@ export class RecipesService {
       sortBy: 'default'
     };
     this.priceUpdatePromise = null;
+    this.hydratingIds = new Set();
     this.detailRequests = new Map();
     this.matchRequests = new Map();
   }
@@ -139,10 +146,12 @@ export class RecipesService {
       if (!localTitles.has(title) && !uniqueExternal.has(recipe.id)) uniqueExternal.set(recipe.id, recipe);
     });
     const recipes = [...uniqueExternal.values()];
+    // Allerhande-sitemapregels zijn alleen een titel met een link: geen foto,
+    // ingrediënten of prijs. Ze sluiten de lijst, zodat echte recepten eerst komen.
     return [
       ...localRecipes,
-      ...recipes.filter(recipe => recipe.ahRecipeOnly),
-      ...recipes.filter(recipe => !recipe.ahRecipeOnly)
+      ...recipes.filter(recipe => !recipe.ahRecipeOnly),
+      ...recipes.filter(recipe => recipe.ahRecipeOnly)
     ];
   }
 
@@ -303,7 +312,7 @@ export class RecipesService {
 
   async applyCachedPrices() {
     await Promise.all(this.recipes.filter(recipe => this.isLivePricedRecipe(recipe)).map(async recipe => {
-      const cached = await this.readCache(`priced-recipe:${recipe.id}`);
+      const cached = await this.readCache(this.priceCacheKey(recipe.id));
       if (!cached?.value) return;
       Object.assign(recipe, cached.value, { priceUpdatedAt: cached.updatedAt });
       this.applyOnlineOnlyPreference(recipe);
@@ -326,42 +335,109 @@ export class RecipesService {
   }
 
   async refreshAHMatchesForLoadedRecipes() {
-    const recipes = this.recipes.filter(recipe => this.isLivePricedRecipe(recipe) && recipe.ingredients?.length);
+    // Alleen recepten die al geprijsd zijn: de rest wordt door hydrateRecipes
+    // opgehaald zodra ze in beeld komen, en honderden AH-zoekopdrachten in één
+    // keer zou de instelling onbruikbaar traag maken.
+    const recipes = this.recipes.filter(recipe =>
+      this.isLivePricedRecipe(recipe) && recipe.ingredients?.length && recipe.priceUpdatedAt
+    );
     let completed = 0;
     await this.mapWithConcurrency(recipes, 3, async recipe => {
       await this.loadAHMatches(recipe);
       this.applyOnlineOnlyPreference(recipe);
-      const stored = await this.writeCache(`priced-recipe:${recipe.id}`, recipe);
+      const stored = await this.writeCache(this.priceCacheKey(recipe.id), recipe);
       recipe.priceUpdatedAt = stored?.updatedAt || Date.now();
       completed++;
     });
     return completed;
   }
 
-  async refreshPrices(onProgress = () => {}) {
-    if (this.priceUpdatePromise) return this.priceUpdatePromise;
-    const externalRecipes = this.recipes.filter(recipe => this.isLivePricedRecipe(recipe));
+  /**
+   * Recepten die alleen een samenvatting hebben, missen ingrediënten en
+   * bereidingsstappen. Die vult een enkel verzoek per recept aan.
+   */
+  needsDetails(recipe) {
+    return Boolean(
+      recipe &&
+      recipe.external &&
+      !recipe.ahRecipeOnly &&
+      !recipe.ingredients?.length &&
+      !recipe.detailAttempted
+    );
+  }
+
+  /**
+   * Haalt ingrediënten en bereidingsstappen op voor de meegegeven recepten.
+   * @param {Array} recipes
+   * @param {Function} onProgress
+   * @returns {Promise<number>} aantal bijgewerkte recepten
+   */
+  async hydrateSummaries(recipes = [], onProgress = () => {}) {
+    const targets = recipes.filter(recipe => this.needsDetails(recipe) && !this.hydratingIds.has(recipe.id));
     let completed = 0;
-    this.priceUpdatePromise = (async () => {
-      for (const summary of externalRecipes) {
-        try {
-          const recipe = summary.external ? await this.loadRecipeDetails(summary) : summary;
-          await this.loadAHMatches(recipe);
-          recipe.priceEstimate = this.ahService.calculateRecipePrice(recipe, recipe.baseServings);
-          const stored = await this.writeCache(`priced-recipe:${recipe.id}`, recipe);
-          recipe.priceUpdatedAt = stored?.updatedAt || Date.now();
-          Object.assign(summary, recipe);
-        } catch (error) {
-          console.warn(`Receptprijs kon niet worden bijgewerkt voor "${summary.title}".`, error);
-          summary.priceError = true;
-        }
-        completed++;
-        onProgress({ completed, total: externalRecipes.length, recipe: summary });
+    await this.mapWithConcurrency(targets, HYDRATE_CONCURRENCY, async recipe => {
+      this.hydratingIds.add(recipe.id);
+      try {
+        Object.assign(recipe, await this.loadRecipeDetails(recipe));
+      } catch (error) {
+        console.warn(`Receptdetails konden niet worden geladen voor "${recipe.title}".`, error);
+        recipe.detailError = true;
+      } finally {
+        // Voorkomt dat een mislukt recept bij elke render opnieuw wordt geprobeerd.
+        recipe.detailAttempted = true;
+        this.hydratingIds.delete(recipe.id);
       }
-    })().finally(() => {
-      this.priceUpdatePromise = null;
+      completed++;
+      onProgress({ phase: 'details', completed, total: targets.length, recipe });
     });
-    return this.priceUpdatePromise;
+    return completed;
+  }
+
+  /**
+   * Prijst recepten met live AH-producten. Dit is het dure deel (één AH-zoek-
+   * opdracht per ingrediënt), dus het draait alleen voor zichtbare kaarten.
+   * @param {Array} recipes
+   * @param {Function} onProgress
+   * @returns {Promise<number>} aantal geprijsde recepten
+   */
+  async priceRecipes(recipes = [], onProgress = () => {}) {
+    const targets = recipes.filter(recipe =>
+      this.isLivePricedRecipe(recipe) &&
+      recipe.ingredients?.length &&
+      !recipe.priceUpdatedAt &&
+      !recipe.priceAttempted &&
+      !this.hydratingIds.has(recipe.id)
+    );
+    let completed = 0;
+    await this.mapWithConcurrency(targets, HYDRATE_CONCURRENCY, async recipe => {
+      this.hydratingIds.add(recipe.id);
+      try {
+        await this.loadAHMatches(recipe);
+        recipe.priceEstimate = this.ahService.calculateRecipePrice(recipe, recipe.baseServings);
+        const stored = await this.writeCache(this.priceCacheKey(recipe.id), recipe);
+        recipe.priceUpdatedAt = stored?.updatedAt || Date.now();
+      } catch (error) {
+        console.warn(`Receptprijs kon niet worden bijgewerkt voor "${recipe.title}".`, error);
+        recipe.priceError = true;
+      } finally {
+        recipe.priceAttempted = true;
+        this.hydratingIds.delete(recipe.id);
+      }
+      completed++;
+      onProgress({ phase: 'prices', completed, total: targets.length, recipe });
+    });
+    return completed;
+  }
+
+  /**
+   * Verrijkt de meegegeven recepten: eerst details, dan AH-prijzen.
+   * @param {Array} recipes
+   * @param {Function} onProgress
+   */
+  async hydrateRecipes(recipes = [], onProgress = () => {}) {
+    const details = await this.hydrateSummaries(recipes, onProgress);
+    const prices = await this.priceRecipes(recipes, onProgress);
+    return { details, prices };
   }
 
   async loadRecipeDetails(summary) {
@@ -445,7 +521,7 @@ export class RecipesService {
     ingredient.selectedAHProduct = product;
     await this.ahService.saveMatch(recipe.id, ingredient.name, product);
     recipe.priceEstimate = this.ahService.calculateRecipePrice(recipe, recipe.baseServings);
-    const stored = await this.writeCache(`priced-recipe:${recipe.id}`, recipe);
+    const stored = await this.writeCache(this.priceCacheKey(recipe.id), recipe);
     recipe.priceUpdatedAt = stored?.updatedAt || Date.now();
     return recipe;
   }
@@ -517,6 +593,10 @@ export class RecipesService {
       .trim();
   }
 
+  priceCacheKey(recipeId) {
+    return `priced-recipe-v${PRICE_CACHE_VERSION}:${recipeId}`;
+  }
+
   async readCache(key) {
     try {
       return await this.cache.get(key);
@@ -570,7 +650,8 @@ export class RecipesService {
         );
         if (!matchesText && !matchesIngredients) return false;
       }
-      if (this.filters.cuisine !== 'all' && recipe.cuisine !== this.filters.cuisine) return false;
+      if (this.filters.cuisine !== 'all' &&
+          canonicalCuisine(recipe.cuisine) !== this.filters.cuisine) return false;
       if (this.filters.maxTime > 0 &&
           (!recipe.prepTimeMinutes || recipe.prepTimeMinutes > this.filters.maxTime)) return false;
       if (this.filters.highProteinOnly &&
@@ -621,7 +702,7 @@ export class RecipesService {
       // Eigen recept heeft al ingrediënten; haal alleen live AH-matches op.
       await this.loadAHMatches(summary);
       summary.priceEstimate = this.ahService.calculateRecipePrice(summary, summary.baseServings);
-      const stored = await this.writeCache(`priced-recipe:${summary.id}`, summary);
+      const stored = await this.writeCache(this.priceCacheKey(summary.id), summary);
       summary.priceUpdatedAt = stored?.updatedAt || Date.now();
       return summary;
     }
@@ -631,12 +712,15 @@ export class RecipesService {
     Object.assign(summary, recipe);
     await this.loadAHMatches(summary);
     summary.priceEstimate = this.ahService.calculateRecipePrice(summary, summary.baseServings);
-    const stored = await this.writeCache(`priced-recipe:${summary.id}`, summary);
+    const stored = await this.writeCache(this.priceCacheKey(summary.id), summary);
     summary.priceUpdatedAt = stored?.updatedAt || Date.now();
     return summary;
   }
 
   getAvailableCuisines() {
-    return Array.from(new Set(this.recipes.map(recipe => recipe.cuisine).filter(Boolean)));
+    // Canonieke namen, zodat Italiaans/Italian uit verschillende bronnen
+    // één filterpil opleveren in plaats van twee.
+    return Array.from(new Set(this.recipes.map(recipe => canonicalCuisine(recipe.cuisine)).filter(Boolean)))
+      .sort((a, b) => a.localeCompare(b, 'nl'));
   }
 }

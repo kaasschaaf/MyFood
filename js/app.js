@@ -3,7 +3,12 @@ import { GeminiService } from './gemini-service.js';
 import { RecipesService } from './recipes-service.js';
 import { UIComponents } from './ui-components.js';
 import { ContentTranslator } from './content-translator.js';
-import { cuisineLabel, getLang, getLocale, initLanguage, t } from './i18n.js';
+import { canonicalCuisine, cuisineLabel, getLang, getLocale, initLanguage, t } from './i18n.js';
+
+// Alleen de meest voorkomende keukens als pil tonen; de rest blijft vindbaar
+// via de zoekbalk, want tientallen pillen maken de filterrij onbruikbaar.
+const MIN_RECIPES_PER_CUISINE_PILL = 3;
+const MAX_CUISINE_PILLS = 10;
 
 class KostApp {
   constructor() {
@@ -17,6 +22,8 @@ class KostApp {
     this.activeIngredientIndex = null;
     this.modalServings = 2;
     this.visibleRecipeCount = 30;
+    this.hydrationPromise = null;
+    this.renderTimer = null;
   }
 
   async init() {
@@ -35,7 +42,7 @@ class KostApp {
     this.initBuildTimeBadge();
     this.render();
     this.translateVisibleRecipes();
-    this.refreshExternalPrices();
+    this.hydrateVisibleRecipes();
 
     // Recipes were rendered in Dutch first; cached translations or a fresh
     // Gemini pass repaint the grid as English when that language is active.
@@ -45,7 +52,21 @@ class KostApp {
     const cuisineContainer = document.getElementById('cuisine-pills');
     if (!cuisineContainer) return;
 
-    const cuisines = this.recipesService.getAvailableCuisines();
+    // TheMealDB levert tientallen keukens met één of twee recepten. Die als pil
+    // tonen maakt de filterrij onbruikbaar, dus alleen wat genoeg keuze biedt.
+    const counts = new Map();
+    this.recipesService.recipes.forEach(recipe => {
+      // Allerhande-regels zijn alleen links; die mogen de pilvolgorde niet bepalen.
+      if (recipe.ahRecipeOnly) return;
+      const key = canonicalCuisine(recipe.cuisine);
+      if (key) counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    const cuisines = this.recipesService
+      .getAvailableCuisines()
+      .filter(cuisine => (counts.get(cuisine) || 0) >= MIN_RECIPES_PER_CUISINE_PILL)
+      .sort((a, b) => (counts.get(b) - counts.get(a)) || a.localeCompare(b, 'nl'))
+      .slice(0, MAX_CUISINE_PILLS);
+
     let pillsHtml = `
       <button type="button" class="cuisine-pill is-active" data-cuisine="all" aria-pressed="true">
         ${this.ui.escapeHtml(t('catalog.allCuisines'))}
@@ -631,7 +652,12 @@ class KostApp {
     const visibleRecipes = filtered.slice(0, this.visibleRecipeCount);
 
     if (countEl) {
-      countEl.textContent = t('catalog.results', { count: filtered.length });
+      // Allerhande-regels zijn links, geen volledige recepten; dat verschil mag
+      // de teller niet verbergen.
+      const linkCount = filtered.filter(recipe => recipe.ahRecipeOnly).length;
+      countEl.textContent = linkCount
+        ? t('catalog.resultsWithLinks', { count: filtered.length - linkCount, links: linkCount })
+        : t('catalog.results', { count: filtered.length });
     }
 
     if (filtered.length === 0) {
@@ -651,6 +677,9 @@ class KostApp {
     }
 
     grid.innerHTML = visibleRecipes.map(r => this.ui.renderRecipeCard(r, servings)).join('');
+    // Nieuwe kaarten (filter, sortering of "meer laden") meteen verrijken.
+    // De aanroep is idempotent zolang er nog een ronde loopt.
+    this.hydrateVisibleRecipes();
     if (filtered.length > visibleRecipes.length) {
       grid.insertAdjacentHTML('beforeend', `
         <div class="col-span-full py-4 text-center">
@@ -664,32 +693,68 @@ class KostApp {
     }
   }
 
-  async refreshExternalPrices() {
+  /**
+   * Vult de kaarten die nu zichtbaar zijn met echte receptgegevens: eerst
+   * ingrediënten en stappen, daarna de live AH-prijzen. Zo draait het dure
+   * AH-zoekwerk alleen voor wat de bezoeker echt ziet, in plaats van voor de
+   * hele catalogus.
+   */
+  async hydrateVisibleRecipes() {
+    if (this.hydrationPromise) return this.hydrationPromise;
     const status = document.getElementById('catalog-status');
-    const recipeCount = this.recipesService.recipes.filter(recipe => this.recipesService.isLivePricedRecipe(recipe)).length;
-    if (recipeCount === 0) {
-      if (status) status.textContent = t('catalog.status.none');
-      return;
+    const visibleRecipes = this.recipesService
+      .getFilteredRecipes()
+      .slice(0, this.visibleRecipeCount);
+    const pending = visibleRecipes.filter(recipe =>
+      this.recipesService.isLivePricedRecipe(recipe) &&
+      (
+        this.recipesService.needsDetails(recipe) ||
+        (recipe.ingredients?.length && !recipe.priceUpdatedAt && !recipe.priceAttempted)
+      )
+    );
+    if (pending.length === 0) {
+      if (status) status.textContent = t('catalog.status.done', { total: visibleRecipes.length });
+      return null;
     }
-    if (status) {
-      status.textContent = t('catalog.status.checking', { count: recipeCount });
-    }
+
+    if (status) status.textContent = t('catalog.status.checking', { count: pending.length });
     let failedRecipes = 0;
-    try {
-      await this.recipesService.refreshPrices(({ completed, total, recipe }) => {
-        if (recipe.priceError) failedRecipes++;
-        if (status) {
-          status.textContent = completed < total
-            ? t('catalog.status.progress', { done: completed, total }) + (failedRecipes ? t('catalog.status.withErrors', { count: failedRecipes }) : '')
-            : t('catalog.status.done', { total }) + (failedRecipes ? t('catalog.status.withErrors', { count: failedRecipes }) : '');
-        }
-        this.render();
-        if (recipe.id === this.activeRecipeId) this.refreshModalContent();
-      });
-    } catch (error) {
-      console.error('Externe AH-prijzen konden niet worden bijgewerkt.', error);
+    this.hydrationPromise = this.recipesService.hydrateRecipes(pending, ({ phase, completed, total, recipe }) => {
+      if (recipe.priceError || recipe.detailError) failedRecipes++;
+      if (status) {
+        const progress = phase === 'details'
+          ? t('catalog.status.details', { done: completed, total })
+          : t('catalog.status.progress', { done: completed, total });
+        status.textContent = progress + (failedRecipes ? t('catalog.status.withErrors', { count: failedRecipes }) : '');
+      }
+      // Een volle hertekening per recept laat de foto's knipperen; daarom
+      // bundelen we de tussenstanden en tekenen we aan het eind definitief.
+      this.scheduleRender();
+      if (recipe.id === this.activeRecipeId) this.refreshModalContent();
+    }).then(() => {
+      if (status) {
+        status.textContent = t('catalog.status.done', { total: pending.length }) +
+          (failedRecipes ? t('catalog.status.withErrors', { count: failedRecipes }) : '');
+      }
+    }).catch(error => {
+      console.error('Receptgegevens konden niet worden bijgewerkt.', error);
       if (status) status.textContent = t('catalog.status.failed', { message: error.message });
-    }
+    }).finally(() => {
+      this.hydrationPromise = null;
+      this.render();
+    });
+    return this.hydrationPromise;
+  }
+
+  /**
+   * Bundelt hertekeningen die door dezelfde achtergrondronde worden veroorzaakt.
+   */
+  scheduleRender() {
+    if (this.renderTimer) return;
+    this.renderTimer = setTimeout(() => {
+      this.renderTimer = null;
+      this.render();
+    }, 400);
   }
 }
 

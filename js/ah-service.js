@@ -13,6 +13,60 @@ function startOfTodayLocal() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 }
+// Recepten uit verschillende bronnen gebruiken verschillende maten. Door ze
+// naar gram, milliliter of stuks om te rekenen kan dezelfde pakprijs worden
+// gebruikt, ook voor TheMealDB (oz, lb, cups, tsp) en Nederlandse maten (tl, el).
+const QUANTITY_UNITS = {
+  g: ['weight', 1],
+  gram: ['weight', 1],
+  grams: ['weight', 1],
+  gr: ['weight', 1],
+  kg: ['weight', 1000],
+  kilogram: ['weight', 1000],
+  kilograms: ['weight', 1000],
+  oz: ['weight', 28.3495],
+  ounce: ['weight', 28.3495],
+  ounces: ['weight', 28.3495],
+  lb: ['weight', 453.592],
+  lbs: ['weight', 453.592],
+  pound: ['weight', 453.592],
+  pounds: ['weight', 453.592],
+  ml: ['volume', 1],
+  milliliter: ['volume', 1],
+  milliliters: ['volume', 1],
+  millilitre: ['volume', 1],
+  millilitres: ['volume', 1],
+  cl: ['volume', 10],
+  dl: ['volume', 100],
+  l: ['volume', 1000],
+  liter: ['volume', 1000],
+  liters: ['volume', 1000],
+  litre: ['volume', 1000],
+  litres: ['volume', 1000],
+  cup: ['volume', 240],
+  cups: ['volume', 240],
+  tbsp: ['volume', 15],
+  tablespoon: ['volume', 15],
+  tablespoons: ['volume', 15],
+  tsp: ['volume', 5],
+  teaspoon: ['volume', 5],
+  teaspoons: ['volume', 5],
+  tl: ['volume', 5],
+  theelepel: ['volume', 5],
+  theelepels: ['volume', 5],
+  el: ['volume', 15],
+  eetlepel: ['volume', 15],
+  eetlepels: ['volume', 15],
+  'fl oz': ['volume', 30],
+  'fluid ounce': ['volume', 30],
+  'fluid ounces': ['volume', 30],
+  stuk: ['count', 1],
+  stuks: ['count', 1],
+  piece: ['count', 1],
+  pieces: ['count', 1],
+  pc: ['count', 1],
+  pcs: ['count', 1]
+};
 const NUTRITION_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 const MIN_REQUEST_INTERVAL = 300;
 const PRODUCT_SEARCH_CACHE_PREFIX = 'ah-search-v5:';
@@ -578,11 +632,11 @@ export class AHService {
 
   normalizeQuantity(amount, unit = '') {
     const normalizedUnit = unit.toLowerCase().replace(/\./g, '').trim();
-    if (['g', 'gram', 'grams'].includes(normalizedUnit)) return { amount, unit: 'weight' };
-    if (['kg', 'kilogram', 'kilograms'].includes(normalizedUnit)) return { amount: amount * 1000, unit: 'weight' };
-    if (['ml', 'milliliter', 'milliliters'].includes(normalizedUnit)) return { amount, unit: 'volume' };
-    if (['l', 'liter', 'litre', 'liters', 'litres'].includes(normalizedUnit)) return { amount: amount * 1000, unit: 'volume' };
-    if (['stuks', 'stuk', 'piece', 'pieces', 'pc', 'pcs'].includes(normalizedUnit)) return { amount, unit: 'count' };
+    // Eenheid -> [dimensie, factor naar de basisEenheid (g, ml of stuk)].
+    const conversion = QUANTITY_UNITS[normalizedUnit];
+    if (conversion) return { amount: amount * conversion[1], unit: conversion[0] };
+    // TheMealDB schrijft vaak alleen een getal, bijvoorbeeld "2" bij "Eggs".
+    if (!normalizedUnit && Number.isFinite(amount)) return { amount, unit: 'count' };
     return null;
   }
 
