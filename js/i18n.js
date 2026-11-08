@@ -142,7 +142,7 @@ const DICTIONARY = {
     'recipe.viewAt': '{title} bekijken bij Albert Heijn',
     'recipe.bonusTitle': '{label} · −{amount}',
     'recipe.translating': 'Recept vertalen…',
-    'recipe.translateNeedsKey': 'Receptteksten blijven Nederlands tot je een Gemini API-sleutel instelt.',
+    'recipe.translateNeedsKey': 'Receptteksten blijven Nederlands: deze browser heeft geen ingebouwde vertaling en er is geen Gemini-sleutel ingesteld.',
 
     'ai.title': 'Vraag Gemini Kookassistent',
     'ai.subtitle': 'Stel een vraag over ingrediënten vervangen, bereiding of tips',
@@ -389,7 +389,7 @@ const DICTIONARY = {
     'recipe.viewAt': 'View {title} at Albert Heijn',
     'recipe.bonusTitle': '{label} · −{amount}',
     'recipe.translating': 'Translating recipe…',
-    'recipe.translateNeedsKey': 'Recipe text stays Dutch until you add a Gemini API key.',
+    'recipe.translateNeedsKey': 'Recipe text stays Dutch: this browser has no built-in translation and no Gemini key is configured.',
 
     'ai.title': 'Ask the Gemini cooking assistant',
     'ai.subtitle': 'Ask about substitutions, cooking method or tips',

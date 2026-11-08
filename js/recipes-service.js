@@ -77,6 +77,8 @@ export class RecipesService {
     };
     this.priceUpdatePromise = null;
     this.hydratingIds = new Set();
+    // Optional hook that turns an English ingredient name into Dutch.
+    this.ingredientTranslator = null;
     this.detailRequests = new Map();
     this.matchRequests = new Map();
   }
@@ -478,10 +480,43 @@ export class RecipesService {
     return request;
   }
 
+  /**
+   * Registers the resolver used to make ingredient names Dutch before an AH
+   * search (TheMealDB recipes are English, AH only understands Dutch).
+   * @param {(name: string) => Promise<string>} translator
+   */
+  setIngredientTranslator(translator) {
+    this.ingredientTranslator = typeof translator === 'function' ? translator : null;
+  }
+
+  /**
+   * Dutch name to search AH with. The built-in recipes are already Dutch;
+   * external ones are translated (glossary first, on-device model otherwise).
+   * @param {Object} ingredient
+   * @param {Object} recipe
+   * @returns {Promise<string>}
+   */
+  async dutchLookupName(ingredient, recipe) {
+    if (ingredient.ahLookupName) return ingredient.ahLookupName;
+    let name = String(ingredient.name || '').trim();
+    if (recipe?.external && this.ingredientTranslator && name) {
+      try {
+        const translated = await this.ingredientTranslator(name);
+        if (translated && translated.trim()) name = translated.trim();
+      } catch (error) {
+        console.warn(`Ingrediënt "${ingredient.name}" kon niet naar het Nederlands worden vertaald.`, error);
+      }
+    }
+    ingredient.ahLookupName = name;
+    return name;
+  }
+
   async fetchAHMatches(recipe) {
     const ingredients = recipe.ingredients || [];
     await this.mapWithConcurrency(ingredients, 3, async ingredient => {
-      const query = this.getAHSearchQuery(ingredient.name);
+      // Altijd Nederlands zoeken: AH kent geen Engelse productnamen.
+      const dutchName = await this.dutchLookupName(ingredient, recipe);
+      const query = this.getAHSearchQuery(dutchName);
       // Ranking en prijs gaan uit van de hoeveelheden zoals het recept ze noemt.
       ingredient.searchQuery = query;
       try {

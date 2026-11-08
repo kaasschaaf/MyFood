@@ -40,6 +40,11 @@ Recipes are sourced from the built-in Kost collection, up to 250 recipes from [T
   - Visual **Health** score bar (0–100).
   - Detailed per-person breakdown of *kcal, protein, carbohydrates, and fats*.
 
+- **🌍 On-Device Translation**:
+  - English recipes are translated with the browser's built-in `Translator` API — no API key, nothing leaves your device. Chrome/Edge only, experimental, and the language pack may need to download once.
+  - Your own Gemini key is used as a fallback when that API is unavailable; without either, recipes stay in the original language and Kost says so.
+  - Ingredients are always translated to **Dutch** before the Albert Heijn lookup, using a built-in EN→NL glossary first and the on-device model for anything it does not know.
+
 - **✨ Integrated Gemini AI Cooking Assistant**:
   - Ask direct questions about the open recipe using Google's Gemini 3.8 Flash model and Interactions API.
   - Quick action buttons for:
@@ -67,7 +72,9 @@ Recipes are sourced from the built-in Kost collection, up to 250 recipes from [T
 
 ---
 
-## 🤖 Set Up Your Gemini API Key
+## 🤖 Set Up Your Gemini API Key (optional)
+
+A key is only needed for the cooking assistant and as a translation fallback. Recipe translation works without one in browsers that ship the on-device `Translator` API.
 
 1. Go to [Google AI Studio](https://aistudio.google.com/app/apikey).
 2. Click **Create API key**.

@@ -1,16 +1,28 @@
 /**
- * Content translator - translates recipe content to English on demand via
- * Gemini and caches the result per recipe.
+ * Content translator - translates recipe content on demand and caches the
+ * result per recipe.
+ *
+ * Two engines, in order of preference:
+ *  1. The browser's built-in on-device Translator API: no key, no backend,
+ *     nothing leaves the device.
+ *  2. Gemini, when an API key is configured.
  *
  * The Dutch source data is never mutated: translations are stored beside it
  * (displayTitle, displayDescription, ingredient.displayName, ...) so that AH
  * product matching keeps using the original Dutch names.
+ *
+ * Ingredient names go the other way as well: TheMealDB lists them in English,
+ * and Albert Heijn needs Dutch, so `ingredientToDutch()` resolves a Dutch
+ * lookup name (glossary first, on-device translation for the rest).
  */
 
 import { BrowserCache } from './browser-cache.js';
+import { BrowserTranslator } from './browser-translator.js';
+import { translateIngredientToDutch } from './ingredient-dutch.js';
 import { getLang } from './i18n.js';
 
 const CACHE_PREFIX = 'translation-v1:en:';
+const INGREDIENT_CACHE_PREFIX = 'ingredient-nl-v1:';
 const MAX_BATCH = 8;
 
 /**
@@ -35,19 +47,95 @@ function buildPayload(recipe, withDetails) {
 }
 
 export class ContentTranslator {
-  constructor(geminiService, cache = new BrowserCache()) {
+  constructor(geminiService, cache = new BrowserCache(), browserTranslator = new BrowserTranslator()) {
     this.geminiService = geminiService;
     this.cache = cache;
+    this.browserTranslator = browserTranslator;
     this.memory = new Map();
     this.pending = new Map();
+    this.ingredientMemory = new Map();
+    this.availablePromise = null;
   }
 
   /**
-   * Whether content translation can run (needs a Gemini key).
+   * Whether recipe content can be translated at all, by either engine.
+   * Never blocks longer than the availability probe.
+   * @returns {Promise<boolean>}
+   */
+  async isTranslationAvailable() {
+    if (this.geminiService?.hasApiKey()) return true;
+    if (!this.browserTranslator.isSupported()) return false;
+    if (!this.availablePromise) {
+      this.availablePromise = this.browserTranslator.canTranslate('nl', 'en').then(available => {
+        // Allow a retry once the model may have finished downloading.
+        if (!available) setTimeout(() => { this.availablePromise = null; }, 2 * 60 * 1000);
+        return available;
+      });
+    }
+    return this.availablePromise;
+  }
+
+  /**
+   * Synchronous best guess, for UI that cannot await.
    * @returns {boolean}
    */
   canTranslate() {
-    return this.geminiService.hasApiKey();
+    return Boolean(this.geminiService?.hasApiKey()) || this.browserTranslator.isSupported();
+  }
+
+  /**
+   * Dutch name for an AH lookup. English sources go through the glossary and,
+   * for anything not covered, the on-device translator.
+   * @param {string} name
+   * @returns {Promise<string>} the original name when nothing could translate
+   */
+  async ingredientToDutch(name) {
+    const original = String(name || '').trim();
+    if (!original) return original;
+    const key = original.toLowerCase();
+    if (this.ingredientMemory.has(key)) return this.ingredientMemory.get(key);
+    const cached = await this.readIngredientCache(key);
+    if (cached) {
+      this.ingredientMemory.set(key, cached);
+      return cached;
+    }
+
+    const glossary = translateIngredientToDutch(original);
+    if (glossary.complete) {
+      this.ingredientMemory.set(key, glossary.text);
+      return glossary.text;
+    }
+
+    let result = glossary.changed ? glossary.text : original;
+    if (!glossary.complete) {
+      const translated = await this.browserTranslator.translate(original, { source: 'en', target: 'nl' });
+      if (translated && translated.trim() !== original.trim()) {
+        // Re-run the glossary over the machine translation: it may still hold
+        // an English word that the API did not know ("sun dried tomatoes").
+        const second = translateIngredientToDutch(translated);
+        result = second.changed ? second.text : translated;
+      }
+    }
+    this.ingredientMemory.set(key, result);
+    if (result !== original) await this.writeIngredientCache(key, result);
+    return result;
+  }
+
+  async readIngredientCache(key) {
+    try {
+      const entry = await this.cache.get(`${INGREDIENT_CACHE_PREFIX}${key}`);
+      return entry?.value?.dutch || null;
+    } catch {
+      return null;
+    }
+  }
+
+  async writeIngredientCache(key, dutch) {
+    try {
+      await this.cache.set(`${INGREDIENT_CACHE_PREFIX}${key}`, { dutch });
+    } catch (error) {
+      console.warn('Dutch ingredient name could not be cached.', error);
+    }
   }
 
   /**
@@ -164,7 +252,7 @@ export class ContentTranslator {
    * @returns {Promise<number>} number of translated recipes
    */
   async translateSummaries(recipes) {
-    if (getLang() !== 'en' || !this.canTranslate()) return 0;
+    if (getLang() !== 'en' || !(await this.isTranslationAvailable())) return 0;
     const missing = [];
     for (const recipe of recipes || []) {
       if (!recipe?.id) continue;
@@ -202,7 +290,7 @@ export class ContentTranslator {
    * @returns {Promise<boolean>}
    */
   async translateRecipe(recipe) {
-    if (!recipe || getLang() !== 'en' || !this.canTranslate()) return false;
+    if (!recipe || getLang() !== 'en' || !(await this.isTranslationAvailable())) return false;
     const cached = await this.readCache(recipe, true);
     if (cached) {
       this.applyTranslation(recipe, cached);
@@ -233,11 +321,61 @@ export class ContentTranslator {
   }
 
   /**
-   * Calls Gemini and parses a JSON object keyed by recipe id.
+   * Translates payloads with whichever engine is available, browser first.
    * @param {Object[]} payloads
    * @returns {Promise<Record<string, Object>>}
    */
   async requestTranslations(payloads) {
+    if (!payloads.length) return {};
+    const viaBrowser = await this.translateWithBrowser(payloads);
+    if (viaBrowser) return viaBrowser;
+    return this.requestGeminiTranslations(payloads);
+  }
+
+  /**
+   * Translates payloads with the on-device Translator API.
+   * @param {Object[]} payloads
+   * @returns {Promise<Record<string, Object>|null>} null when unavailable
+   */
+  async translateWithBrowser(payloads) {
+    if (!this.browserTranslator.isSupported()) return null;
+    const available = await this.browserTranslator.canTranslate('nl', 'en');
+    if (!available) return null;
+
+    const options = { source: 'nl', target: 'en' };
+    const byId = {};
+    try {
+      for (const payload of payloads) {
+        const item = { id: payload.id };
+        if (payload.title) item.title = await this.browserTranslator.translate(payload.title, options);
+        if (payload.description) {
+          item.description = await this.browserTranslator.translate(payload.description, options);
+        }
+        if (payload.cuisine) item.cuisine = await this.browserTranslator.translate(payload.cuisine, options);
+        if (payload.difficulty) {
+          item.difficulty = await this.browserTranslator.translate(payload.difficulty, options);
+        }
+        if (Array.isArray(payload.ingredients) && payload.ingredients.length) {
+          item.ingredients = await this.browserTranslator.translateAll(payload.ingredients, options);
+        }
+        if (Array.isArray(payload.instructions) && payload.instructions.length) {
+          item.instructions = await this.browserTranslator.translateAll(payload.instructions, options);
+        }
+        byId[payload.id] = item;
+      }
+      return byId;
+    } catch (error) {
+      console.warn('Browser translation failed; falling back to Gemini.', error);
+      return null;
+    }
+  }
+
+  /**
+   * Calls Gemini and parses a JSON object keyed by recipe id.
+   * @param {Object[]} payloads
+   * @returns {Promise<Record<string, Object>>}
+   */
+  async requestGeminiTranslations(payloads) {
     if (!payloads.length) return {};
     const apiKey = this.geminiService.getApiKey();
     if (!apiKey) throw new Error('No Gemini API key configured.');

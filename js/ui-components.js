@@ -106,7 +106,10 @@ export class UIComponents {
    * @returns {string}
    */
   buildAHSearchUrl(ingredient) {
-    const query = this.recipesService.getAHSearchQuery(ingredient.name);
+    // Altijd de Nederlandse naam: AH kent geen Engelse productnamen.
+    const query = this.recipesService.getAHSearchQuery(
+      ingredient.ahLookupName || ingredient.name
+    );
     return `https://www.ah.nl/zoeken?query=${encodeURIComponent(query)}`;
   }
 

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { RecipesService } from '../js/recipes-service.js';
+import { translateIngredientToDutch } from '../js/ingredient-dutch.js';
 
 const noopCache = { get: async () => null, set: async () => ({ updatedAt: Date.now() }) };
 const makeService = () => new RecipesService({}, noopCache);
@@ -72,4 +73,101 @@ test('combineRecipes deduplicates external recipes against local titles and each
   assert.ok(ids.includes('ah-1'));
   assert.ok(!ids.includes('ext-1'), 'local-title duplicate should be removed');
   assert.equal(ids.filter(id => id === 'ext-2').length, 1, 'duplicate id should collapse');
+});
+
+/**
+ * AH service stub that records the queries the app would send.
+ * @param {string[]} queries
+ */
+function recordingAHService(queries) {
+  return {
+    searchProducts: async query => {
+      queries.push(query);
+      return { products: [], updatedAt: Date.now(), stale: false };
+    },
+    rankProductsForIngredient: (ingredient, products) =>
+      (products || []).map(product => ({ product, relevant: true })),
+    getSavedMatch: async () => null,
+    saveMatch: async () => {},
+    filterProductsByOnlinePreference: products => products || []
+  };
+}
+
+test('AH is searched with a Dutch name for English recipes', async () => {
+  const queries = [];
+  const rs = new RecipesService(recordingAHService(queries), noopCache);
+  rs.setIngredientTranslator(async name => translateIngredientToDutch(name).text);
+
+  const recipe = {
+    id: 'themealdb-1',
+    external: true,
+    baseServings: 2,
+    ingredients: [
+      { name: 'Ground Beef', amount: 1, unit: 'lb' },
+      { name: 'Broccoli', amount: 1, unit: 'lb' },
+      { name: 'High Heat Cooking Oil', amount: 2, unit: 'tbsp' }
+    ]
+  };
+  await rs.fetchAHMatches(recipe);
+
+  assert.deepEqual(queries, ['rundergehakt', 'broccoli', 'olie']);
+  assert.equal(recipe.ingredients[0].ahLookupName, 'rundergehakt');
+  assert.equal(recipe.ingredients[2].ahLookupName, 'olie');
+});
+
+test('built-in Dutch recipes are never translated before the AH search', async () => {
+  const queries = [];
+  const rs = new RecipesService(recordingAHService(queries), noopCache);
+  let called = 0;
+  rs.setIngredientTranslator(async name => {
+    called++;
+    return translateIngredientToDutch(name).text;
+  });
+
+  const recipe = {
+    id: 'local-1',
+    baseServings: 2,
+    ingredients: [{ name: 'Kipfilet', amount: 300, unit: 'g' }]
+  };
+  await rs.fetchAHMatches(recipe);
+
+  assert.deepEqual(queries, ['Kipfilet']);
+  assert.equal(called, 0, 'local ingredient names are already Dutch');
+});
+
+test('a failing translator leaves the original ingredient name in place', async () => {
+  const queries = [];
+  const rs = new RecipesService(recordingAHService(queries), noopCache);
+  rs.setIngredientTranslator(async () => {
+    throw new Error('offline');
+  });
+
+  const recipe = {
+    id: 'themealdb-2',
+    external: true,
+    baseServings: 2,
+    ingredients: [{ name: 'Xoconostle', amount: 200, unit: 'g' }]
+  };
+  await rs.fetchAHMatches(recipe);
+
+  assert.deepEqual(queries, ['Xoconostle']);
+  assert.equal(recipe.ingredients[0].ahLookupName, 'Xoconostle');
+});
+
+test('the static alias list still catches English names when translation fails', async () => {
+  const queries = [];
+  const rs = new RecipesService(recordingAHService(queries), noopCache);
+  rs.setIngredientTranslator(async () => {
+    throw new Error('offline');
+  });
+
+  const recipe = {
+    id: 'themealdb-3',
+    external: true,
+    baseServings: 2,
+    ingredients: [{ name: 'spinach', amount: 200, unit: 'g' }]
+  };
+  await rs.fetchAHMatches(recipe);
+
+  assert.deepEqual(queries, ['spinazie']);
 });

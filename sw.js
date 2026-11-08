@@ -1,6 +1,6 @@
 // Service worker for Kost. Bump CACHE_VERSION when the precache list or the
 // caching strategy changes, so old caches are cleaned up on activate.
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const CACHE_PREFIX = 'kost-';
 const STATIC_CACHE = `${CACHE_PREFIX}static-${CACHE_VERSION}`;
 const FONT_CACHE = `${CACHE_PREFIX}fonts-${CACHE_VERSION}`;
@@ -18,9 +18,11 @@ const PRECACHE_URLS = [
   './js/app.js',
   './js/ah-service.js',
   './js/browser-cache.js',
+  './js/browser-translator.js',
   './js/content-translator.js',
   './js/gemini-service.js',
   './js/i18n.js',
+  './js/ingredient-dutch.js',
   './js/product-comparison.js',
   './js/recipes-service.js',
   './js/ui-components.js',

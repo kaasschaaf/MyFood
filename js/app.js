@@ -22,6 +22,8 @@ class KostApp {
     this.geminiService = new GeminiService();
     this.recipesService = new RecipesService(this.ahService);
     this.translator = new ContentTranslator(this.geminiService);
+    // AH zoekt alleen op Nederlandse namen; TheMealDB levert Engels.
+    this.recipesService.setIngredientTranslator(name => this.translator.ingredientToDutch(name));
     this.ui = new UIComponents(this.ahService, this.geminiService, this.recipesService, this.translator);
     
     this.activeRecipeId = null;
@@ -730,14 +732,15 @@ class KostApp {
   }
 
   /**
-   * Shows or hides the notice explaining that recipe text stays Dutch
-   * until a Gemini key is configured.
+   * Shows or hides the notice explaining that recipe text stays Dutch when
+   * neither the browser's built-in translation nor Gemini is available.
    */
-  syncTranslationNotice() {
+  async syncTranslationNotice() {
     const notice = document.getElementById('translation-notice');
     const text = document.getElementById('translation-notice-text');
     if (!notice || !text) return;
-    const show = getLang() === 'en' && !this.translator.canTranslate();
+    const available = await this.translator.isTranslationAvailable();
+    const show = getLang() === 'en' && !available;
     text.textContent = show ? t('recipe.translateNeedsKey') : '';
     notice.classList.toggle('hidden', !show);
     notice.classList.toggle('flex', show);
@@ -747,9 +750,9 @@ class KostApp {
    * Translates the recipes currently on screen, then repaints the grid.
    */
   async translateVisibleRecipes() {
-    this.syncTranslationNotice();
+    await this.syncTranslationNotice();
     if (getLang() !== 'en') return;
-    if (!this.translator.canTranslate()) return;
+    if (!(await this.translator.isTranslationAvailable())) return;
     const visible = this.recipesService.getFilteredRecipes().slice(0, this.visibleRecipeCount);
     await this.translator.applyCachedSummaries(visible);
     this.render();
@@ -764,7 +767,7 @@ class KostApp {
     const recipe = this.recipesService.getRecipeById(this.activeRecipeId);
     if (!recipe) return;
     if (getLang() !== 'en') return;
-    if (this.translator.canTranslate()) {
+    if (await this.translator.isTranslationAvailable()) {
       await this.translator.translateRecipe(recipe);
     }
   }
