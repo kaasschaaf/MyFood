@@ -257,3 +257,37 @@ test('selectProductForIngredient returns no product when nothing matches', () =>
   assert.equal(selection.product, null);
   assert.equal(selection.relevant, false);
 });
+
+test('unitPriceFor reports a comparable price per kilo, litre or piece', () => {
+  const ah = makeService();
+  // 500 g for €1.29 => €2.58 per kg.
+  const broccoli = ah.unitPriceFor({ price: 1.29, regularPrice: 1.29, unitSize: '500 g' });
+  assert.equal(broccoli.unit, 'kg');
+  assert.ok(Math.abs(broccoli.amount - 2.58) < 1e-9);
+  assert.equal(ah.unitPriceFor({ price: 2.75, regularPrice: 2.75, unitSize: '0,5 l' }).unit, 'l');
+  assert.equal(ah.unitPriceFor({ price: 2.5, regularPrice: 2.5, unitSize: '5 stuks' }).unit, 'stuk');
+  // Multiple packs are summed before dividing.
+  assert.ok(Math.abs(ah.unitPriceFor({ price: 3, regularPrice: 3, unitSize: '2 x 150 g' }).amount - 10) < 1e-9);
+});
+
+test('unitPriceFor keeps the pre-bonus unit price for comparison', () => {
+  const ah = makeService();
+  const bonus = ah.unitPriceFor({ price: 1.99, regularPrice: 2.5, unitSize: '200 g' });
+  assert.ok(Math.abs(bonus.amount - 9.95) < 1e-9);
+  assert.ok(Math.abs(bonus.regular - 12.5) < 1e-9);
+});
+
+test('unitPriceFor falls back to the AH description and skips single pieces', () => {
+  const ah = makeService();
+  const described = ah.unitPriceFor({
+    price: 2,
+    regularPrice: 2,
+    unitSize: '',
+    unitPriceDescription: 'prijs per kg 3.31'
+  });
+  assert.equal(described.unit, 'kg');
+  assert.equal(described.amount, 3.31);
+  // A single loose item has no meaningful unit price.
+  assert.equal(ah.unitPriceFor({ price: 2.79, regularPrice: 2.79, unitSize: 'per stuk' }), null);
+  assert.equal(ah.unitPriceFor({ price: 2.79, regularPrice: 2.79, unitSize: '' }), null);
+});

@@ -111,6 +111,27 @@ export class UIComponents {
   }
 
   /**
+   * "€ 2,58 per kg" voor een product, plus de oude kiloprijs bij een bonus.
+   * @param {Object} product
+   * @returns {{current: string, regular: string|null}|null}
+   */
+  unitPriceLabel(product) {
+    const unitPrice = this.ahService.unitPriceFor(product);
+    if (!unitPrice) return null;
+    const unit = unitPrice.unit === 'stuk' ? t('recipe.options.unitPiece') : unitPrice.unit;
+    const format = amount => t('recipe.options.unitPrice', {
+      price: this.ahService.formatEuro(Math.round(amount * 100) / 100),
+      unit
+    });
+    const hasDiscount = Boolean(product.isBonus) &&
+      Number.isFinite(product.regularPrice) && product.regularPrice > product.price;
+    return {
+      current: format(unitPrice.amount),
+      regular: hasDiscount && unitPrice.regular > unitPrice.amount ? format(unitPrice.regular) : null
+    };
+  }
+
+  /**
    * Rendert een klikbare lijst met geschikte AH-producten voor een ingrediënt.
    * Elk product linkt naar de AH-winkelpagina.
    * @param {Object} ingredient
@@ -144,6 +165,7 @@ export class UIComponents {
         const hasDiscount = Boolean(option.isBonus) &&
           Number.isFinite(regularPrice) && regularPrice > option.price;
         const savings = hasDiscount ? Math.round((regularPrice - option.price) * 100) / 100 : 0;
+        const unitPrice = this.unitPriceLabel(option);
         const metaParts = [option.unitSize, option.isOnlineOnly ? t('recipe.options.onlineOnly') : '', option.cachedMatch ? t('recipe.options.cache') : '']
           .filter(Boolean)
           .map(part => this.escapeHtml(part));
@@ -165,7 +187,13 @@ export class UIComponents {
                   ${isCheapest ? `<span class="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-600 dark:bg-white/10 dark:text-neutral-300">${this.escapeHtml(t('recipe.options.cheapest'))}</span>` : ''}
                   ${offIngredient ? `<span class="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">${this.escapeHtml(t('recipe.options.notIngredient'))}</span>` : ''}
                 </span>
-                <span class="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[10px] text-slate-400 dark:text-neutral-400">
+                <span class="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] text-slate-400 dark:text-neutral-400">
+                  ${unitPrice ? `
+                    <span class="inline-flex items-baseline gap-1 rounded bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-600 tabular-nums dark:bg-white/10 dark:text-neutral-300">
+                      ${this.escapeHtml(unitPrice.current)}
+                      ${unitPrice.regular ? `<span class="font-normal text-slate-400 line-through dark:text-neutral-500">${this.escapeHtml(unitPrice.regular)}</span>` : ''}
+                    </span>
+                  ` : ''}
                   ${metaParts.length ? `<span>${metaParts.join(' · ')}</span>` : ''}
                 </span>
               </span>
@@ -477,6 +505,7 @@ export class UIComponents {
       ingredient.unit || '',
       ingredient.name || ''
     ].filter(part => String(part).length).join(' ');
+    const selectedUnitPrice = product ? this.unitPriceLabel(product) : null;
 
     return `
       <div class="mx-auto max-w-4xl space-y-6 p-5 sm:p-7">
@@ -514,6 +543,13 @@ export class UIComponents {
               : this.escapeHtml(t('recipe.options.none'))}</span>
             ${bonusCount > 0 ? `<span aria-hidden="true">·</span><span class="font-semibold text-amber-700 dark:text-amber-300">${this.escapeHtml(t('recipe.options.withBonus', { count: bonusCount }))}</span>` : ''}
             ${quantityCost ? `<span aria-hidden="true">·</span><span class="tabular-nums">${this.escapeHtml(t('recipe.options.used', { amount: this.ahService.formatEuro(quantityCost.current) }))}</span>` : ''}
+            ${selectedUnitPrice ? `
+              <span aria-hidden="true">·</span>
+              <span class="inline-flex items-baseline gap-1 rounded bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-600 tabular-nums dark:bg-white/10 dark:text-neutral-300">
+                ${this.escapeHtml(selectedUnitPrice.current)}
+                ${selectedUnitPrice.regular ? `<span class="font-normal text-slate-400 line-through dark:text-neutral-500">${this.escapeHtml(selectedUnitPrice.regular)}</span>` : ''}
+              </span>
+            ` : ''}
           </p>
         </div>
 

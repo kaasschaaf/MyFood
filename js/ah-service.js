@@ -750,6 +750,54 @@ export class AHService {
   }
 
   /**
+   * Prijs per kilo, liter of stuk, zodat verpakkingen onderling te vergelijken
+   * zijn. Berekend uit het pakformaat, met AH's eigen omschrijving als
+   * terugvaloptie wanneer het formaat niet te lezen is.
+   * @param {Object} product
+   * @returns {{amount: number, unit: 'kg'|'l'|'stuk', regular: number}|null}
+   */
+  unitPriceFor(product) {
+    if (!product || !Number.isFinite(product.price) || product.price <= 0) return null;
+    const regularPrice = Number.isFinite(product.regularPrice) && product.regularPrice > 0
+      ? product.regularPrice
+      : product.price;
+    const packageSize = this.parsePackageSize(product.unitSize);
+    if (packageSize?.amount > 0) {
+      if (packageSize.unit === 'weight') {
+        const kilos = packageSize.amount / 1000;
+        return { amount: product.price / kilos, unit: 'kg', regular: regularPrice / kilos };
+      }
+      if (packageSize.unit === 'volume') {
+        const litres = packageSize.amount / 1000;
+        return { amount: product.price / litres, unit: 'l', regular: regularPrice / litres };
+      }
+      if (packageSize.unit === 'count' && packageSize.amount > 1) {
+        return {
+          amount: product.price / packageSize.amount,
+          unit: 'stuk',
+          regular: regularPrice / packageSize.amount
+        };
+      }
+      // Eén los exemplaar: de stukprijs is gewoon de pakprijs, dus niets tonen.
+      if (packageSize.unit === 'count') return null;
+    }
+    // "prijs per kg €3.31": AH zet de eenheid vóór het bedrag.
+    const description = String(product.unitPriceDescription || '');
+    const match = description.match(/(kg|kilogram|g|gram|l|liter|ml|stuk|stuks)\D{0,14}(\d+(?:[.,]\d+)?)/i);
+    if (!match) return null;
+    const value = Number(match[2].replace(',', '.'));
+    if (!Number.isFinite(value) || value <= 0) return null;
+    const unit = /^(kg|kilogram)$/i.test(match[1])
+      ? 'kg'
+      : /^(l|liter)$/i.test(match[1])
+        ? 'l'
+        : /^(stuk|stuks)$/i.test(match[1])
+          ? 'stuk'
+          : null;
+    return unit ? { amount: value, unit, regular: value } : null;
+  }
+
+  /**
    * Berekent wat het receptgedeelte van dit product kost, uitgaande van een
    * evenredig deel van de verpakking. Geeft null als het formaat niet past.
    */
