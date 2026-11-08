@@ -1,5 +1,5 @@
 import { escapeHtml } from './utils.js';
-import { cuisineLabel, getLang, getLocale, t } from './i18n.js';
+import { cuisineLabel, getLocale, t } from './i18n.js';
 import { ContentTranslator } from './content-translator.js';
 
 /**
@@ -46,19 +46,17 @@ export class UIComponents {
   }
 
   /**
-   * Returns the translated field when English content is available.
+   * Returns the field in the active language, translated when available.
    * @param {Object} recipe
-   * @param {string} translatedKey
-   * @param {string} sourceKey
+   * @param {'cuisine'|'difficulty'} sourceKey
    * @returns {string}
    */
-  translated(recipe, translatedKey, sourceKey) {
-    if (getLang() === 'en' && recipe?.[translatedKey]) return recipe[translatedKey];
-    return recipe?.[sourceKey] || '';
+  translated(recipe, sourceKey) {
+    return this.translator.field(recipe, sourceKey) || recipe?.[sourceKey] || '';
   }
 
   cuisine(recipe) {
-    return cuisineLabel(this.translated(recipe, 'displayCuisine', 'cuisine'));
+    return cuisineLabel(this.translated(recipe, 'cuisine'));
   }
 
   /**
@@ -66,7 +64,7 @@ export class UIComponents {
    * geen "— min" of de Engelse tekst "Not listed".
    */
   difficulty(recipe) {
-    const value = this.translated(recipe, 'displayDifficulty', 'difficulty');
+    const value = this.translated(recipe, 'difficulty');
     if (!value || /^(not listed|onbekend)$/i.test(value)) return t('recipe.notListed');
     return value;
   }
@@ -429,7 +427,7 @@ export class UIComponents {
                   <div
                     class="h-full rounded-full transition-all duration-700 ${isHighProtein ? 'bg-gradient-to-r from-blue-500 to-indigo-600' : 'bg-blue-400'}"
                     style="width: ${proteinPercent}%"
-                    title="${this.escapeHtml(nutrition.proteinGrams)} gram eiwit per portie"
+                    title="${this.escapeHtml(nutrition.proteinGrams)} gram eiwit per portie${nutrition.estimated ? ` · ${this.escapeHtml(t('recipe.nutritionEstimated'))}` : ''}"
                   ></div>
                 </div>
               </div>
@@ -446,7 +444,7 @@ export class UIComponents {
                   <div
                     class="h-full rounded-full transition-all duration-700 ${healthPercent >= 90 ? 'bg-gradient-to-r from-emerald-400 to-teal-500' : 'bg-gradient-to-r from-lime-400 to-emerald-500'}"
                     style="width: ${healthPercent}%"
-                    title="Gezondheidsscore: ${healthPercent}/100"
+                    title="Gezondheidsscore: ${healthPercent}/100${nutrition.estimated ? ` · ${this.escapeHtml(t('recipe.nutritionEstimated'))}` : ''}"
                   ></div>
                 </div>
               </div>
@@ -766,6 +764,7 @@ export class UIComponents {
             <span class="mt-1 block text-lg font-bold text-slate-800 dark:text-neutral-100">${this.escapeHtml(nutrition.fatGrams)} g</span>
           </div>
         </div>
+        ${nutrition.estimated ? `<p class="-mt-2 text-[11px] text-slate-400 dark:text-neutral-500">${this.escapeHtml(t('recipe.nutritionEstimated'))}</p>` : ''}
         ` : ''}
 
         <!-- Twee Kolommen: Ingrediënten & Bereiding -->

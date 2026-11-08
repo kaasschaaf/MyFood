@@ -171,3 +171,80 @@ test('the static alias list still catches English names when translation fails',
 
   assert.deepEqual(queries, ['spinazie']);
 });
+
+test('external recipes get a real description instead of a source disclaimer', () => {
+  const rs = makeService();
+  const summary = rs.normalizeRecipeSummary({ idMeal: '5', strMeal: 'Chicken Curry', strArea: 'Indian' }, 'Chicken');
+  assert.equal(summary.description, 'Indian chicken dish.');
+  assert.ok(!/themealdb|meal database/i.test(summary.description));
+
+  const meal = {
+    idMeal: '5',
+    strMeal: 'Chicken Curry',
+    strArea: 'Indian',
+    strCategory: 'Chicken',
+    strIngredient1: 'Chicken',
+    strMeasure1: '500 g',
+    strIngredient2: 'Curry Powder',
+    strMeasure2: '2 tbsp',
+    strIngredient3: 'Onion',
+    strMeasure3: '1',
+    strInstructions: 'Fry it.'
+  };
+  const recipe = rs.normalizeExternalRecipe(meal);
+  assert.equal(recipe.description, 'Indian chicken dish with chicken, curry powder and onion.');
+  assert.ok(!/themealdb|meal database/i.test(recipe.description));
+});
+
+test('external recipes get protein and health metrics like the built-in ones', () => {
+  const rs = makeService();
+  const meal = {
+    idMeal: '6',
+    strMeal: 'Chicken Curry',
+    strArea: 'Indian',
+    strCategory: 'Chicken',
+    strIngredient1: 'Chicken Breasts',
+    strMeasure1: '2',
+    strIngredient2: 'Chopped Tomatoes',
+    strMeasure2: '400 g',
+    strIngredient3: 'Onion',
+    strMeasure3: '1',
+    strIngredient4: 'Rice',
+    strMeasure4: '200 g',
+    strInstructions: 'Cook it.'
+  };
+  const recipe = rs.normalizeExternalRecipe(meal);
+  assert.ok(recipe.nutrition, 'nutrition should be estimated');
+  assert.equal(recipe.nutrition.estimated, true);
+  assert.ok(recipe.nutrition.proteinGrams > 20);
+  assert.ok(recipe.nutrition.healthScore >= 15 && recipe.nutrition.healthScore <= 98);
+});
+
+test('hand-written nutrition is never overwritten by the estimate', () => {
+  const rs = makeService();
+  const recipe = {
+    id: 'local-x',
+    baseServings: 2,
+    nutrition: { calories: 540, proteinGrams: 42, carbsGrams: 52, fatGrams: 16, healthScore: 92 },
+    ingredients: [{ name: 'Kipfilet', amount: 200, unit: 'g' }, { name: 'Rijst', amount: 150, unit: 'g' }]
+  };
+  rs.ensureNutrition(recipe);
+  assert.equal(recipe.nutrition.healthScore, 92);
+  assert.equal(recipe.nutrition.estimated, undefined);
+});
+
+test('a recipe cached with the old source disclaimer is repaired on load', () => {
+  const rs = makeService();
+  const cached = {
+    id: 'themealdb-9',
+    external: true,
+    title: 'Kefta',
+    description: 'Recipe from TheMealDB. Open the recipe to view its ingredients and calculate AH prices.',
+    cuisine: 'Moroccan',
+    mealType: 'Beef',
+    ingredients: [{ name: 'Ground Beef', amount: 300, unit: 'g' }, { name: 'Onion', amount: 1, unit: '' }]
+  };
+  const [recipe] = rs.combineRecipes([], [cached]);
+  assert.equal(recipe.description, 'Moroccan beef dish with ground beef and onion.');
+  assert.ok(recipe.nutrition, 'migration also fills in the nutrition estimate');
+});

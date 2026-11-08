@@ -1,15 +1,19 @@
 /**
- * Content translator - translates recipe content on demand and caches the
- * result per recipe.
+ * Content translator - translates recipe content into the language the app is
+ * currently showing, and caches the result per recipe and per language.
+ *
+ * Direction follows the source of the recipe: the built-in Dutch recipes are
+ * Dutch, TheMealDB is English. In Dutch mode English recipes are translated to
+ * Dutch, in English mode Dutch recipes are translated to English.
  *
  * Two engines, in order of preference:
  *  1. The browser's built-in on-device Translator API: no key, no backend,
  *     nothing leaves the device.
  *  2. Gemini, when an API key is configured.
  *
- * The Dutch source data is never mutated: translations are stored beside it
- * (displayTitle, displayDescription, ingredient.displayName, ...) so that AH
- * product matching keeps using the original Dutch names.
+ * Source data is never mutated: translations are stored beside it under
+ * `recipe.translations[lang]`, so filters, AH lookups and the original recipe
+ * keep working.
  *
  * Ingredient names go the other way as well: TheMealDB lists them in English,
  * and Albert Heijn needs Dutch, so `ingredientToDutch()` resolves a Dutch
@@ -21,9 +25,10 @@ import { BrowserTranslator } from './browser-translator.js';
 import { translateIngredientToDutch } from './ingredient-dutch.js';
 import { getLang } from './i18n.js';
 
-const CACHE_PREFIX = 'translation-v1:en:';
+const CACHE_PREFIX = 'translation-v3:';
 const INGREDIENT_CACHE_PREFIX = 'ingredient-nl-v1:';
 const MAX_BATCH = 8;
+const LANGUAGE_NAMES = { nl: 'Dutch', en: 'English' };
 
 /**
  * Collects the translatable parts of a recipe.
@@ -54,25 +59,61 @@ export class ContentTranslator {
     this.memory = new Map();
     this.pending = new Map();
     this.ingredientMemory = new Map();
-    this.availablePromise = null;
+    this.availableByDirection = new Map();
   }
 
   /**
-   * Whether recipe content can be translated at all, by either engine.
+   * Language a recipe is written in. Only TheMealDB recipes are English; the
+   * built-in and Allerhande recipes are Dutch.
+   * @param {Object} recipe
+   * @returns {'nl'|'en'}
+   */
+  sourceLang(recipe) {
+    return recipe?.external ? 'en' : 'nl';
+  }
+
+  /**
+   * The direction the active interface needs.
+   * @returns {{ source: 'nl'|'en', target: 'nl'|'en' }}
+   */
+  neededDirection() {
+    const target = getLang() === 'en' ? 'en' : 'nl';
+    return { source: target === 'en' ? 'nl' : 'en', target };
+  }
+
+  /**
+   * Whether this recipe still needs translating for the active language.
+   * @param {Object} recipe
+   * @returns {boolean}
+   */
+  needsTranslation(recipe) {
+    if (!recipe || recipe.ahRecipeOnly) return false;
+    const target = getLang() === 'en' ? 'en' : 'nl';
+    return this.sourceLang(recipe) !== target;
+  }
+
+  /**
+   * Whether a specific direction can be translated, by either engine.
    * Never blocks longer than the availability probe.
+   * @param {'nl'|'en'} [source]
+   * @param {'nl'|'en'} [target]
    * @returns {Promise<boolean>}
    */
-  async isTranslationAvailable() {
-    if (this.geminiService?.hasApiKey()) return true;
+  async isTranslationAvailable(source, target) {
+    if (this.geminiService?.hasApiKey?.()) return true;
+    const direction = source && target ? { source, target } : this.neededDirection();
+    if (direction.source === direction.target) return true;
     if (!this.browserTranslator.isSupported()) return false;
-    if (!this.availablePromise) {
-      this.availablePromise = this.browserTranslator.canTranslate('nl', 'en').then(available => {
+    const key = `${direction.source}>${direction.target}`;
+    if (!this.availableByDirection.has(key)) {
+      const probe = this.browserTranslator.canTranslate(direction.source, direction.target).then(available => {
         // Allow a retry once the model may have finished downloading.
-        if (!available) setTimeout(() => { this.availablePromise = null; }, 2 * 60 * 1000);
+        if (!available) setTimeout(() => { this.availableByDirection.delete(key); }, 2 * 60 * 1000);
         return available;
       });
+      this.availableByDirection.set(key, probe);
     }
-    return this.availablePromise;
+    return this.availableByDirection.get(key);
   }
 
   /**
@@ -80,7 +121,7 @@ export class ContentTranslator {
    * @returns {boolean}
    */
   canTranslate() {
-    return Boolean(this.geminiService?.hasApiKey()) || this.browserTranslator.isSupported();
+    return Boolean(this.geminiService?.hasApiKey?.()) || this.browserTranslator.isSupported();
   }
 
   /**
@@ -139,24 +180,49 @@ export class ContentTranslator {
   }
 
   /**
-   * Applies cached translations to a recipe object (no network).
+   * Stores a translation next to the source data.
    * @param {Object} recipe
    * @param {Object|null} translation
+   * @param {'nl'|'en'} lang
    */
-  applyTranslation(recipe, translation) {
+  applyTranslation(recipe, translation, lang) {
     if (!recipe || !translation) return recipe;
-    if (translation.title) recipe.displayTitle = translation.title;
-    if (translation.description) recipe.displayDescription = translation.description;
-    if (translation.cuisine) recipe.displayCuisine = translation.cuisine;
-    if (translation.difficulty) recipe.displayDifficulty = translation.difficulty;
-    const names = translation.ingredients || [];
+    // Older builds stored a translation of the "Recipe from TheMealDB"
+    // disclaimer; never let that cached sentence come back.
+    const description = String(translation.description || '');
+    const value = /recipe from\s+(?:the)?\s*mealdb/i.test(description)
+      ? { ...translation, description: '' }
+      : translation;
+    if (!recipe.translations) recipe.translations = {};
+    recipe.translations[lang] = value;
+    const names = value.ingredients || [];
     (recipe.ingredients || []).forEach((ingredient, index) => {
-      if (names[index]) ingredient.displayName = names[index];
+      if (!names[index]) return;
+      if (!ingredient.translations) ingredient.translations = {};
+      ingredient.translations[lang] = names[index];
     });
-    if (Array.isArray(translation.instructions) && translation.instructions.length) {
-      recipe.displayInstructions = translation.instructions;
-    }
     return recipe;
+  }
+
+  /**
+   * Translation for the active language, when one has been applied.
+   * @param {Object} recipe
+   * @returns {Object|null}
+   */
+  translationFor(recipe) {
+    const lang = getLang() === 'en' ? 'en' : 'nl';
+    return recipe?.translations?.[lang] || null;
+  }
+
+  /**
+   * Translated value of a source field, when available.
+   * @param {Object} recipe
+   * @param {'title'|'description'|'cuisine'|'difficulty'} key
+   * @returns {string|undefined}
+   */
+  field(recipe, key) {
+    const value = this.translationFor(recipe)?.[key];
+    return typeof value === 'string' && value ? value : undefined;
   }
 
   /**
@@ -166,7 +232,7 @@ export class ContentTranslator {
    */
   title(recipe) {
     if (!recipe) return '';
-    return getLang() === 'en' && recipe.displayTitle ? recipe.displayTitle : recipe.title;
+    return this.field(recipe, 'title') || recipe.title;
   }
 
   /**
@@ -176,7 +242,7 @@ export class ContentTranslator {
    */
   description(recipe) {
     if (!recipe) return '';
-    return getLang() === 'en' && recipe.displayDescription ? recipe.displayDescription : recipe.description;
+    return this.field(recipe, 'description') || recipe.description;
   }
 
   /**
@@ -186,7 +252,8 @@ export class ContentTranslator {
    */
   ingredientName(ingredient) {
     if (!ingredient) return '';
-    return getLang() === 'en' && ingredient.displayName ? ingredient.displayName : ingredient.name;
+    const lang = getLang() === 'en' ? 'en' : 'nl';
+    return ingredient.translations?.[lang] || ingredient.name;
   }
 
   /**
@@ -196,19 +263,24 @@ export class ContentTranslator {
    */
   instructions(recipe) {
     if (!recipe) return [];
-    return getLang() === 'en' && recipe.displayInstructions?.length
-      ? recipe.displayInstructions
+    return this.translationFor(recipe)?.instructions?.length
+      ? this.translationFor(recipe).instructions
       : (recipe.instructions || []);
+  }
+
+  cacheKey(recipe, lang, withDetails) {
+    return `${CACHE_PREFIX}${lang}:${withDetails ? 'full' : 'summary'}:${recipe.id}`;
   }
 
   /**
    * Reads a cached translation from memory or IndexedDB.
    * @param {Object} recipe
+   * @param {'nl'|'en'} lang
    * @param {boolean} withDetails
    * @returns {Promise<Object|null>}
    */
-  async readCache(recipe, withDetails) {
-    const key = `${CACHE_PREFIX}${withDetails ? 'full' : 'summary'}:${recipe.id}`;
+  async readCache(recipe, lang, withDetails) {
+    const key = this.cacheKey(recipe, lang, withDetails);
     if (this.memory.has(key)) return this.memory.get(key);
     try {
       const entry = await this.cache.get(key);
@@ -222,8 +294,8 @@ export class ContentTranslator {
     return null;
   }
 
-  async writeCache(recipe, withDetails, value) {
-    const key = `${CACHE_PREFIX}${withDetails ? 'full' : 'summary'}:${recipe.id}`;
+  async writeCache(recipe, lang, withDetails, value) {
+    const key = this.cacheKey(recipe, lang, withDetails);
     this.memory.set(key, value);
     try {
       await this.cache.set(key, value);
@@ -238,10 +310,10 @@ export class ContentTranslator {
    * @returns {Promise<void>}
    */
   async applyCachedSummaries(recipes) {
-    if (getLang() !== 'en') return;
-    await Promise.all((recipes || []).map(async recipe => {
-      const cached = await this.readCache(recipe, false);
-      if (cached) this.applyTranslation(recipe, cached);
+    await Promise.all((recipes || []).filter(recipe => this.needsTranslation(recipe)).map(async recipe => {
+      const lang = getLang() === 'en' ? 'en' : 'nl';
+      const cached = await this.readCache(recipe, lang, false);
+      if (cached) this.applyTranslation(recipe, cached, lang);
     }));
   }
 
@@ -252,33 +324,42 @@ export class ContentTranslator {
    * @returns {Promise<number>} number of translated recipes
    */
   async translateSummaries(recipes) {
-    if (getLang() !== 'en' || !(await this.isTranslationAvailable())) return 0;
-    const missing = [];
+    const lang = getLang() === 'en' ? 'en' : 'nl';
+    const groups = new Map();
     for (const recipe of recipes || []) {
-      if (!recipe?.id) continue;
-      const cached = await this.readCache(recipe, false);
+      if (!recipe?.id || !this.needsTranslation(recipe)) continue;
+      const cached = await this.readCache(recipe, lang, false);
       if (cached) {
-        this.applyTranslation(recipe, cached);
-      } else {
-        missing.push(recipe);
+        this.applyTranslation(recipe, cached, lang);
+        continue;
       }
+      const source = this.sourceLang(recipe);
+      if (!(await this.isTranslationAvailable(source, lang))) continue;
+      const key = `${source}>${lang}`;
+      if (!groups.has(key)) groups.set(key, { source, target: lang, recipes: [] });
+      groups.get(key).recipes.push(recipe);
     }
 
     let translated = 0;
-    for (let index = 0; index < missing.length; index += MAX_BATCH) {
-      const batch = missing.slice(index, index + MAX_BATCH);
-      try {
-        const result = await this.requestTranslations(batch.map(recipe => buildPayload(recipe, false)));
-        batch.forEach(recipe => {
-          const value = result[recipe.id];
-          if (!value) return;
-          this.applyTranslation(recipe, value);
-          this.writeCache(recipe, false, value);
-          translated++;
-        });
-      } catch (error) {
-        console.warn('Recipe summaries could not be translated.', error);
-        return translated;
+    for (const { source, target, recipes: pending } of groups.values()) {
+      for (let index = 0; index < pending.length; index += MAX_BATCH) {
+        const batch = pending.slice(index, index + MAX_BATCH);
+        try {
+          const result = await this.requestTranslations(
+            batch.map(recipe => buildPayload(recipe, false)),
+            { source, target }
+          );
+          batch.forEach(recipe => {
+            const value = result[recipe.id];
+            if (!value) return;
+            this.applyTranslation(recipe, value, target);
+            this.writeCache(recipe, target, false, value);
+            translated++;
+          });
+        } catch (error) {
+          console.warn('Recipe summaries could not be translated.', error);
+          return translated;
+        }
       }
     }
     return translated;
@@ -290,21 +371,24 @@ export class ContentTranslator {
    * @returns {Promise<boolean>}
    */
   async translateRecipe(recipe) {
-    if (!recipe || getLang() !== 'en' || !(await this.isTranslationAvailable())) return false;
-    const cached = await this.readCache(recipe, true);
+    if (!recipe || !this.needsTranslation(recipe)) return false;
+    const target = getLang() === 'en' ? 'en' : 'nl';
+    const source = this.sourceLang(recipe);
+    const cached = await this.readCache(recipe, target, true);
     if (cached) {
-      this.applyTranslation(recipe, cached);
+      this.applyTranslation(recipe, cached, target);
       return true;
     }
+    if (!(await this.isTranslationAvailable(source, target))) return false;
 
     const key = recipe.id;
     if (this.pending.has(key)) {
       const value = await this.pending.get(key);
-      if (value) this.applyTranslation(recipe, value);
+      if (value) this.applyTranslation(recipe, value, target);
       return Boolean(value);
     }
 
-    const request = this.requestTranslations([buildPayload(recipe, true)])
+    const request = this.requestTranslations([buildPayload(recipe, true)], { source, target })
       .then(result => result[recipe.id] || null)
       .catch(error => {
         console.warn('Recipe could not be translated.', error);
@@ -315,34 +399,36 @@ export class ContentTranslator {
     this.pending.set(key, request);
     const value = await request;
     if (!value) return false;
-    this.applyTranslation(recipe, value);
-    await this.writeCache(recipe, true, value);
+    this.applyTranslation(recipe, value, target);
+    await this.writeCache(recipe, target, true, value);
     return true;
   }
 
   /**
    * Translates payloads with whichever engine is available, browser first.
    * @param {Object[]} payloads
+   * @param {{ source: 'nl'|'en', target: 'nl'|'en' }} direction
    * @returns {Promise<Record<string, Object>>}
    */
-  async requestTranslations(payloads) {
+  async requestTranslations(payloads, direction) {
     if (!payloads.length) return {};
-    const viaBrowser = await this.translateWithBrowser(payloads);
+    const viaBrowser = await this.translateWithBrowser(payloads, direction);
     if (viaBrowser) return viaBrowser;
-    return this.requestGeminiTranslations(payloads);
+    return this.requestGeminiTranslations(payloads, direction);
   }
 
   /**
    * Translates payloads with the on-device Translator API.
    * @param {Object[]} payloads
+   * @param {{ source: 'nl'|'en', target: 'nl'|'en' }} direction
    * @returns {Promise<Record<string, Object>|null>} null when unavailable
    */
-  async translateWithBrowser(payloads) {
+  async translateWithBrowser(payloads, direction) {
     if (!this.browserTranslator.isSupported()) return null;
-    const available = await this.browserTranslator.canTranslate('nl', 'en');
+    const available = await this.browserTranslator.canTranslate(direction.source, direction.target);
     if (!available) return null;
 
-    const options = { source: 'nl', target: 'en' };
+    const options = { source: direction.source, target: direction.target };
     const byId = {};
     try {
       for (const payload of payloads) {
@@ -373,15 +459,16 @@ export class ContentTranslator {
   /**
    * Calls Gemini and parses a JSON object keyed by recipe id.
    * @param {Object[]} payloads
+   * @param {{ source: 'nl'|'en', target: 'nl'|'en' }} direction
    * @returns {Promise<Record<string, Object>>}
    */
-  async requestGeminiTranslations(payloads) {
+  async requestGeminiTranslations(payloads, direction) {
     if (!payloads.length) return {};
     const apiKey = this.geminiService.getApiKey();
     if (!apiKey) throw new Error('No Gemini API key configured.');
 
     const instruction = [
-      'You translate Dutch recipe content into natural, concise English.',
+      `You translate ${LANGUAGE_NAMES[direction.source]} recipe content into natural, concise ${LANGUAGE_NAMES[direction.target]}.`,
       'Keep brand names, Albert Heijn product names and units intact.',
       'Translate titles, descriptions, cuisine/style, difficulty, ingredient names and cooking steps.',
       'Ingredient names must stay short and generic (for example "salmon fillet", "spinach").',

@@ -3,7 +3,7 @@ import { GeminiService } from './gemini-service.js';
 import { RecipesService } from './recipes-service.js';
 import { UIComponents } from './ui-components.js';
 import { ContentTranslator } from './content-translator.js';
-import { canonicalCuisine, cuisineLabel, getLang, getLocale, initLanguage, t } from './i18n.js';
+import { canonicalCuisine, cuisineLabel, getLocale, initLanguage, t } from './i18n.js';
 
 // Alleen de meest voorkomende keukens als pil tonen; de rest blijft vindbaar
 // via de zoekbalk, want tientallen pillen maken de filterrij onbruikbaar.
@@ -732,18 +732,25 @@ class KostApp {
   }
 
   /**
-   * Shows or hides the notice explaining that recipe text stays Dutch when
-   * neither the browser's built-in translation nor Gemini is available.
+   * Shows or hides the notice explaining that recipes from another language
+   * stay in the source language when neither the browser's built-in
+   * translation nor Gemini is available.
    */
   async syncTranslationNotice() {
     const notice = document.getElementById('translation-notice');
     const text = document.getElementById('translation-notice-text');
     if (!notice || !text) return;
-    const available = await this.translator.isTranslationAvailable();
-    const show = getLang() === 'en' && !available;
+    const visible = this.visibleRecipes();
+    const needsTranslation = visible.some(recipe => this.translator.needsTranslation(recipe));
+    const available = !needsTranslation || await this.translator.isTranslationAvailable();
+    const show = needsTranslation && !available;
     text.textContent = show ? t('recipe.translateNeedsKey') : '';
     notice.classList.toggle('hidden', !show);
     notice.classList.toggle('flex', show);
+  }
+
+  visibleRecipes() {
+    return this.recipesService.getFilteredRecipes().slice(0, this.visibleRecipeCount);
   }
 
   /**
@@ -751,9 +758,10 @@ class KostApp {
    */
   async translateVisibleRecipes() {
     await this.syncTranslationNotice();
-    if (getLang() !== 'en') return;
-    if (!(await this.translator.isTranslationAvailable())) return;
-    const visible = this.recipesService.getFilteredRecipes().slice(0, this.visibleRecipeCount);
+    const visible = this.visibleRecipes();
+    if (!visible.some(recipe => this.translator.needsTranslation(recipe))) return;
+    const { source, target } = this.translator.neededDirection();
+    if (!(await this.translator.isTranslationAvailable(source, target))) return;
     await this.translator.applyCachedSummaries(visible);
     this.render();
     const translated = await this.translator.translateSummaries(visible);
@@ -765,11 +773,8 @@ class KostApp {
    */
   async translateActiveRecipe() {
     const recipe = this.recipesService.getRecipeById(this.activeRecipeId);
-    if (!recipe) return;
-    if (getLang() !== 'en') return;
-    if (await this.translator.isTranslationAvailable()) {
-      await this.translator.translateRecipe(recipe);
-    }
+    if (!recipe || !this.translator.needsTranslation(recipe)) return;
+    await this.translator.translateRecipe(recipe);
   }
 
   initBuildTimeBadge() {

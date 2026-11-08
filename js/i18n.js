@@ -102,6 +102,7 @@ const DICTIONARY = {
     'recipe.updatedAt': 'Laatst bijgewerkt: {date}',
     'recipe.stalePrices': 'AH was niet bereikbaar; deels getoonde productgegevens komen uit de cache.',
     'recipe.calories': 'Calorieën p.p.',
+    'recipe.nutritionEstimated': 'Geschat uit de ingrediënten van dit recept.',
     'recipe.protein': 'Eiwit p.p.',
     'recipe.carbs': 'Koolhydraten p.p.',
     'recipe.fat': 'Vetten p.p.',
@@ -142,7 +143,7 @@ const DICTIONARY = {
     'recipe.viewAt': '{title} bekijken bij Albert Heijn',
     'recipe.bonusTitle': '{label} · −{amount}',
     'recipe.translating': 'Recept vertalen…',
-    'recipe.translateNeedsKey': 'Receptteksten blijven Nederlands: deze browser heeft geen ingebouwde vertaling en er is geen Gemini-sleutel ingesteld.',
+    'recipe.translateNeedsKey': 'Sommige recepten blijven in de taal van de bron: deze browser heeft geen ingebouwde vertaling en er is geen Gemini-sleutel ingesteld.',
 
     'ai.title': 'Vraag Gemini Kookassistent',
     'ai.subtitle': 'Stel een vraag over ingrediënten vervangen, bereiding of tips',
@@ -349,6 +350,7 @@ const DICTIONARY = {
     'recipe.updatedAt': 'Last updated: {date}',
     'recipe.stalePrices': 'AH was unreachable; some product data comes from the cache.',
     'recipe.calories': 'Calories p.p.',
+    'recipe.nutritionEstimated': 'Estimated from this recipe’s ingredients.',
     'recipe.protein': 'Protein p.p.',
     'recipe.carbs': 'Carbs p.p.',
     'recipe.fat': 'Fat p.p.',
@@ -389,7 +391,7 @@ const DICTIONARY = {
     'recipe.viewAt': 'View {title} at Albert Heijn',
     'recipe.bonusTitle': '{label} · −{amount}',
     'recipe.translating': 'Translating recipe…',
-    'recipe.translateNeedsKey': 'Recipe text stays Dutch: this browser has no built-in translation and no Gemini key is configured.',
+    'recipe.translateNeedsKey': 'Some recipes stay in their source language: this browser has no built-in translation and no Gemini key is configured.',
 
     'ai.title': 'Ask the Gemini cooking assistant',
     'ai.subtitle': 'Ask about substitutions, cooking method or tips',

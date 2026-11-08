@@ -41,9 +41,13 @@ Recipes are sourced from the built-in Kost collection, up to 250 recipes from [T
   - Detailed per-person breakdown of *kcal, protein, carbohydrates, and fats*.
 
 - **🌍 On-Device Translation**:
-  - English recipes are translated with the browser's built-in `Translator` API — no API key, nothing leaves your device. Chrome/Edge only, experimental, and the language pack may need to download once.
+  - Recipes are shown in the language you picked: TheMealDB is English and is translated to Dutch in Dutch mode, while the built-in Dutch recipes are translated to English in English mode. Translation uses the browser's built-in `Translator` API — no API key, nothing leaves your device. Chrome/Edge only, experimental, and the language pack may need to download once.
   - Your own Gemini key is used as a fallback when that API is unavailable; without either, recipes stay in the original language and Kost says so.
   - Ingredients are always translated to **Dutch** before the Albert Heijn lookup, using a built-in EN→NL glossary first and the on-device model for anything it does not know.
+
+- **🥗 Protein & Health for Every Recipe**:
+  - Built-in recipes carry hand-written nutrition; external recipes get an estimate from their ingredients (a compact offline food table with per-piece weights), so every card shows the same protein and health bars.
+  - Estimates are marked as such in the card tooltip and under the nutrition dashboard.
 
 - **✨ Integrated Gemini AI Cooking Assistant**:
   - Ask direct questions about the open recipe using Google's Gemini 3.8 Flash model and Interactions API.

@@ -1,5 +1,6 @@
 import { BrowserCache } from './browser-cache.js';
 import { canonicalCuisine } from './i18n.js';
+import { estimateRecipeNutrition } from './nutrition-estimator.js';
 
 const THEMEALDB_API = 'https://www.themealdb.com/api/json/v1/1';
 const RECIPE_CATALOG_KEY = 'recipes:catalog';
@@ -145,7 +146,9 @@ export class RecipesService {
     const uniqueExternal = new Map();
     externalRecipes.forEach(recipe => {
       const title = this.normalizeName(recipe.title);
-      if (!localTitles.has(title) && !uniqueExternal.has(recipe.id)) uniqueExternal.set(recipe.id, recipe);
+      if (!localTitles.has(title) && !uniqueExternal.has(recipe.id)) {
+        uniqueExternal.set(recipe.id, this.migrateExternalRecipe(recipe));
+      }
     });
     const recipes = [...uniqueExternal.values()];
     // Allerhande-sitemapregels zijn alleen een titel met een link: geen foto,
@@ -287,12 +290,13 @@ export class RecipesService {
 
   normalizeRecipeSummary(meal, category = '') {
     const id = String(meal.idMeal || '');
+    const cuisine = meal.strArea || meal.strCountry || category || 'International';
     return {
       id: `themealdb-${id}`,
       mealDbId: id,
       title: meal.strMeal || 'Untitled recipe',
-      description: `Recipe from TheMealDB. Open the recipe to view its ingredients and calculate AH prices.`,
-      cuisine: meal.strArea || meal.strCountry || category || 'International',
+      description: this.buildExternalDescription({ cuisine, mealType: category }),
+      cuisine,
       mealType: category || 'Meal',
       prepTimeMinutes: 0,
       difficulty: 'Not listed',
@@ -308,8 +312,74 @@ export class RecipesService {
     };
   }
 
+  /**
+   * Upgrades external recipes that were cached by an older build: the old
+   * "Recipe from TheMealDB" description is replaced by a real one and the
+   * nutrition estimate is filled in.
+   * @param {Object} recipe
+   * @returns {Object}
+   */
+  migrateExternalRecipe(recipe) {
+    if (!recipe?.external) return recipe;
+    // Translations may have cached the old disclaimer too; drop those fields so
+    // the freshly built description is used instead.
+    Object.values(recipe.translations || {}).forEach(translation => {
+      if (translation && /recipe from\s+(?:the)?\s*mealdb/i.test(String(translation.description || ''))) {
+        translation.description = '';
+      }
+    });
+    if (!recipe.description || /recipe from\s+(?:the)?\s*mealdb/i.test(recipe.description)) {
+      recipe.description = this.buildExternalDescription({
+        cuisine: recipe.cuisine,
+        mealType: recipe.mealType,
+        ingredients: recipe.ingredients
+      });
+    }
+    return this.ensureNutrition(recipe);
+  }
+
   isLivePricedRecipe(recipe) {
     return Boolean(recipe && !recipe.ahRecipeOnly && (recipe.external || recipe.livePriced));
+  }
+
+  /**
+   * A readable description for external recipes, built from what the source
+   * actually tells us: cuisine, course and (once loaded) the main ingredients.
+   * TheMealDB has no description field, so this replaces "Recipe from TheMealDB".
+   * @param {{ cuisine?: string, mealType?: string, ingredients?: Array }} recipe
+   * @returns {string}
+   */
+  buildExternalDescription({ cuisine = '', mealType = '', ingredients = [] } = {}) {
+    const area = String(cuisine || '').trim();
+    const course = String(mealType || '').trim().toLowerCase();
+    const kind = course
+      ? (/(dish|course|meal|dessert|soup|salad|snack|breakfast|starter|side)$/.test(course) ? course : `${course} dish`)
+      : 'dish';
+    const lead = area && !/^international$/i.test(area) ? `${area} ${kind}` : `A ${kind}`;
+    const names = ingredients
+      .filter(ingredient => ingredient?.name)
+      .map(ingredient => String(ingredient.name).toLowerCase())
+      .slice(0, 3);
+    if (!names.length) return `${lead[0].toUpperCase()}${lead.slice(1)}.`;
+    const list = names.length === 1
+      ? names[0]
+      : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+    return `${lead[0].toUpperCase()}${lead.slice(1)} with ${list}.`;
+  }
+
+  /**
+   * Gives live-priced recipes the same protein and health metrics as the
+   * hand-written ones. Hand-written nutrition is never overwritten.
+   * @param {Object} recipe
+   * @returns {Object}
+   */
+  ensureNutrition(recipe) {
+    if (!recipe || recipe.ahRecipeOnly) return recipe;
+    if (recipe.nutrition?.proteinGrams !== undefined && recipe.nutrition?.healthScore !== undefined) return recipe;
+    if (!recipe.ingredients?.length) return recipe;
+    const estimate = estimateRecipeNutrition(recipe, recipe.baseServings);
+    if (estimate) recipe.nutrition = estimate;
+    return recipe;
   }
 
   async applyCachedPrices() {
@@ -317,6 +387,7 @@ export class RecipesService {
       const cached = await this.readCache(this.priceCacheKey(recipe.id));
       if (!cached?.value) return;
       Object.assign(recipe, cached.value, { priceUpdatedAt: cached.updatedAt });
+      this.migrateExternalRecipe(recipe);
       this.applyOnlineOnlyPreference(recipe);
     }));
   }
@@ -382,6 +453,7 @@ export class RecipesService {
       this.hydratingIds.add(recipe.id);
       try {
         Object.assign(recipe, await this.loadRecipeDetails(recipe));
+        this.migrateExternalRecipe(recipe);
       } catch (error) {
         console.warn(`Receptdetails konden niet worden geladen voor "${recipe.title}".`, error);
         recipe.detailError = true;
@@ -588,16 +660,20 @@ export class RecipesService {
         selectedAHProduct: null
       });
     }
-    summary.description = `Recipe from TheMealDB. Prices use live AH product data when available.`;
     summary.cuisine = meal.strArea || meal.strCountry || summary.cuisine;
     summary.sourceUrl = this.getSafeExternalUrl(meal.strSource) || summary.sourceUrl;
     summary.baseServings = Number.parseInt(meal.strServings, 10) || 2;
     summary.ingredients = ingredients;
+    summary.description = this.buildExternalDescription({
+      cuisine: summary.cuisine,
+      mealType: summary.mealType,
+      ingredients
+    });
     summary.instructions = (meal.strInstructions || '')
       .split(/\r?\n/)
       .map(step => step.trim())
       .filter(Boolean);
-    return summary;
+    return this.ensureNutrition(summary);
   }
 
   getAHSearchQuery(ingredientName) {
@@ -690,10 +766,20 @@ export class RecipesService {
     return this.recipes.filter(recipe => {
       const query = this.filters.searchQuery.toLowerCase().trim();
       if (query) {
-        const fields = [recipe.title, recipe.description, recipe.cuisine, ...(recipe.tags || [])];
+        // Translations count too: in Dutch mode an English source recipe is
+        // shown (and therefore searched) with its Dutch title.
+        const translated = Object.values(recipe.translations || {});
+        const fields = [
+          recipe.title,
+          recipe.description,
+          recipe.cuisine,
+          ...(recipe.tags || []),
+          ...translated.flatMap(value => [value?.title, value?.description])
+        ];
         const matchesText = fields.some(value => value?.toLowerCase().includes(query));
         const matchesIngredients = (recipe.ingredients || []).some(ingredient =>
-          ingredient.name.toLowerCase().includes(query)
+          ingredient.name.toLowerCase().includes(query) ||
+          Object.values(ingredient.translations || {}).some(name => name?.toLowerCase().includes(query))
         );
         if (!matchesText && !matchesIngredients) return false;
       }
@@ -753,10 +839,11 @@ export class RecipesService {
       summary.priceUpdatedAt = stored?.updatedAt || Date.now();
       return summary;
     }
-    if (summary.ingredients?.length) return summary;
+    if (summary.ingredients?.length) return this.migrateExternalRecipe(summary);
 
     const recipe = await this.loadRecipeDetails(summary);
     Object.assign(summary, recipe);
+    this.migrateExternalRecipe(summary);
     await this.loadAHMatches(summary);
     summary.priceEstimate = this.ahService.calculateRecipePrice(summary, summary.baseServings);
     const stored = await this.writeCache(this.priceCacheKey(summary.id), summary);
