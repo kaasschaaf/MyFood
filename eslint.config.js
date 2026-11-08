@@ -22,6 +22,8 @@ export default [
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
         matchMedia: 'readonly',
+        MutationObserver: 'readonly',
+        navigator: 'readonly',
         CustomEvent: 'readonly',
         Option: 'readonly',
         console: 'readonly'
@@ -54,6 +56,29 @@ export default [
     rules: {
       ...js.configs.recommended.rules,
       'no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrors: 'none' }]
+    }
+  },
+  {
+    files: ['sw.js'],
+    languageOptions: {
+      ecmaVersion: 2023,
+      sourceType: 'script',
+      globals: {
+        self: 'readonly',
+        caches: 'readonly',
+        fetch: 'readonly',
+        Response: 'readonly',
+        URL: 'readonly',
+        console: 'readonly'
+      }
+    },
+    rules: {
+      ...js.configs.recommended.rules,
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrors: 'none' }],
+      'no-undef': 'error',
+      eqeqeq: ['error', 'smart'],
+      'no-var': 'error',
+      'prefer-const': 'error'
     }
   },
   {

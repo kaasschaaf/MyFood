@@ -1,0 +1,54 @@
+{
+  "id": "./",
+  "name": "Kost - Recepten, AH Prijzen & AI Kookhulp",
+  "short_name": "Kost",
+  "description": "Vind recepten, bekijk actuele Albert Heijn prijzen en bonus deals, en stel je kookvragen aan Gemini AI.",
+  "lang": "nl",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f8f6",
+  "theme_color": "#047857",
+  "categories": ["food", "lifestyle", "shopping"],
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Recepten",
+      "short_name": "Recepten",
+      "url": "./index.html",
+      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Producten vergelijken",
+      "short_name": "Producten",
+      "url": "./producten.html",
+      "icons": [{ "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

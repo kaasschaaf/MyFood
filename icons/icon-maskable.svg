@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Kost">
+  <defs>
+    <linearGradient id="kost-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#047857"/>
+      <stop offset="1" stop-color="#14b8a6"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#kost-bg)"/>
+  <g transform="translate(42.6 74.5) scale(17)" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7 13a4 4 0 1 1 1.2-7.8A4 4 0 0 1 16 6a4 4 0 1 1 .8 7.1V19H7v-6Z"/>
+    <path d="M7 16h10"/>
+  </g>
+</svg>

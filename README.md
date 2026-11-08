@@ -54,6 +54,11 @@ Recipes are sourced from the built-in Kost collection, up to 250 recipes from [T
   - Optimized for both mobile and desktop devices.
   - Includes light and dark mode.
 
+- **📲 Installeerbaar als PWA**:
+  - Installeer Kost als app via je browser (*Installeren* of *Zet op beginscherm*) op telefoon, tablet en desktop.
+  - Een service worker bewaart de app-shell — pagina's, styling, scripts en de receptencatalogus — zodat Kost ook zonder internet opent. Live AH-prijzen en Gemini-vragen hebben uiteraard wel een verbinding nodig.
+  - De app gebruikt `manifest.json`, de iconen in `icons/` en de offline-cache in `sw.js`. Verhoog `CACHE_VERSION` in `sw.js` wanneer je de offline-cache of de lijst met vooraf opgeslagen bestanden wijzigt.
+
 - **💾 Browser Cache & Anonymous Data**:
   - Recipe catalogues and details, AH product search results, and your product-match selections are stored locally in IndexedDB.
   - AH price/search results are cached only within the current day and are re-fetched after local midnight, so daily/weekly bonus changes are always reflected. Cached data is shown immediately while live updates run; if AH is unavailable, Kost keeps usable cached results and indicates when AH data is stale.
@@ -83,5 +88,17 @@ python3 -m http.server 8000
 ```
 
 Then open `http://localhost:3000` or `http://localhost:8000` in your browser.
+
+---
+
+## 📲 Install as an App
+
+Kost is a Progressive Web App. Open the deployed site over HTTPS (or `http://localhost`) and use your browser's install option:
+
+- **Chrome / Edge (desktop or Android):** choose **Install app** in the address bar or browser menu.
+- **Safari (iOS / iPadOS):** choose **Share → Add to Home Screen**.
+- **Firefox:** installation is not supported on every platform; the app still works as a normal website.
+
+The first visit caches the app shell. After that, Kost opens offline; live prices, new recipes, and Gemini answers still need a connection. Service workers only run on HTTPS or localhost, so opening `index.html` directly from disk will not register one.
 
 > **Note:** The Albert Heijn mobile API is unofficial and undocumented. AH may change or limit it, and prices or availability may differ by store and over time. TheMealDB recipe data may not include nutrition information or an original publisher link for every recipe.
