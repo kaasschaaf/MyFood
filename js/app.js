@@ -8,6 +8,12 @@ import { canonicalCuisine, cuisineLabel, getLang, getLocale, initLanguage, t } f
 // Alleen de meest voorkomende keukens als pil tonen; de rest blijft vindbaar
 // via de zoekbalk, want tientallen pillen maken de filterrij onbruikbaar.
 const MIN_RECIPES_PER_CUISINE_PILL = 3;
+// Vasthouden op een AH-productrij kiest dat product. Korter = tik (opent AH),
+// langer = onbedoeld wachten.
+const HOLD_TO_CHOOSE_MS = 450;
+const HOLD_MOVE_TOLERANCE_PX = 12;
+// Hoe lang na het loslaten de klik wordt tegengehouden (die zou AH openen).
+const SUPPRESS_CLICK_MS = 900;
 const MAX_CUISINE_PILLS = 10;
 
 class KostApp {
@@ -24,6 +30,10 @@ class KostApp {
     this.visibleRecipeCount = 30;
     this.hydrationPromise = null;
     this.renderTimer = null;
+    this.holdTimer = null;
+    this.holdTarget = null;
+    this.holdStart = null;
+    this.suppressProductClickUntil = 0;
   }
 
   async init() {
@@ -294,6 +304,8 @@ class KostApp {
         }
       });
 
+      this.bindHoldToChoose(recipeModal);
+
       recipeModal.addEventListener('change', async (e) => {
         const select = e.target.closest('.ah-product-select');
         if (!select) return;
@@ -418,11 +430,144 @@ class KostApp {
   refreshModalContent() {
     const modal = document.getElementById('recipe-modal');
     const recipe = this.recipesService.getRecipeById(this.activeRecipeId);
-    if (modal && recipe) {
-      modal.innerHTML = this.ui.renderRecipeModal(recipe, this.modalServings, {
-        ingredientIndex: this.activeIngredientIndex
-      });
+    if (!modal || !recipe) return;
+    // De ingrediëntpagina opnieuw tekenen mag de lezer niet naar boven sturen.
+    const previousScroll = modal.querySelector('[data-panel="ingredient"]')?.scrollTop || 0;
+    modal.innerHTML = this.ui.renderRecipeModal(recipe, this.modalServings, {
+      ingredientIndex: this.activeIngredientIndex
+    });
+    const ingredientPage = modal.querySelector('[data-panel="ingredient"]');
+    if (ingredientPage && previousScroll) ingredientPage.scrollTop = previousScroll;
+  }
+
+  /**
+   * Vasthouden op een AH-productrij kiest dat product als het ingrediënt.
+   * Een korte tik opent de AH-pagina, vasthouden en loslaten kiest. Op een
+   * toetsenbord doet de spatiebalk hetzelfde en rechtermuisknop op de desktop.
+   * @param {HTMLElement} recipeModal
+   */
+  bindHoldToChoose(recipeModal) {
+    const optionFrom = event => event.target.closest?.('[data-product-option]');
+    let press = null;
+    let armTimer = null;
+
+    const clearPress = () => {
+      if (armTimer) clearTimeout(armTimer);
+      armTimer = null;
+      if (press?.element) {
+        press.element.classList.remove('is-holding', 'is-armed');
+      }
+      press = null;
+    };
+
+    const startPress = event => {
+      const element = optionFrom(event);
+      // Alleen de primaire aanwijzer: vinger, pen of linkermuisknop.
+      if (!element || (event.pointerType === 'mouse' && event.button !== 0)) return;
+      clearPress();
+      press = { id: element.dataset.productOption, element, x: event.clientX, y: event.clientY, at: Date.now() };
+      element.classList.add('is-holding');
+      // Visuele hint zodra vasthouden lang genoeg duurt; loslaten maakt de keuze.
+      armTimer = setTimeout(() => {
+        armTimer = null;
+        if (!press) return;
+        press.element.classList.add('is-armed');
+      }, HOLD_TO_CHOOSE_MS);
+    };
+
+    const movePress = event => {
+      if (!press) return;
+      // Scrollen of vegen mag nooit per ongeluk een product kiezen.
+      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > HOLD_MOVE_TOLERANCE_PX) {
+        clearPress();
+      }
+    };
+
+    const endPress = event => {
+      if (!press) return;
+      const { id, at, element } = press;
+      const heldLongEnough = Date.now() - at >= HOLD_TO_CHOOSE_MS;
+      const stillOnSameRow = optionFrom(event)?.dataset.productOption === id;
+      clearPress();
+      if (!heldLongEnough || !stillOnSameRow) return;
+      // De klik die op dit loslaten volgt zou AH openen; die slikken we in.
+      // Een tijdstempel in plaats van een timer: die is immuun voor het
+      // vertragen van timers op de achtergrond.
+      this.suppressProductClickUntil = Date.now() + SUPPRESS_CLICK_MS;
+      element.classList.remove('is-holding', 'is-armed');
+      this.chooseProduct(id);
+    };
+
+    recipeModal.addEventListener('pointerdown', startPress);
+    recipeModal.addEventListener('pointermove', movePress);
+    recipeModal.addEventListener('pointerup', endPress);
+    recipeModal.addEventListener('pointercancel', clearPress);
+    recipeModal.addEventListener('pointerleave', clearPress);
+
+    // Rechtermuisknop is de desktopvariant van vasthouden.
+    recipeModal.addEventListener('contextmenu', event => {
+      const option = optionFrom(event);
+      if (!option) return;
+      event.preventDefault();
+      // Android toont dit menu bij vasthouden; de keuze is dan al gemaakt.
+      clearPress();
+      this.chooseProduct(option.dataset.productOption);
+    });
+
+    // Spatie kiest; Enter opent nog steeds de AH-link.
+    recipeModal.addEventListener('keydown', event => {
+      const option = optionFrom(event);
+      if (!option || (event.key !== ' ' && event.key !== 'Spacebar')) return;
+      event.preventDefault();
+      this.chooseProduct(option.dataset.productOption);
+    });
+
+    recipeModal.addEventListener('click', event => {
+      if (!optionFrom(event)) return;
+      if (!this.suppressProductClickUntil || Date.now() > this.suppressProductClickUntil) return;
+      event.preventDefault();
+      event.stopPropagation();
+      this.suppressProductClickUntil = 0;
+    }, true);
+  }
+
+  /**
+   * Kiest een AH-product voor het ingrediënt dat nu openstaat.
+   * @param {string} productId
+   */
+  async chooseProduct(productId) {
+    const recipe = this.recipesService.getRecipeById(this.activeRecipeId);
+    const index = this.activeIngredientIndex;
+    if (!recipe || !Number.isInteger(index) || !productId) return;
+    const product = (recipe.ingredients?.[index]?.ahProductOptions || [])
+      .find(option => option.id === productId);
+    try {
+      await this.recipesService.selectProductMatch(this.activeRecipeId, index, productId);
+      if (globalThis.navigator?.vibrate) globalThis.navigator.vibrate(12);
+      this.refreshModalContent();
+      this.render();
+      this.announceProductChoice(product?.title);
+    } catch (error) {
+      console.error('AH-productkeuze opslaan mislukt.', error);
+      this.announceProductChoice(null, error.message);
     }
+  }
+
+  /**
+   * Bevestigt de keuze in de live-regio van de ingrediëntweergave.
+   * @param {string} [title]
+   * @param {string} [errorMessage]
+   */
+  announceProductChoice(title, errorMessage) {
+    const status = document.querySelector('#recipe-modal [data-selection-status]');
+    if (!status) return;
+    status.classList.remove('hidden', 'bg-emerald-50', 'text-emerald-800', 'dark:bg-emerald-950/30', 'dark:text-emerald-300');
+    if (errorMessage) {
+      status.classList.add('bg-rose-50', 'text-rose-700', 'dark:bg-rose-950/30', 'dark:text-rose-300');
+      status.textContent = errorMessage;
+      return;
+    }
+    status.textContent = t('recipe.options.holdChosen', { title: title || '' });
   }
 
   /**

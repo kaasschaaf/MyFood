@@ -154,7 +154,9 @@ export class UIComponents {
           <a href="${this.escapeHtml(url)}"
             target="_blank" rel="noopener noreferrer"
             title="${this.escapeHtml(t('recipe.viewAt', { title: option.title }))}"
-            class="block rounded-xl border px-3 py-2.5 transition ${selectedRing}">
+            data-product-option="${this.escapeHtml(option.id)}"
+            aria-keyshortcuts="Space"
+            class="product-option block rounded-xl border px-3 py-2.5 transition ${selectedRing}">
             <span class="flex items-start justify-between gap-2">
               <span class="min-w-0 flex-1">
                 <span class="flex items-center gap-1.5">
@@ -528,6 +530,10 @@ export class UIComponents {
               ${this.escapeHtml(t('recipe.options.noMatch'))}
             </p>
           `}
+          <p class="mb-2 px-1 text-[11px] leading-relaxed text-slate-400 dark:text-neutral-400">
+            ${this.escapeHtml(t('recipe.options.holdHint'))}
+          </p>
+          <p data-selection-status role="status" aria-live="polite" class="mb-2 hidden rounded-lg bg-emerald-50 px-2.5 py-2 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300"></p>
           ${this.renderIngredientProducts(ingredient, product)}
         </section>
       </div>

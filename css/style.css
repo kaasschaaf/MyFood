@@ -122,6 +122,41 @@ dialog::backdrop {
   }
 }
 
+/* AH-productrijen in de ingrediëntweergave: vasthouden kiest het product.
+   De callout en tekstselectie van het besturingssysteem zouden dat hinderen. */
+.product-option {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+  transition: transform 0.15s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.product-option.is-holding {
+  transform: scale(0.985);
+}
+
+/* Grens bereikt: loslaten kiest dit product. */
+.product-option.is-armed {
+  border-color: var(--focus-ring);
+  background-color: rgb(16 185 129 / 0.1);
+  box-shadow: 0 0 0 2px rgb(16 185 129 / 0.35);
+}
+
+.dark .product-option.is-armed {
+  background-color: rgb(16 185 129 / 0.16);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-option {
+    transition: none;
+  }
+
+  .product-option.is-holding {
+    transform: none;
+  }
+}
+
 dialog[open] {
   animation: modal-fade-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
