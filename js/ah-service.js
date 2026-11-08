@@ -961,7 +961,8 @@ export class AHService {
    */
   rankProductsForIngredient(ingredient, products = [], scale = 1) {
     const name = ingredient?.searchQuery || ingredient?.name || '';
-    return products
+    // Alleen online verkrijgbare producten horen standaard niet bij een recept.
+    return this.filterProductsByOnlinePreference(products)
       .map(product => {
         const relevant = this.isRelevantProductForIngredient(name, product);
         const exactness = relevant ? this.productExactness(name, product) : 0;

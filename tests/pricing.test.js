@@ -270,6 +270,47 @@ test('unitPriceFor reports a comparable price per kilo, litre or piece', () => {
   assert.ok(Math.abs(ah.unitPriceFor({ price: 3, regularPrice: 3, unitSize: '2 x 150 g' }).amount - 10) < 1e-9);
 });
 
+test('online-only products never become an ingredient option by default', () => {
+  const ah = makeService();
+  assert.equal(ah.getIgnoreOnlineOnlyProducts(), true);
+  const products = [
+    {
+      id: 'web',
+      title: 'AH Broccoli',
+      price: 0.99,
+      regularPrice: 0.99,
+      unitSize: '500 g',
+      isOnlineOnly: true,
+      mainCategory: 'Groente, aardappelen',
+      subCategory: 'Broccoli'
+    },
+    {
+      id: 'winkel',
+      title: 'AH Broccoli',
+      price: 1.29,
+      regularPrice: 1.29,
+      unitSize: '500 g',
+      mainCategory: 'Groente, aardappelen',
+      subCategory: 'Broccoli'
+    }
+  ];
+  const ingredient = { name: 'broccoli', amount: 350, unit: 'g' };
+  const ranked = ah.rankProductsForIngredient(ingredient, products, 1);
+  assert.deepEqual(ranked.map(entry => entry.product.id), ['winkel']);
+  assert.equal(ah.selectProductForIngredient(ingredient, products, 1).product.id, 'winkel');
+});
+
+test('online-only products return when the preference is switched off', () => {
+  const ah = makeService();
+  ah.readOnlineOnlyPreference = () => false;
+  const products = [
+    { id: 'web', title: 'AH Broccoli', price: 0.99, regularPrice: 0.99, unitSize: '500 g', isOnlineOnly: true },
+    { id: 'winkel', title: 'AH Broccoli', price: 1.29, regularPrice: 1.29, unitSize: '500 g' }
+  ];
+  const ranked = ah.rankProductsForIngredient({ name: 'broccoli', amount: 350, unit: 'g' }, products, 1);
+  assert.deepEqual(ranked.map(entry => entry.product.id), ['web', 'winkel']);
+});
+
 test('unitPriceFor keeps the pre-bonus unit price for comparison', () => {
   const ah = makeService();
   const bonus = ah.unitPriceFor({ price: 1.99, regularPrice: 2.5, unitSize: '200 g' });

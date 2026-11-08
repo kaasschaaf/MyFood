@@ -135,6 +135,19 @@ export class UIComponents {
   }
 
   /**
+   * Producten die de bezoeker daadwerkelijk in de winkel kan kopen. Alleen
+   * online verkrijgbare producten vallen standaard af, ook als ze nog in een
+   * oude cache of in een eerder gekozen match zitten.
+   * @param {Object} ingredient
+   * @returns {Array}
+   */
+  onlineAvailableOptions(ingredient) {
+    const options = ingredient.ahProductOptions || [];
+    if (typeof this.ahService.filterProductsByOnlinePreference !== 'function') return options;
+    return this.ahService.filterProductsByOnlinePreference(options);
+  }
+
+  /**
    * Rendert een klikbare lijst met geschikte AH-producten voor een ingrediënt.
    * Elk product linkt naar de AH-winkelpagina.
    * @param {Object} ingredient
@@ -142,8 +155,9 @@ export class UIComponents {
    * @returns {string} HTML string
    */
   renderIngredientProducts(ingredient, selectedProduct) {
-    const options = ingredient.ahProductOptions || [];
+    const options = this.onlineAvailableOptions(ingredient);
     const isExternal = options.length > 0 ||
+      (ingredient.ahProductOptions || []).length > 0 ||
       Boolean(ingredient.productLookupAt || ingredient.selectedAHProduct || ingredient.productLookupError);
 
     if (options.length > 0) {
@@ -497,8 +511,9 @@ export class UIComponents {
     const bonusDesc = live
       ? product?.bonusDescription || t('recipe.options.bonus')
       : ingredient.bonusText || t('recipe.options.bonus');
-    const optionCount = (ingredient.ahProductOptions || []).length;
-    const bonusCount = (ingredient.ahProductOptions || []).filter(option => option.isBonus).length;
+    const visibleOptions = this.onlineAvailableOptions(ingredient);
+    const optionCount = visibleOptions.length;
+    const bonusCount = visibleOptions.filter(option => option.isBonus).length;
     const selectedRegularPrice = Number(product?.regularPrice);
     const selectedSavings = isBonus && Number.isFinite(selectedRegularPrice) && selectedRegularPrice > (product?.price || 0)
       ? Math.round((selectedRegularPrice - product.price) * 100) / 100
@@ -564,7 +579,7 @@ export class UIComponents {
               ${this.icon('flame', 'h-3 w-3')} ${this.escapeHtml(t('recipe.options.bonusShown'))}
             </span>
           </p>
-          ${(ingredient.ahProductOptions || []).some(option => option.matchesIngredient !== false) ? '' : `
+          ${this.onlineAvailableOptions(ingredient).some(option => option.matchesIngredient !== false) ? '' : `
             <p class="mb-2 rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
               ${this.escapeHtml(t('recipe.options.noMatch'))}
             </p>
@@ -776,7 +791,7 @@ export class UIComponents {
                 const bonusDesc = live
                   ? product?.bonusDescription || t('recipe.options.bonus')
                   : ing.bonusText || t('recipe.options.bonus');
-                const optionCount = (ing.ahProductOptions || []).length;
+                const optionCount = this.onlineAvailableOptions(ing).length;
                 const rowSavings = isBonus && quantityCost && Number.isFinite(quantityCost.regular) &&
                   quantityCost.regular > quantityCost.current
                   ? Math.round((quantityCost.regular - quantityCost.current) * 100) / 100
