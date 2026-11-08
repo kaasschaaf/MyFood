@@ -142,3 +142,33 @@ test('translations make a recipe findable by its translated title', async () => 
   await translator.translateSummaries([recipe]);
   assert.equal(recipe.translations.nl.title, '[nl] Chicken Curry');
 });
+
+test('a translation made from the old placeholder is thrown away and redone', async () => {
+  const cache = memoryCache();
+  const browser = fakeBrowserTranslator();
+  const translator = new ContentTranslator({ hasApiKey: () => false }, cache, browser);
+  setLang('nl');
+  const recipe = externalRecipe();
+  // Simulate a cached translation from a build that had the old description.
+  cache.store.set('translation-v3:nl:summary:themealdb-1', {
+    id: 'themealdb-1',
+    title: '[nl] Chicken Curry',
+    description: '[nl] Recipe from TheMealDB. Prices use live AH product data when available.'
+  });
+
+  const count = await translator.translateSummaries([recipe]);
+
+  assert.equal(count, 1, 'the stale translation should be re-requested');
+  assert.equal(translator.description(recipe), '[nl] A British chicken dish with chicken and curry powder.');
+  assert.ok(browser.calls.some(call => call.includes('en>nl:A British chicken dish')), browser.calls.join(' | '));
+});
+
+test('isStaleTranslation recognises the old placeholder in any shape', async () => {
+  const { isStaleTranslation } = await import('../js/content-translator.js');
+  assert.equal(isStaleTranslation({ description: 'Recipe from TheMealDB. Open the recipe…' }), true);
+  assert.equal(isStaleTranslation({ description: 'NL:Recipe from TheMealDB. Prices…' }), true);
+  assert.equal(isStaleTranslation({ description: 'Recipe from MealDB.' }), true);
+  assert.equal(isStaleTranslation({ description: 'Algerian beef dish with onion.' }), false);
+  assert.equal(isStaleTranslation({}), false);
+  assert.equal(isStaleTranslation(null), false);
+});

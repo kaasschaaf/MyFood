@@ -29,6 +29,18 @@ const CACHE_PREFIX = 'translation-v3:';
 const INGREDIENT_CACHE_PREFIX = 'ingredient-nl-v1:';
 const MAX_BATCH = 8;
 const LANGUAGE_NAMES = { nl: 'Dutch', en: 'English' };
+// Older builds described every TheMealDB recipe with this placeholder. A
+// translation made from that sentence does not contain the real description,
+// so it must be thrown away instead of reused.
+const STALE_DESCRIPTION = /recipe from\s+(?:the)?\s*mealdb/i;
+
+/**
+ * @param {Object|null} translation
+ * @returns {boolean} whether the translation is based on the old placeholder
+ */
+export function isStaleTranslation(translation) {
+  return STALE_DESCRIPTION.test(String(translation?.description || ''));
+}
 
 /**
  * Collects the translatable parts of a recipe.
@@ -189,8 +201,7 @@ export class ContentTranslator {
     if (!recipe || !translation) return recipe;
     // Older builds stored a translation of the "Recipe from TheMealDB"
     // disclaimer; never let that cached sentence come back.
-    const description = String(translation.description || '');
-    const value = /recipe from\s+(?:the)?\s*mealdb/i.test(description)
+    const value = isStaleTranslation(translation)
       ? { ...translation, description: '' }
       : translation;
     if (!recipe.translations) recipe.translations = {};
@@ -294,6 +305,32 @@ export class ContentTranslator {
     return null;
   }
 
+  /**
+   * Cache lookup that drops translations made from the old placeholder, so the
+   * regenerated description is translated again instead of being skipped.
+   * @param {Object} recipe
+   * @param {'nl'|'en'} lang
+   * @param {boolean} withDetails
+   * @returns {Promise<Object|null>}
+   */
+  async readUsableCache(recipe, lang, withDetails) {
+    const cached = await this.readCache(recipe, lang, withDetails);
+    if (!cached) return null;
+    if (!isStaleTranslation(cached)) return cached;
+    await this.dropCache(recipe, lang, withDetails);
+    return null;
+  }
+
+  async dropCache(recipe, lang, withDetails) {
+    const key = this.cacheKey(recipe, lang, withDetails);
+    this.memory.delete(key);
+    try {
+      await this.cache.delete?.(key);
+    } catch (error) {
+      console.warn('Stale translation could not be removed.', error);
+    }
+  }
+
   async writeCache(recipe, lang, withDetails, value) {
     const key = this.cacheKey(recipe, lang, withDetails);
     this.memory.set(key, value);
@@ -312,7 +349,7 @@ export class ContentTranslator {
   async applyCachedSummaries(recipes) {
     await Promise.all((recipes || []).filter(recipe => this.needsTranslation(recipe)).map(async recipe => {
       const lang = getLang() === 'en' ? 'en' : 'nl';
-      const cached = await this.readCache(recipe, lang, false);
+      const cached = await this.readUsableCache(recipe, lang, false);
       if (cached) this.applyTranslation(recipe, cached, lang);
     }));
   }
@@ -328,7 +365,7 @@ export class ContentTranslator {
     const groups = new Map();
     for (const recipe of recipes || []) {
       if (!recipe?.id || !this.needsTranslation(recipe)) continue;
-      const cached = await this.readCache(recipe, lang, false);
+      const cached = await this.readUsableCache(recipe, lang, false);
       if (cached) {
         this.applyTranslation(recipe, cached, lang);
         continue;
@@ -374,7 +411,7 @@ export class ContentTranslator {
     if (!recipe || !this.needsTranslation(recipe)) return false;
     const target = getLang() === 'en' ? 'en' : 'nl';
     const source = this.sourceLang(recipe);
-    const cached = await this.readCache(recipe, target, true);
+    const cached = await this.readUsableCache(recipe, target, true);
     if (cached) {
       this.applyTranslation(recipe, cached, target);
       return true;
