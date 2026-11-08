@@ -158,3 +158,102 @@ test('roundEuro rounds to two decimals without floating point drift', () => {
   assert.equal(ah.roundEuro(1.005), 1.01);
   assert.equal(ah.roundEuro(2.675), 2.68);
 });
+
+test('parsePackageSize reads the pack sizes AH uses', () => {
+  const ah = makeService();
+  assert.deepEqual(ah.parsePackageSize('400 g'), { amount: 400, unit: 'weight' });
+  assert.deepEqual(ah.parsePackageSize('ca. 500 g'), { amount: 500, unit: 'weight' });
+  assert.deepEqual(ah.parsePackageSize('los per 500 g'), { amount: 500, unit: 'weight' });
+  assert.deepEqual(ah.parsePackageSize('0,5 l'), { amount: 500, unit: 'volume' });
+  assert.deepEqual(ah.parsePackageSize('per stuk'), { amount: 1, unit: 'count' });
+  assert.deepEqual(ah.parsePackageSize('2 x 150 g'), { amount: 300, unit: 'weight' });
+  assert.equal(ah.parsePackageSize(''), null);
+});
+
+test('calculateQuantityCost refuses a pack that is far too small for the recipe', () => {
+  const ah = makeService();
+  // A 36 g spice mix cannot cover 350 g of broccoli: 350/36 is ~10 packs.
+  assert.equal(
+    ah.calculateQuantityCost({ amount: 350, unit: 'g' }, { price: 1.99, regularPrice: 1.99, unitSize: '36 g' }, 1),
+    null
+  );
+});
+
+test('calculateQuantityCost bridges pieces, weight and volume where that makes sense', () => {
+  const ah = makeService();
+  // 1 eetlepel mosterd (15 ml) from a 250 g jar.
+  const mustard = ah.calculateQuantityCost({ amount: 1, unit: 'el' }, { price: 0.75, regularPrice: 0.75, unitSize: '250 g' }, 1);
+  assert.ok(mustard.current < 0.06);
+  // 4 tortillas from a 370 g pack of 6.
+  const wraps = ah.calculateQuantityCost(
+    { name: 'tortilla', amount: 4, unit: 'stuks' },
+    { price: 0.95, regularPrice: 0.95, unitSize: '370 g' },
+    1
+  );
+  assert.ok(Math.abs(wraps.current - 0.4108) < 0.01);
+});
+
+test('isRelevantProductForIngredient rejects dishes that merely contain the ingredient', () => {
+  const ah = makeService();
+  const broccoli = { title: 'AH Broccoli', unitSize: '500 g', mainCategory: 'Groente, aardappelen', subCategory: 'Broccoli' };
+  const spiceMix = {
+    title: 'Honig Bakplaat mix aardappel, broccoli, gehakt',
+    unitSize: '36 g',
+    mainCategory: 'Pasta, rijst, wereldkeuken',
+    subCategory: 'Hollandse maaltijdpakketten, mixen'
+  };
+  const babyFood = {
+    title: 'Olvarit Broccoli kalkoen aardappel 12m+',
+    unitSize: '250 g',
+    mainCategory: 'Baby en kind',
+    subCategory: 'Maaltijden vanaf 12 maanden'
+  };
+  const blend = {
+    title: 'AH Bloemkool broccoli kleinverpakking',
+    unitSize: '200 g',
+    mainCategory: 'Groente, aardappelen',
+    subCategory: 'Bloemkool'
+  };
+  assert.equal(ah.isRelevantProductForIngredient('broccoli', broccoli), true);
+  assert.equal(ah.isRelevantProductForIngredient('broccoli', spiceMix), false);
+  assert.equal(ah.isRelevantProductForIngredient('broccoli', babyFood), false);
+  assert.equal(ah.isRelevantProductForIngredient('broccoli', blend), false);
+});
+
+test('isRelevantProductForIngredient does not match on a coincidental prefix', () => {
+  const ah = makeService();
+  const sausage = { title: 'AH Boterhamworst', mainCategory: 'Vleeswaren', subCategory: 'Boterhamworst (voorverpakt)' };
+  const cauliflower = { title: 'AH Bloemkool', mainCategory: 'Groente, aardappelen', subCategory: 'Bloemkool' };
+  const butter = { title: 'AH Roomboter ongezouten', mainCategory: 'Zuivel, eieren', subCategory: 'Ongezouten roomboter' };
+  const flour = { title: 'AH Tarwebloem', mainCategory: 'Bakproducten', subCategory: 'Bloem' };
+  assert.equal(ah.isRelevantProductForIngredient('boter', sausage), false);
+  assert.equal(ah.isRelevantProductForIngredient('bloem', cauliflower), false);
+  assert.equal(ah.isRelevantProductForIngredient('boter', butter), true);
+  assert.equal(ah.isRelevantProductForIngredient('bloem', flour), true);
+});
+
+test('selectProductForIngredient prefers the cheapest product that really is the ingredient', () => {
+  const ah = makeService();
+  const products = [
+    // The first AH search hit, but it is a spice mix and wildly overpriced for 350 g.
+    { id: 'mix', title: 'Honig Bakplaat mix aardappel, broccoli, gehakt', price: 1.99, regularPrice: 1.99, unitSize: '36 g', mainCategory: 'Pasta, rijst, wereldkeuken', subCategory: 'Hollandse maaltijdpakketten, mixen' },
+    { id: 'small', title: 'AH Broccoliroosjes', price: 1.99, regularPrice: 1.99, unitSize: '200 g', mainCategory: 'Groente, aardappelen', subCategory: 'Broccoli' },
+    { id: 'cheap', title: 'AH Broccoli', price: 1.29, regularPrice: 1.29, unitSize: '500 g', mainCategory: 'Groente, aardappelen', subCategory: 'Broccoli' },
+    { id: 'bulk', title: 'AH Broccoli', price: 4.49, regularPrice: 4.49, unitSize: '2 kg', mainCategory: 'Groente, aardappelen', subCategory: 'Broccoli' }
+  ];
+  const selection = ah.selectProductForIngredient({ name: 'broccoli', amount: 350, unit: 'g' }, products, 1);
+  // The 2 kg pack is cheapest per gram but four times the need.
+  assert.equal(selection.product.id, 'cheap');
+  assert.equal(selection.relevant, true);
+  assert.deepEqual(selection.matchedIds, ['cheap', 'bulk', 'small']);
+});
+
+test('selectProductForIngredient returns no product when nothing matches', () => {
+  const ah = makeService();
+  const products = [
+    { id: 'mix', title: 'Maggi Ovenschotel broccoli gratin', price: 1.89, regularPrice: 1.89, unitSize: '43 g', mainCategory: 'Pasta, rijst, wereldkeuken', subCategory: 'Hollandse maaltijdpakketten, mixen' }
+  ];
+  const selection = ah.selectProductForIngredient({ name: 'broccoli', amount: 350, unit: 'g' }, products, 1);
+  assert.equal(selection.product, null);
+  assert.equal(selection.relevant, false);
+});

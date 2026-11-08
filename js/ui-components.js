@@ -130,8 +130,11 @@ export class UIComponents {
         return Number(bSelected) - Number(aSelected);
       });
 
+      const cheapestOption = options.find(option => option.matchesIngredient !== false);
       const rows = sorted.map(option => {
         const isSelected = option.id === selectedProduct?.id;
+        const isCheapest = Boolean(cheapestOption) && option.id === cheapestOption.id;
+        const offIngredient = option.matchesIngredient === false;
         const url = option.productUrl || this.buildAHSearchUrl(ingredient);
         const bonusDescription = String(option.bonusDescription || '').trim();
         const bonusLabel = bonusDescription
@@ -155,8 +158,10 @@ export class UIComponents {
             <span class="flex items-start justify-between gap-2">
               <span class="min-w-0 flex-1">
                 <span class="flex items-center gap-1.5">
-                  <span class="truncate text-xs font-semibold text-slate-800 dark:text-neutral-100">${this.escapeHtml(option.title)}</span>
+                  <span class="truncate text-xs font-semibold ${offIngredient ? 'text-slate-500 dark:text-neutral-400' : 'text-slate-800 dark:text-neutral-100'}">${this.escapeHtml(option.title)}</span>
                   ${isSelected ? `<span class="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">${this.escapeHtml(t('recipe.options.chosen'))}</span>` : ''}
+                  ${isCheapest ? `<span class="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-600 dark:bg-white/10 dark:text-neutral-300">${this.escapeHtml(t('recipe.options.cheapest'))}</span>` : ''}
+                  ${offIngredient ? `<span class="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">${this.escapeHtml(t('recipe.options.notIngredient'))}</span>` : ''}
                 </span>
                 <span class="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-[10px] text-slate-400 dark:text-neutral-400">
                   ${metaParts.length ? `<span>${metaParts.join(' · ')}</span>` : ''}
@@ -518,6 +523,11 @@ export class UIComponents {
               ${this.icon('flame', 'h-3 w-3')} ${this.escapeHtml(t('recipe.options.bonusShown'))}
             </span>
           </p>
+          ${(ingredient.ahProductOptions || []).some(option => option.matchesIngredient !== false) ? '' : `
+            <p class="mb-2 rounded-lg bg-amber-50 px-2.5 py-2 text-[11px] text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+              ${this.escapeHtml(t('recipe.options.noMatch'))}
+            </p>
+          `}
           ${this.renderIngredientProducts(ingredient, product)}
         </section>
       </div>

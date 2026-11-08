@@ -16,6 +16,117 @@ function startOfTodayLocal() {
 // Recepten uit verschillende bronnen gebruiken verschillende maten. Door ze
 // naar gram, milliliter of stuks om te rekenen kan dezelfde pakprijs worden
 // gebruikt, ook voor TheMealDB (oz, lb, cups, tsp) en Nederlandse maten (tl, el).
+// Ingrediëntnamen bevatten veel vulwoorden; alleen de zelfstandige naamwoorden
+// zeggen iets over welk product erbij hoort.
+const INGREDIENT_STOPWORDS = new Set([
+  'fresh', 'freshly', 'dried', 'ground', 'chopped', 'sliced', 'diced', 'minced', 'crushed', 'grated',
+  'peeled', 'large', 'small', 'medium', 'whole', 'plain', 'extra', 'virgin', 'boneless', 'skinless',
+  'lean', 'raw', 'cooked', 'of', 'the', 'and', 'with', 'for', 'to', 'taste', 'a', 'an', 'or', 'x',
+  'into', 'cut', 'pieces', 'piece', 'halve', 'half', 'cloves', 'clove', 'leaves', 'leaf', 'pinch',
+  'splash', 'sprinkling', 'handful', 'can', 'cans', 'tin', 'packet', 'pack', 'grams', 'gram', 'g',
+  'kg', 'ml', 'l', 'oz', 'lb', 'lbs', 'cups', 'cup', 'tbsp', 'tsp', 'tablespoons', 'teaspoons',
+  'stuks', 'stuk', 'el', 'tl', 'ca', 'about', 'optional', 'plus', 'more', 'as', 'needed', 'good',
+  'big', 'little', 'few', 'some', 'each', 'your', 'favourite', 'favorite'
+]);
+
+// Woorden die aangeven dat het product een gerecht of mix is waarin het
+// ingrediënt slechts voorkomt. Een "bakplaat mix broccoli" is geen broccoli.
+const COMPOSITE_MARKERS = [
+  'mix', 'kruidenmix', 'maaltijdmix', 'maaltijdpakket', 'ovenschotel', 'dagschotel', 'schotel',
+  'stamppot', 'soep', 'salade', 'burger', 'hapje', 'knijpfruit', 'maaltijd', 'pizza', 'saus',
+  'dressing', 'snack', 'chips', 'lasagne', 'tortellini', 'cake', 'taart', 'muffin', 'pannenkoek',
+  'smoothie', 'granola', 'koek', 'gebak', 'pronto', 'ovengroente', 'roerbakgroente', 'soepgroente',
+  'kruiden', 'specerij', 'bouillon', 'instant',
+  // Bewerkt: wel het ingrediënt, niet bruikbaar als los ingrediënt.
+  'zoetzuur', 'ingelegd', 'poeder', 'puree', 'siroop', 'jam', 'chutney', 'gemarineerd',
+  'pesto', 'tapenade', 'hummus', 'ketchup', 'mayonaise',
+  // Andere basisproducten die op het ingrediënt lijken.
+  'karnemelk', 'koffiemelk', 'sojamelk', 'amandelmelk', 'havermelk', 'rijstmelk', 'geitenmelk',
+  'chocolademelk', 'drinkyoghurt', 'sojadrink', 'amandeldrink', 'bloemkool', 'opscuimmelk',
+  'baristamelk', 'stemgember', 'bakgember', 'passata', 'tomatenpuree'
+];
+
+// Bijvoeglijke naamwoorden die vóór het zelfstandig naamwoord staan
+// ("gele uien", "rode puntpaprika") en zelf niets over het product zeggen.
+const PRODUCT_ADJECTIVES = new Set([
+  'geel', 'gele', 'rood', 'rode', 'wit', 'witte', 'groen', 'groene', 'bruin', 'bruine', 'paars', 'paarse',
+  'oranje', 'zwart', 'zwarte', 'klein', 'kleine', 'groot', 'grote', 'jong', 'jonge', 'oud', 'oude', 'vers',
+  'verse', 'diepvries', 'extra', 'fijn', 'fijne', 'grof', 'grove', 'heel', 'halve', 'half', 'sweet', 'mild',
+  'milde', 'zoet', 'zoete', 'pittig', 'pittige', 'naturel', 'puur', 'luxe', 'klasse', 'gesneden', 'geraspt',
+  'gemalen', 'ongezouten', 'gezouten', 'vrije', 'uitloop', 'scharrel', 'biologisch', 'bio', 'hollandse',
+  'mager', 'magere', 'halfvolle', 'volle', 'houdbare', 'gepasteuriseerde', 'rauwe', 'grofgesneden',
+  'light', 'luchtig', 'romig', 'romige', 'fris', 'frisse', 'zoetzuur',
+  'nederlandse', 'italiaanse', 'franse', 'duitse', 'spaanse', 'griekse', 'verse', 'los', 'per', 'ca'
+]);
+
+// Merken en kwalificaties die vóór de productnaam staan.
+const PRODUCT_PREFIXES = [
+  'ah', 'jumbo', 'plus', 'aldi', 'lidl', 'dirk', 'coop', 'spar', 'honig', 'maggi', 'knorr', 'bonduelle',
+  'olvarit', 'conimex', 'hak', 'iglo', 'mora', 'heinz', 'calve', 'unox', 'campina', 'optimel', 'arla',
+  'melkan', 'natura', 'biologisch', 'bio', 'vers', 'verse', 'diepvries', 'hollandse', 'nederlandse',
+  'terra', 'ella s kitchen'
+];
+const PRODUCT_PREFIX_PATTERN = new RegExp(`^(?:${PRODUCT_PREFIXES.join('|')}) +`);
+
+// Schappen met kant-en-klare gerechten of babyvoeding: daar zit het ingrediënt
+// in verwerkt, maar het is geen bruikbare vervanging. Alleen op het subschap
+// letten: AH zet bijvoorbeeld suiker onder "Maaltijden, salades".
+const PREPARED_FOOD_MAIN_CATEGORIES = ['baby en kind'];
+const PREPARED_FOOD_SUBCATEGORIES = [
+  'knijphapje', 'maaltijden vanaf', 'hapje', 'verse soepen', 'soep', 'stamppot', 'salade'
+];
+
+// Meer pakken dan dit betekent dat het product qua formaat niet bij het recept
+// past (bijv. een kruidenmix van 36 g voor 350 g groente).
+const MAX_PACKS_PER_INGREDIENT = 6;
+// Een verpakking die veel groter is dan nodig is ("30 eieren" voor 2 eieren)
+// is wel het goedkoopst per stuk, maar niet wat je voor dit recept koopt.
+const MAX_PACK_OVERSHOOT = 4;
+// Volume en gewicht zijn voor sauzen, oliën en dranken ongeveer gelijk.
+const VOLUME_WEIGHT_EQUIVALENTS = new Set(['volume>weight', 'weight>volume']);
+
+// Recepten vragen "4 tortilla's" of "1 ui" waar AH in grammen verkoopt. Deze
+// richtgewichten overbruggen dat; ze zijn bewust afgerond en alleen bedoeld om
+// de kosten te schatten.
+const PIECE_WEIGHT_GRAMS = {
+  tortilla: 40,
+  wrap: 40,
+  naan: 90,
+  pita: 60,
+  broodje: 60,
+  boterham: 35,
+  ei: 55,
+  eieren: 55,
+  ui: 100,
+  uien: 100,
+  sjalot: 40,
+  sjalotten: 40,
+  knoflook: 5,
+  teen: 5,
+  wortel: 70,
+  wortels: 70,
+  aardappel: 150,
+  aardappelen: 150,
+  tomaat: 120,
+  tomaten: 120,
+  paprika: 150,
+  citroen: 100,
+  limoen: 80,
+  appel: 150,
+  appels: 150,
+  banaan: 120,
+  avocado: 200,
+  courgette: 250,
+  aubergine: 300,
+  prei: 150,
+  bleekselderij: 60,
+  champignon: 15,
+  champignons: 15,
+  bosui: 15,
+  stengel: 40,
+  takje: 2
+};
+
 const QUANTITY_UNITS = {
   g: ['weight', 1],
   gram: ['weight', 1],
@@ -529,7 +640,9 @@ export class AHService {
   }
 
   getMatchCacheKey(recipeId, ingredientName) {
-    return `ah-match:${recipeId}:${ingredientName.trim().toLowerCase()}`;
+    // v2: producten worden nu op bruikbaarheid gekozen, dus oude keuzes
+    // (zoals een kruidenmix bij broccoli) mogen niet hergebruikt worden.
+    return `ah-match-v2:${recipeId}:${ingredientName.trim().toLowerCase()}`;
   }
 
   async readCache(key) {
@@ -613,20 +726,240 @@ export class AHService {
     };
   }
 
+  /**
+   * Leest de pakinhoud uit AH's `unitSize`, bijvoorbeeld "400 g", "ca. 500 g",
+   * "2 x 150 g", "0,5 l" of "per stuk".
+   * @param {string} unitSize
+   * @returns {{amount: number, unit: string}|null}
+   */
+  parsePackageSize(unitSize) {
+    const raw = String(unitSize || '').trim();
+    if (!raw) return null;
+    // "per stuk" / "los" zonder gewicht: één exemplaar.
+    if (!/\d/.test(raw)) {
+      return /\bstuks?\b|\bper\s+stuk\b|\blos\b/i.test(raw) ? { amount: 1, unit: 'count' } : null;
+    }
+    const multi = raw.match(/(\d+)\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*(kg|g|gr|ml|cl|dl|l)\b/i);
+    if (multi) {
+      const single = this.normalizeQuantity(Number(multi[2].replace(',', '.')), multi[3]);
+      return single ? { amount: single.amount * Number(multi[1]), unit: single.unit } : null;
+    }
+    const match = raw.match(/(\d+(?:[.,]\d+)?)\s*(kg|g|gr|gram|ml|cl|dl|l|liter|stuks?|stuk|pieces?|pcs?)\b/i);
+    if (!match) return null;
+    return this.normalizeQuantity(Number(match[1].replace(',', '.')), match[2]);
+  }
+
+  /**
+   * Berekent wat het receptgedeelte van dit product kost, uitgaande van een
+   * evenredig deel van de verpakking. Geeft null als het formaat niet past.
+   */
   calculateQuantityCost(ingredient, product, scale) {
     if (!Number.isFinite(ingredient.amount) || ingredient.amount <= 0) return null;
     const ingredientQuantity = this.normalizeQuantity(ingredient.amount, ingredient.unit);
-    const packMatch = String(product.unitSize || '')
-      .match(/(\d+(?:[.,]\d+)?)\s*(kg|g|l|ml|stuks?|pieces?|pcs?)\b/i);
-    if (!ingredientQuantity || !packMatch) return null;
-    const packageQuantity = this.normalizeQuantity(Number(packMatch[1].replace(',', '.')), packMatch[2]);
-    if (!packageQuantity || packageQuantity.unit !== ingredientQuantity.unit) return null;
+    const packageQuantity = this.parsePackageSize(product.unitSize);
+    if (!ingredientQuantity || !packageQuantity) return null;
 
-    const amountUsed = ingredientQuantity.amount * scale;
+    let amountUsed = ingredientQuantity.amount * scale;
+    if (packageQuantity.unit !== ingredientQuantity.unit) {
+      const comparable = VOLUME_WEIGHT_EQUIVALENTS.has(`${ingredientQuantity.unit}>${packageQuantity.unit}`) ||
+        VOLUME_WEIGHT_EQUIVALENTS.has(`${packageQuantity.unit}>${ingredientQuantity.unit}`);
+      if (comparable) {
+        // 1 ml = 1 g: een eetlepel mosterd tegenover een pak in grammen.
+        amountUsed = ingredientQuantity.amount * scale;
+      } else if (packageQuantity.unit === 'weight' && ingredientQuantity.unit === 'count') {
+        // "4 tortilla's" tegenover een pak van 320 g.
+        const gramsPerPiece = PIECE_WEIGHT_GRAMS[this.ingredientHeadword(ingredient.name)];
+        if (!gramsPerPiece) return null;
+        amountUsed = ingredientQuantity.amount * scale * gramsPerPiece;
+      } else {
+        return null;
+      }
+    }
     const quantityRatio = amountUsed / packageQuantity.amount;
+    // Een veel te kleine verpakking (kruidenmix voor een kilo groente) is geen
+    // zinnige match; die sluiten we uit in plaats van de prijs op te blazen.
+    if (quantityRatio > MAX_PACKS_PER_INGREDIENT) return null;
     return {
       current: product.price * quantityRatio,
-      regular: product.regularPrice * quantityRatio
+      regular: product.regularPrice * quantityRatio,
+      quantityRatio
+    };
+  }
+
+  normalizeText(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+  }
+
+  /**
+   * Het zelfstandig naamwoord van een ingrediënt: in het Nederlands staat dat
+   * achteraan ("zoete aardappel" -> "aardappel", "Griekse yoghurt" -> "yoghurt").
+   * @param {string} name
+   * @returns {string}
+   */
+  ingredientHeadword(name) {
+    const words = this.ingredientKeywords(name);
+    return words.length ? words[words.length - 1] : '';
+  }
+
+  /**
+   * De betekenisvolle woorden van een ingrediënt. "Zuivelspread bieslook light"
+   * levert "zuivelspread" en "bieslook"; een product dat één daarvan is, is het
+   * gezochte ingrediënt.
+   * @param {string} name
+   * @returns {string[]}
+   */
+  ingredientKeywords(name) {
+    return this.normalizeText(name)
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 1 && !INGREDIENT_STOPWORDS.has(word) && !PRODUCT_ADJECTIVES.has(word));
+  }
+
+  words(text) {
+    return this.normalizeText(text)
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter(Boolean);
+  }
+
+  /**
+   * Vergelijkt één woord met het kernwoord van het ingrediënt. "broccoliroosjes"
+   * en "puntpaprika" horen erbij, "boterhamworst" bij "boter" niet: daarvoor
+   * moet het woord grotendeels uit het kernwoord bestaan.
+   * @param {string} word
+   * @param {string} headword
+   * @returns {boolean}
+   */
+  wordMatchesHeadword(word, headword) {
+    if (!word || !headword) return false;
+    if (word === headword) return true;
+    const plural = headword.endsWith('en') ? headword.slice(0, -2) : null;
+    if (plural && word === plural) return true;
+    if (word.endsWith('en') && word.slice(0, -2) === headword) return true;
+    // "ei" hoort bij "eieren", "ui" bij "uien".
+    if (headword.length <= 3 && word.startsWith(headword)) return true;
+    // In het Nederlands staat de kern achteraan: "basmatirijst" is rijst en
+    // "puntpaprika" is paprika. Vooraan matcht alleen een kortere vorm
+    // ("uien" vs "ui"), zodat "bloemkool" geen bloem wordt.
+    if (word.endsWith(headword) && word.length - headword.length >= 3) return true;
+    return headword.startsWith(word);
+  }
+
+  /**
+   * Bepaalt of een AH-product echt het ingrediënt is (en niet een gerecht of
+   * mix waarin het toevallig voorkomt).
+   * @param {string} ingredientName
+   * @param {Object} product
+   * @returns {boolean}
+   */
+  isRelevantProductForIngredient(ingredientName, product) {
+    if (!product) return false;
+    const headwords = this.ingredientKeywords(ingredientName);
+    if (!headwords.length) return false;
+    const matchesAny = word => headwords.some(keyword => this.wordMatchesHeadword(word, keyword));
+    const ingredient = this.normalizeText(ingredientName);
+    const title = this.normalizeText(product.title);
+    const mainCategory = this.normalizeText(product.mainCategory);
+    const subCategoryText = this.normalizeText(product.subCategory);
+    if (PREPARED_FOOD_MAIN_CATEGORIES.some(category => mainCategory.includes(category))) return false;
+    if (PREPARED_FOOD_SUBCATEGORIES.some(category => subCategoryText.includes(category))) return false;
+    if (COMPOSITE_MARKERS.some(marker => title.includes(marker) && !ingredient.includes(marker))) return false;
+
+    // Het schap is de betrouwbaarste aanwijzing: "AH Gele uien" zit in "Ui".
+    const categoryMatches = this.words(product.subCategory).some(matchesAny);
+    // In de titel moet het ingrediënt het eerste zelfstandig naamwoord zijn:
+    // "gele uien" en "rode puntpaprika" wel, "bloemkool broccoli kleinverpakking"
+    // en "boterhamworst" niet.
+    let stripped = title;
+    while (PRODUCT_PREFIX_PATTERN.test(stripped)) stripped = stripped.replace(PRODUCT_PREFIX_PATTERN, '');
+    const significant = this.words(stripped)
+      .find(word => !PRODUCT_ADJECTIVES.has(word) && !INGREDIENT_STOPWORDS.has(word));
+    const titleLeads = Boolean(significant) && matchesAny(significant);
+    if (!categoryMatches && !titleLeads) return false;
+    // Een lijst of mengsel ("broccoli, wortel, bloemkool", "honing pinda &
+    // cashewnoten") valt af.
+    if (/,\s*[a-z]/.test(stripped)) return false;
+    if (/\s[&+]\s|\sen\s/.test(stripped)) return false;
+    return true;
+  }
+
+  /**
+   * Hoe precies het product het ingrediënt is: 2 als het product ermee begint
+   * ("AH Broccoli"), 1 als het alleen in hetzelfde schap ligt ("AH Bimi").
+   * @param {string} ingredientName
+   * @param {Object} product
+   * @returns {number}
+   */
+  productExactness(ingredientName, product) {
+    const headwords = this.ingredientKeywords(ingredientName);
+    let stripped = this.normalizeText(product.title);
+    while (PRODUCT_PREFIX_PATTERN.test(stripped)) stripped = stripped.replace(PRODUCT_PREFIX_PATTERN, '');
+    const significant = this.words(stripped)
+      .find(word => !PRODUCT_ADJECTIVES.has(word) && !INGREDIENT_STOPWORDS.has(word));
+    const matches = significant && headwords.some(keyword => this.wordMatchesHeadword(significant, keyword));
+    return matches ? 2 : 1;
+  }
+
+  /**
+   * Sorteert producten op bruikbaarheid en daarna op prijs voor de benodigde
+   * hoeveelheid, zodat de goedkoopste zinnige optie bovenaan staat.
+   * @param {Object} ingredient
+   * @param {Array} products
+   * @param {number} scale
+   * @returns {Array}
+   */
+  rankProductsForIngredient(ingredient, products = [], scale = 1) {
+    const name = ingredient?.searchQuery || ingredient?.name || '';
+    return products
+      .map(product => {
+        const relevant = this.isRelevantProductForIngredient(name, product);
+        const exactness = relevant ? this.productExactness(name, product) : 0;
+        const quantityCost = this.calculateQuantityCost(ingredient, product, scale);
+        const packageSize = this.parsePackageSize(product.unitSize);
+        const ingredientQuantity = Number.isFinite(ingredient?.amount)
+          ? this.normalizeQuantity(ingredient.amount, ingredient.unit || '')
+          : null;
+        const overshoot = packageSize && ingredientQuantity && packageSize.unit === ingredientQuantity.unit
+          ? packageSize.amount / Math.max(ingredientQuantity.amount * scale, 1e-6)
+          : 1;
+        return {
+          product,
+          relevant,
+          exactness,
+          cost: quantityCost?.current ?? null,
+          oversized: overshoot > MAX_PACK_OVERSHOOT
+        };
+      })
+      .sort((a, b) => {
+        if (a.relevant !== b.relevant) return Number(b.relevant) - Number(a.relevant);
+        // Eerst exact het gevraagde ingrediënt, daarna pas de vervanger.
+        if (a.exactness !== b.exactness) return b.exactness - a.exactness;
+        if (a.oversized !== b.oversized) return Number(a.oversized) - Number(b.oversized);
+        if (a.cost !== null && b.cost !== null) return a.cost - b.cost;
+        if (a.cost !== null) return -1;
+        if (b.cost !== null) return 1;
+        return a.product.price - b.product.price;
+      });
+  }
+
+  /**
+   * Kiest het goedkoopste product dat ook echt het ingrediënt is.
+   * @param {Object} ingredient
+   * @param {Array} products
+   * @param {number} scale
+   * @returns {{product: Object|null, relevant: boolean}}
+   */
+  selectProductForIngredient(ingredient, products = [], scale = 1) {
+    const ranked = this.rankProductsForIngredient(ingredient, products, scale);
+    const best = ranked.find(entry => entry.relevant);
+    return {
+      product: best?.product || null,
+      relevant: Boolean(best),
+      ranked: ranked.map(entry => entry.product),
+      matchedIds: ranked.filter(entry => entry.relevant).map(entry => entry.product.id)
     };
   }
 

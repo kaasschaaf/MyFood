@@ -9,7 +9,7 @@ const RECIPE_CATALOG_TTL = 24 * 60 * 60 * 1000;
 const RECIPE_DETAIL_TTL = 7 * 24 * 60 * 60 * 1000;
 // Ophogen zodra de prijsberekening verandert: oude schattingen (zonder bijv.
 // ondersteuning voor tl/oz/cup) mogen niet blijven hangen.
-const PRICE_CACHE_VERSION = 2;
+const PRICE_CACHE_VERSION = 3;
 const RECIPE_LIMIT = 250;
 // Hoeveel recepten er tegelijk worden verrijkt met details en AH-prijzen.
 const HYDRATE_CONCURRENCY = 3;
@@ -328,7 +328,8 @@ export class RecipesService {
         product => product.id === ingredient.selectedAHProduct?.id
       );
       if (!selectedStillAvailable) {
-        ingredient.selectedAHProduct = ingredient.ahProductOptions[0] || null;
+        const ranked = this.ahService.rankProductsForIngredient(ingredient, ingredient.ahProductOptions, 1);
+        ingredient.selectedAHProduct = ranked.find(entry => entry.relevant)?.product || null;
       }
     });
     recipe.priceEstimate = this.ahService.calculateRecipePrice(recipe, recipe.baseServings);
@@ -481,31 +482,42 @@ export class RecipesService {
     const ingredients = recipe.ingredients || [];
     await this.mapWithConcurrency(ingredients, 3, async ingredient => {
       const query = this.getAHSearchQuery(ingredient.name);
+      // Ranking en prijs gaan uit van de hoeveelheden zoals het recept ze noemt.
+      ingredient.searchQuery = query;
       try {
         const result = await this.ahService.searchProducts(query, { revalidate: true });
-        ingredient.ahProductOptions = result.products;
+        const ranked = this.ahService.rankProductsForIngredient(ingredient, result.products, 1);
+        ingredient.ahProductOptions = ranked.map(entry => ({
+          ...entry.product,
+          matchesIngredient: entry.relevant
+        }));
         ingredient.productLookupAt = result.updatedAt;
         ingredient.productLookupStale = result.stale;
+
         const saved = await this.ahService.getSavedMatch(recipe.id, ingredient.name);
-        const savedMatch = saved?.value
-          ? result.products.find(product => product.id === saved.value.id)
-          : null;
-        const savedMatchAllowed = saved?.value &&
+        const savedAllowed = Boolean(saved?.value) &&
           this.ahService.filterProductsByOnlinePreference([saved.value]).length > 0;
-        if (savedMatchAllowed && !savedMatch) {
-          ingredient.ahProductOptions.unshift({ ...saved.value, cachedMatch: true });
+        let savedProduct = savedAllowed
+          ? ingredient.ahProductOptions.find(product => product.id === saved.value.id)
+          : null;
+        if (savedAllowed && !savedProduct) {
+          // Keuze van de gebruiker bewaren, ook als AH het product nu anders sorteert.
+          savedProduct = { ...saved.value, cachedMatch: true, matchesIngredient: true };
+          ingredient.ahProductOptions.unshift(savedProduct);
           ingredient.productLookupStale = true;
         }
-        ingredient.selectedAHProduct = savedMatch || (savedMatchAllowed ? saved.value : null) || result.products[0] || null;
+        const savedIsUsable = Boolean(savedProduct) && savedProduct.matchesIngredient !== false;
+        const cheapestRelevant = ranked.find(entry => entry.relevant)?.product || null;
+        ingredient.selectedAHProduct = savedIsUsable ? savedProduct : cheapestRelevant;
       } catch (error) {
         ingredient.ahProductOptions = [];
         ingredient.productLookupError = error.message;
         const saved = await this.ahService.getSavedMatch(recipe.id, ingredient.name);
-        const savedMatchAllowed = saved?.value &&
+        const savedMatchAllowed = Boolean(saved?.value) &&
           this.ahService.filterProductsByOnlinePreference([saved.value]).length > 0;
         ingredient.selectedAHProduct = savedMatchAllowed ? saved.value : null;
-        if (savedMatchAllowed) ingredient.ahProductOptions = [{ ...saved.value, cachedMatch: true }];
-        ingredient.productLookupStale = Boolean(savedMatchAllowed);
+        if (savedMatchAllowed) ingredient.ahProductOptions = [{ ...saved.value, cachedMatch: true, matchesIngredient: true }];
+        ingredient.productLookupStale = savedMatchAllowed;
       }
     });
     recipe.priceError = ingredients.some(ingredient => ingredient.productLookupError);
@@ -518,7 +530,7 @@ export class RecipesService {
     if (!ingredient) throw new Error('Receptingrediënt voor productkeuze niet gevonden.');
     const product = (ingredient.ahProductOptions || []).find(option => option.id === productId);
     if (!product) throw new Error('Gekozen AH-product bestaat niet meer in de zoekresultaten.');
-    ingredient.selectedAHProduct = product;
+    ingredient.selectedAHProduct = { ...product, matchesIngredient: true };
     await this.ahService.saveMatch(recipe.id, ingredient.name, product);
     recipe.priceEstimate = this.ahService.calculateRecipePrice(recipe, recipe.baseServings);
     const stored = await this.writeCache(this.priceCacheKey(recipe.id), recipe);

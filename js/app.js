@@ -571,7 +571,13 @@ class KostApp {
     this.syncPortionLabels?.();
     this.render();
     if (this.activeRecipeId) {
-      await this.translateActiveRecipe();
+      // Vertalen mag mislukken (geen Gemini-sleutel); het venster moet hoe dan
+      // ook in de nieuwe taal opnieuw worden getekend.
+      try {
+        await this.translateActiveRecipe();
+      } catch (error) {
+        console.warn('Recept kon niet worden vertaald.', error);
+      }
       this.refreshModalContent();
       this.render();
     }
