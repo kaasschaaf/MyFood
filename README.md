@@ -39,6 +39,7 @@ AH product search still exists, but only for **Mijn producten**: queries that th
 - **🛒 Albert Heijn Prices & Bonus Deals (Default: 2 people)**:
   - Matches every ingredient against the AH products stored in `data/products.json`, ranked by the same rules as a live search (completeness, exactness, pack size, price).
   - Shows the suitable AH products per ingredient as clickable links straight to the AH store page, with the current match highlighted.
+  - Every amount is metric: `350 g broccoli`, `1,5 l water`, `2 teentjes knoflook` — cups, spoons and pounds from the source recipes are converted once by the pipeline.
   - Estimates the cost of the used quantity only when product-pack size and recipe units can be reliably converted. Other products show their pack price without inventing a quantity cost.
   - Recipe prices are calculated and cached so recipes with complete price data can be sorted by estimated price per person; unpriced recipes appear after priced recipes.
   - Dynamic portion switcher (`[-] 2 people [+]`): all weights and prices scale in real time from 1 to 8 people.
@@ -119,6 +120,16 @@ back to the source text.
 turns a raw line into a stable Dutch key — fractions, ranges, brackets, prep
 qualifiers and Dutch wording are normalised, so `To taste salt` is simply
 `zout` and `1 1/2 cups (180 g) all-purpose flour, divided` is `bloem`.
+
+**Metric only.** Recipes arrive in cups, spoons, ounces and pounds as often as in
+grams. [`js/measure.js`](./js/measure.js) converts every amount once, at build
+time: weight becomes `g`/`kg`, volume becomes `ml`/`l`, and counted things
+(`clove`, `slice`, `can`, `pkg`, `bunch`, `pinch`…) keep their number with a
+label that is localised when shown (`2 teentjes` / `2 cloves`). Cups, spoons and
+imperial words never reach the page: measurements that end up inside an
+ingredient name are stripped, and lost fraction slashes (`34 cup sour cream`)
+are repaired. The app converts at render time as well, so a live TheMealDB
+recipe is shown in metric too.
 
 **Reports.** Every script prints one aligned block at the end: per-phase timings
 with share of total, the per-gate funnel, translation/cache counts, ingredient

@@ -1,6 +1,8 @@
 /**
  * Gemini Service - Beheert interactie met Google Generative Language API
  */
+import { formatQuantity } from './measure.js';
+
 export class GeminiService {
   constructor() {
     this.storageKey = 'myfood_gemini_api_key';
@@ -47,10 +49,9 @@ export class GeminiService {
     }
 
     const scale = servings / (recipe.baseServings || 2);
-    const scaledIngredients = (recipe.ingredients || []).map(i => {
-      const amount = Math.round((i.amount * scale) * 10) / 10;
-      return `- ${amount} ${i.unit} ${i.name}`;
-    }).join('\n');
+    const scaledIngredients = (recipe.ingredients || []).map(i =>
+      `- ${formatQuantity(i.amount * scale, i.unit, 'nl')} ${i.name}`
+    ).join('\n');
 
     const systemInstruction = `Je bent een vriendelijke, deskundige Nederlandse chef-kok en voedingsdeskundige in de Kost webapp.
 De gebruiker bekijkt momenteel dit recept:

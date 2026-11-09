@@ -124,3 +124,27 @@ test('the price snapshot is recent enough to be useful', t => {
   }
   assert.ok(days < 400, 'price snapshot is older than the app should accept');
 });
+
+test('the dataset stores metric amounts only', t => {
+  if (!hasStaticData) {
+    t.skip('no static dataset committed yet');
+    return;
+  }
+  const metricUnits = new Set(['', 'g', 'kg', 'ml', 'l',
+    'piece', 'clove', 'slice', 'can', 'pkg', 'bunch', 'sprig', 'leaf', 'handful', 'dash', 'pinch', 'head']);
+  const imperial = /\b(cups?|tbsp|tblsp|tbs|tsp|teaspoons?|tablespoons?|oz|ounces?|lbs?|pounds?|pints?|quarts?|gallons?|fl oz)\b/i;
+  const badUnits = new Set();
+  const badNames = new Set();
+  for (const entry of catalog) {
+    if (!entry.shard) continue;
+    const path = resolve(DATA, 'recipes', entry.shard);
+    for (const recipe of JSON.parse(readFileSync(path, 'utf8'))) {
+      for (const ingredient of recipe.ingredients) {
+        if (!metricUnits.has(ingredient.unit || '')) badUnits.add(ingredient.unit);
+        if (imperial.test(ingredient.name || '') || imperial.test(ingredient.nameEn || '')) badNames.add(ingredient.nameEn);
+      }
+    }
+  }
+  assert.deepEqual([...badUnits], [], 'every unit must be metric or a counted unit');
+  assert.deepEqual([...badNames], [], 'no ingredient name may carry an imperial measurement');
+});

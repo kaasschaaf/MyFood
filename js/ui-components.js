@@ -1,6 +1,7 @@
 import { escapeHtml } from './utils.js';
-import { cuisineLabel, getLocale, t } from './i18n.js';
+import { cuisineLabel, getLang, getLocale, t } from './i18n.js';
 import { ContentTranslator } from './content-translator.js';
+import { formatQuantity } from './measure.js';
 
 /**
  * UI Components - Rendert receptenkaarten, modalen, balkjes en interactieve elementen
@@ -38,6 +39,19 @@ export class UIComponents {
   /** Ingredient name for display only; AH lookups keep the Dutch name. */
   ingredientName(ingredient) {
     return this.translator.ingredientName(ingredient);
+  }
+
+  /**
+   * Metric amount for display ("350 g", "1,5 l", "2 teentjes"). Imperial
+   * amounts from the source data are converted here so nothing else leaks.
+   * @param {{amount?: number, unit?: string}} ingredient
+   * @param {number} [scale] portion scale
+   * @returns {string}
+   */
+  quantityLabel(ingredient, scale = 1) {
+    const amount = Number(ingredient?.amount);
+    const value = Number.isFinite(amount) && amount > 0 ? amount * scale : null;
+    return formatQuantity(value, ingredient?.unit, getLang());
   }
 
   /** Cooking steps in the active language. */
@@ -500,9 +514,6 @@ export class UIComponents {
     if (!ingredient) return '';
 
     const scale = servings / (recipe.baseServings || 2);
-    const scaledAmount = Number.isFinite(ingredient.amount)
-      ? Math.round((ingredient.amount * scale) * 10) / 10
-      : null;
     const product = ingredient.selectedAHProduct;
     const live = this.isLivePriced(recipe);
     const quantityCost = live && product
@@ -520,8 +531,7 @@ export class UIComponents {
       ? Math.round((selectedRegularPrice - product.price) * 100) / 100
       : 0;
     const amountLabel = [
-      scaledAmount === null ? '' : scaledAmount,
-      ingredient.unit || '',
+      formatQuantity(ingredient.amount * scale, ingredient.unit, getLang()),
       ingredient.name || ''
     ].filter(part => String(part).length).join(' ');
     const selectedUnitPrice = product ? this.unitPriceLabel(product) : null;
@@ -780,9 +790,6 @@ export class UIComponents {
             </h3>
             <ul class="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-sm dark:divide-white/10 dark:border-white/10 dark:bg-neutral-800/60">
               ${(recipe.ingredients || []).map((ing, index) => {
-                const scaledAmount = Number.isFinite(ing.amount)
-                  ? Math.round((ing.amount * scale) * 10) / 10
-                  : null;
                 const product = ing.selectedAHProduct;
                 const live = this.isLivePriced(recipe);
                 const quantityCost = live && product
@@ -812,7 +819,7 @@ export class UIComponents {
                       </span>
                       <span class="min-w-0 flex-1">
                         <span class="block truncate text-sm font-semibold text-slate-800 dark:text-neutral-100">
-                          ${scaledAmount === null ? '' : `<span class="tabular-nums">${this.escapeHtml(scaledAmount)}</span> `}${this.escapeHtml(ing.unit)} ${this.escapeHtml(this.ingredientName(ing))}
+                          ${this.escapeHtml(this.quantityLabel(ing, scale))} ${this.escapeHtml(this.ingredientName(ing))}
                         </span>
                         <span class="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400 dark:text-neutral-400">
                           ${isBonus

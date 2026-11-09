@@ -28,6 +28,7 @@ import { describeRecipe } from './lib/describe.js';
 import { translationStats, translateBatch } from './lib/translate.js';
 import { DATA_DIR, SCRIPT_FILE, SHARD_SIZE, catalogEntry, metaBlock, recipeId, shardName, writeJson } from './lib/data.js';
 import { canonicalIngredients } from '../js/ingredient-canonical.js';
+import { toMetric } from '../js/measure.js';
 import { estimateRecipeNutrition } from '../js/nutrition-estimator.js';
 import { parseArgs, readJsonFile, writeStage } from './lib/cli.js';
 
@@ -48,13 +49,18 @@ const report = createReport('build-recipes', {
 function toIngredients(line) {
   return canonicalIngredients(line)
     .filter(item => item.key && item.key.length > 1)
-    .map(item => ({
-      name: item.nameNl || item.nameEn,
-      nameEn: item.nameEn,
-      key: item.key,
-      amount: item.amount,
-      unit: item.unit
-    }));
+    .map(item => {
+      // The dataset mixes cups, spoons, ounces and pounds with grams; store one
+      // metric unit vocabulary so the app never has to convert on the fly.
+      const metric = toMetric(item.amount, item.unit);
+      return {
+        name: item.nameNl || item.nameEn,
+        nameEn: item.nameEn,
+        key: item.key,
+        amount: metric.amount,
+        unit: metric.unit
+      };
+    });
 }
 
 /**
@@ -125,10 +131,13 @@ function loadCuratedRecipes() {
   return readJsonFile(CURATED_PATH, []).map(recipe => {
     const ingredients = (recipe.ingredients || []).map(ingredient => {
       const [item] = canonicalIngredients(`${ingredient.amount ?? ''} ${ingredient.unit ?? ''} ${ingredient.name}`);
+      const metric = toMetric(ingredient.amount, ingredient.unit);
       return {
         ...ingredient,
         key: item?.key || '',
-        nameEn: item?.nameEn || ''
+        nameEn: item?.nameEn || '',
+        amount: metric.amount,
+        unit: metric.unit
       };
     });
     const { descriptionEn } = describeRecipe({
