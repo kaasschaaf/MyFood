@@ -2,6 +2,7 @@ import { BrowserCache } from './browser-cache.js';
 import { canonicalCuisine } from './i18n.js';
 import { toMetric } from './measure.js';
 import { estimateRecipeNutrition } from './nutrition-estimator.js';
+import { rankRecipes } from './recipe-ranking.js';
 import { productsForKey, selectStaticProduct } from './static-data.js';
 
 const THEMEALDB_API = 'https://www.themealdb.com/api/json/v1/1';
@@ -188,7 +189,11 @@ export class RecipesService {
       sourceUrl: entry.sourceUrl || '',
       staticPriced: entry.source !== 'allerhande',
       ahRecipeOnly: entry.source === 'allerhande',
-      ingredientCount: entry.ingredientCount || 0
+      ingredientCount: entry.ingredientCount || 0,
+      // Price and score computed by the data pipeline, so the grid can show
+      // prices and rank recipes before any recipe body is loaded.
+      catalogPrice: entry.price || null,
+      recommendation: Number.isFinite(entry.recommendation) ? entry.recommendation : null
     };
   }
 
@@ -973,7 +978,7 @@ export class RecipesService {
   }
 
   getFilteredRecipes() {
-    return this.recipes.filter(recipe => {
+    const matches = this.recipes.filter(recipe => {
       const query = this.filters.searchQuery.toLowerCase().trim();
       if (query) {
         // Translations count too: in Dutch mode an English source recipe is
@@ -1005,7 +1010,19 @@ export class RecipesService {
       if (this.filters.maxPrice > 0 &&
           (!priceInfo.hasPriceData || priceInfo.pricePerPerson > this.filters.maxPrice)) return false;
       return true;
-    }).sort((a, b) => {
+    });
+
+    // "Aanbevolen" is a ranking, not the order the data file happens to have:
+    // quality bands with a daily rotation inside each band (see
+    // js/recipe-ranking.js). It is computed once per call so scrolling and
+    // re-rendering stay stable within a day.
+    if (this.filters.sortBy === 'default') {
+      return rankRecipes(matches, {
+        priceFor: recipe => this.ahService.calculateRecipePrice(recipe, this.activeServings)
+      });
+    }
+
+    return matches.sort((a, b) => {
       const priceA = this.ahService.calculateRecipePrice(a, this.activeServings);
       const priceB = this.ahService.calculateRecipePrice(b, this.activeServings);
       switch (this.filters.sortBy) {

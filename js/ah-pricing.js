@@ -12,6 +12,10 @@ import { ingredientHeadword } from './ingredient-matching.js';
 // More packs than this means the product does not fit the recipe's scale (for
 // example a 36 g spice mix for 350 g of vegetables).
 export const MAX_PACKS_PER_INGREDIENT = 6;
+// A single ingredient line never costs this much. Above it the match is wrong
+// (a €1 899 air conditioner once stood in for "muffin split"), so the cost is
+// reported as unknown instead of inventing a nine-hundred-euro sandwich.
+export const MAX_INGREDIENT_COST = 40;
 // Volume and weight are close enough for sauces, oils and drinks.
 const VOLUME_WEIGHT_EQUIVALENTS = new Set(['volume>weight', 'weight>volume']);
 
@@ -259,9 +263,112 @@ export function calculateQuantityCost(ingredient, product, scale) {
   // A pack that is far too small (spice mix for a kilo of vegetables) is not a
   // sensible match; exclude it instead of inflating the price.
   if (quantityRatio > MAX_PACKS_PER_INGREDIENT) return null;
+  if (product.price * quantityRatio > MAX_INGREDIENT_COST) return null;
   return {
     current: product.price * quantityRatio,
     regular: product.regularPrice * quantityRatio,
     quantityRatio
+  };
+}
+
+/**
+ * Rounds an amount to whole cents.
+ * @param {number} amount
+ * @returns {number}
+ */
+function toCents(amount) {
+  return Math.round((Number(amount) + Number.EPSILON) * 100) / 100;
+}
+
+/**
+ * What a whole recipe costs from its chosen products.
+ *
+ * Pure and shared: the app prices a loaded recipe with it, and the pipeline
+ * stores the same estimate in the catalogue so the grid can show and sort by
+ * price before any recipe body is loaded.
+ *
+ * @param {Object} recipe
+ * @param {number} [servings]
+ * @returns {{totalPrice: number, pricePerPerson: number, totalStandardPrice: number,
+ *   totalSavings: number, hasBonus: boolean, bonusCount: number, hasPriceData: boolean,
+ *   hasAnyPriceData: boolean, matchedIngredientCount: number, ingredientCount: number,
+ *   pricedIngredientCount: number, unmatchedIngredientCount: number,
+ *   unpricedIngredientCount: number}}
+ */
+export function recipePriceEstimate(recipe, servings = 2) {
+  const empty = {
+    totalPrice: 0,
+    pricePerPerson: 0,
+    totalStandardPrice: 0,
+    totalSavings: 0,
+    hasBonus: false,
+    bonusCount: 0,
+    hasPriceData: false,
+    hasAnyPriceData: false,
+    matchedIngredientCount: 0,
+    ingredientCount: 0,
+    pricedIngredientCount: 0,
+    unmatchedIngredientCount: 0,
+    unpricedIngredientCount: 0
+  };
+  const ingredients = recipe?.ingredients;
+  if (!Array.isArray(ingredients) || ingredients.length === 0) return empty;
+
+  const scale = servings / (recipe.baseServings || 2);
+  let totalPrice = 0;
+  let totalStandardPrice = 0;
+  let bonusCount = 0;
+  let allIngredientsPriced = true;
+  let matchedIngredientCount = 0;
+  let pricedIngredientCount = 0;
+
+  ingredients.forEach(ingredient => {
+    let actualPrice;
+    let regularPrice;
+    // Static dataset recipes are priced from the same product-shaped snapshot
+    // as a live search, so they take the same branch.
+    if (recipe.sourceUrl || recipe.livePriced || recipe.staticPriced) {
+      const product = ingredient.selectedAHProduct;
+      if (product) matchedIngredientCount++;
+      const quantityCost = product && calculateQuantityCost(ingredient, product, scale);
+      if (!quantityCost) {
+        allIngredientsPriced = false;
+        return;
+      }
+      actualPrice = quantityCost.current;
+      regularPrice = quantityCost.regular;
+    } else {
+      regularPrice = ingredient.standardPrice;
+      if (!Number.isFinite(regularPrice) || regularPrice <= 0) {
+        allIngredientsPriced = false;
+        return;
+      }
+      actualPrice = regularPrice * scale;
+      regularPrice *= scale;
+      matchedIngredientCount++;
+    }
+
+    totalPrice += actualPrice;
+    totalStandardPrice += regularPrice;
+    pricedIngredientCount++;
+    if (regularPrice > actualPrice) bonusCount++;
+  });
+
+  totalPrice = toCents(totalPrice);
+  totalStandardPrice = toCents(totalStandardPrice);
+  return {
+    totalPrice,
+    pricePerPerson: servings > 0 ? toCents(totalPrice / servings) : 0,
+    totalStandardPrice,
+    totalSavings: toCents(Math.max(0, totalStandardPrice - totalPrice)),
+    hasBonus: bonusCount > 0,
+    bonusCount,
+    hasPriceData: allIngredientsPriced,
+    hasAnyPriceData: pricedIngredientCount > 0,
+    matchedIngredientCount,
+    ingredientCount: ingredients.length,
+    pricedIngredientCount,
+    unmatchedIngredientCount: ingredients.length - matchedIngredientCount,
+    unpricedIngredientCount: ingredients.length - pricedIngredientCount
   };
 }

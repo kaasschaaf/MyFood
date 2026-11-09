@@ -4,7 +4,7 @@ A modern, fast, and mobile-friendly recipe web app for finding dishes, checking 
 
 Recipes, translations and product matches are **static data files** built by a pipeline in [`scripts/`](./scripts) and committed to the repository, so the app itself only downloads JSON and does the price arithmetic locally:
 
-- `data/catalog.json` — the lean index the recipe grid renders (one entry per recipe).
+- `data/catalog.json` — the lean index the recipe grid renders (one entry per recipe), including its price estimate and recommendation score.
 - `data/recipes/NNN.json` — full recipes, 100 per shard, with Dutch **and** English titles, steps and ingredient names.
 - `data/products.json` — every ingredient Kost needs, with the Albert Heijn products that match it, including nutrition.
 - `data/prices.json` — the current price snapshot for those products, refreshed every Monday.
@@ -33,7 +33,8 @@ AH product search still exists, but only for **Mijn producten**: queries that th
     - 🔥 **AH Bonus Deals**: Show recipes whose ingredients are currently on sale this week.
     - 🥩 **High Protein**: Filter recipes with more than 30 grams of protein per person.
     - ⏱️ **Quick**: Filter recipes ready within 25 minutes.
-  - Sort by: *Price per person (low-high), biggest bonus savings, most protein, health score, or prep time*.
+  - Sort by: *Aanbevolen (default), Price per person (low-high), biggest bonus savings, most protein, health score, or prep time*.
+  - **Aanbevolen** is a real ranking, not file order: a quality score per recipe (how much of it the price snapshot can price, documented nutrition, a believable ingredient list, a written description, a dish type, a translation) in 10-point bands, with the order *inside* a band rotated daily. Better recipes always lead, but the front page is a different mix of the corpus every day instead of the same handful. The score and price are computed by the pipeline and stored in `data/catalog.json`, so the grid can rank and price 2 000 recipes without loading a single recipe body.
   - Browse genuine Allerhande recipes alongside the cooked dataset; dinner dishes are tagged by type (pasta, kip, vis, stoof, oven…).
 
 - **🛒 Albert Heijn Prices & Bonus Deals (Default: 2 people)**:
@@ -143,9 +144,11 @@ dataset size can be chosen from measurements.
 
 `.github/workflows/data-prices.yml` runs every **Monday at 00:00 UTC (01:00
 Amsterdam)** and on demand. It re-reads only the products already stored in
-`data/products.json`, updates `data/prices.json`, and commits to `develop`. If
-more than 20 % of the products disappear from AH, or fewer than 80 % of stored
-products come back, the job aborts instead of writing a half-filled snapshot.
+`data/products.json`, updates `data/prices.json`, recomputes the per-recipe
+prices in `data/catalog.json` (so the grid never advertises last week's totals),
+and commits to `develop`. If more than 20 % of the products disappear from AH,
+or fewer than 80 % of stored products come back, the job aborts instead of
+writing a half-filled snapshot.
 
 `.github/workflows/data-recipes.yml` rebuilds the whole dataset by hand (and on
 the first of the month).

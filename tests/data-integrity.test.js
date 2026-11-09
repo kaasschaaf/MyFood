@@ -148,3 +148,29 @@ test('the dataset stores metric amounts only', t => {
   assert.deepEqual([...badUnits], [], 'every unit must be metric or a counted unit');
   assert.deepEqual([...badNames], [], 'no ingredient name may carry an imperial measurement');
 });
+
+test('every catalogue entry carries a price and a recommendation score', t => {
+  if (!hasStaticData) {
+    t.skip('no static dataset committed yet');
+    return;
+  }
+  const missing = catalog.filter(entry => !entry.price || !Number.isFinite(entry.recommendation));
+  assert.deepEqual(missing.map(entry => entry.id), [], 'the grid cannot price or rank these recipes');
+
+  // The stored price has to be a plausible dinner for a whole recipe.
+  const totals = catalog.map(entry => entry.price.total).filter(value => Number.isFinite(value));
+  assert.ok(totals.length === catalog.length, 'every price needs a total');
+  assert.ok(totals.every(value => value >= 0 && value <= 200), 'a recipe total between €0 and €200');
+
+  const scored = catalog.map(entry => entry.recommendation);
+  assert.ok(scored.every(value => value >= 0 && value <= 100), 'scores are 0..100');
+  // A ranking where everything scores the same would be no ranking at all.
+  assert.ok(new Set(scored).size > 5, 'scores must spread across recipes');
+
+  // Most of the recipe should be priced, or the estimate is meaningless.
+  const coverage = catalog.reduce((sum, entry) => {
+    const total = Number(entry.ingredientCount) || 0;
+    return sum + (total ? entry.price.priced / total : 0);
+  }, 0) / catalog.length;
+  assert.ok(coverage > 0.5, `mean price coverage is ${(coverage * 100).toFixed(1)}%`);
+});
