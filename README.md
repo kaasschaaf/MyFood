@@ -171,11 +171,12 @@ badge that links back to production; it uses its own service-worker cache
 ready. The workflow also runs lint, the tests and, when the pipeline is present,
 `scripts/verify-data.js` before anything is uploaded.
 
-**Repository setting.** The site must be published by this workflow, so
-**Settings → Pages → Build and deployment → Source** has to be **GitHub
-Actions**. With "Deploy from a branch" left on, GitHub's own
-`pages build and deployment` job republishes `main` after every release and
-removes `/dev/`; the deploy job warns when that happens.
+**The `github-pages` environment only accepts deployments from `main`.** A push
+to `develop` therefore verifies its own commit and then dispatches the same
+workflow on `main`, which rebuilds both trees; the deployment itself always runs
+from a `main` ref. Nothing has to be changed in the repository settings for the
+preview to work, and the deploy job fails loudly if `/dev/` is not live after
+publishing.
 
 ---
 
