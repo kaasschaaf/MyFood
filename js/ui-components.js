@@ -74,7 +74,10 @@ export class UIComponents {
   }
 
   isLivePriced(recipe) {
-    return Boolean(recipe && !recipe.ahRecipeOnly && (recipe.external || recipe.livePriced));
+    // Static dataset recipes are priced from the committed snapshot, so they
+    // count as priced just like the hand-written ones.
+    return Boolean(recipe && !recipe.ahRecipeOnly &&
+      (recipe.external || recipe.livePriced || recipe.staticPriced));
   }
 
   icon(name, className = 'h-4 w-4') {

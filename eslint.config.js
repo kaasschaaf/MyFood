@@ -45,6 +45,7 @@ export default [
       sourceType: 'module',
       globals: {
         process: 'readonly',
+        Buffer: 'readonly',
         console: 'readonly',
         fetch: 'readonly',
         URL: 'readonly',

@@ -17,8 +17,9 @@
 
 import { mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const REPORT_DIR = resolve('.reports');
+const REPORT_DIR = resolve(dirname(dirname(fileURLToPath(import.meta.url))), '.reports');
 
 /**
  * Formats milliseconds as `1m05s` / `12.3s`.

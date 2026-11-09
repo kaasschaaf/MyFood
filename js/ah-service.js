@@ -1,6 +1,13 @@
 import { BrowserCache } from './browser-cache.js';
 import { formatEuro } from './utils.js';
 import { getLocale } from './i18n.js';
+import { isOnlineOnlyProduct, normalizeProduct } from './ah-product.js';
+import {
+  calculateQuantityCost as calculateQuantityCostOf,
+  normalizeQuantity as normalizeQuantityOf,
+  parsePackageSize as parsePackageSizeOf,
+  unitPriceFor as unitPriceForOf
+} from './ah-pricing.js';
 import {
   ingredientKeywords,
   ingredientHeadword,
@@ -24,108 +31,8 @@ function startOfTodayLocal() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 }
-// Recepten uit verschillende bronnen gebruiken verschillende maten. Door ze
-// naar gram, milliliter of stuks om te rekenen kan dezelfde pakprijs worden
-// gebruikt, ook voor TheMealDB (oz, lb, cups, tsp) en Nederlandse maten (tl, el).
-// Meer pakken dan dit betekent dat het product qua formaat niet bij het recept
-// past (bijv. een kruidenmix van 36 g voor 350 g groente).
-const MAX_PACKS_PER_INGREDIENT = 6;
-// Volume en gewicht zijn voor sauzen, oliën en dranken ongeveer gelijk.
-const VOLUME_WEIGHT_EQUIVALENTS = new Set(['volume>weight', 'weight>volume']);
-
-// Recepten vragen "4 tortilla's" of "1 ui" waar AH in grammen verkoopt. Deze
-// richtgewichten overbruggen dat; ze zijn bewust afgerond en alleen bedoeld om
-// de kosten te schatten.
-const PIECE_WEIGHT_GRAMS = {
-  tortilla: 40,
-  wrap: 40,
-  naan: 90,
-  pita: 60,
-  broodje: 60,
-  boterham: 35,
-  ei: 55,
-  eieren: 55,
-  ui: 100,
-  uien: 100,
-  sjalot: 40,
-  sjalotten: 40,
-  knoflook: 5,
-  teen: 5,
-  wortel: 70,
-  wortels: 70,
-  aardappel: 150,
-  aardappelen: 150,
-  tomaat: 120,
-  tomaten: 120,
-  paprika: 150,
-  citroen: 100,
-  limoen: 80,
-  appel: 150,
-  appels: 150,
-  banaan: 120,
-  avocado: 200,
-  courgette: 250,
-  aubergine: 300,
-  prei: 150,
-  bleekselderij: 60,
-  champignon: 15,
-  champignons: 15,
-  bosui: 15,
-  stengel: 40,
-  takje: 2
-};
-
-const QUANTITY_UNITS = {
-  g: ['weight', 1],
-  gram: ['weight', 1],
-  grams: ['weight', 1],
-  gr: ['weight', 1],
-  kg: ['weight', 1000],
-  kilogram: ['weight', 1000],
-  kilograms: ['weight', 1000],
-  oz: ['weight', 28.3495],
-  ounce: ['weight', 28.3495],
-  ounces: ['weight', 28.3495],
-  lb: ['weight', 453.592],
-  lbs: ['weight', 453.592],
-  pound: ['weight', 453.592],
-  pounds: ['weight', 453.592],
-  ml: ['volume', 1],
-  milliliter: ['volume', 1],
-  milliliters: ['volume', 1],
-  millilitre: ['volume', 1],
-  millilitres: ['volume', 1],
-  cl: ['volume', 10],
-  dl: ['volume', 100],
-  l: ['volume', 1000],
-  liter: ['volume', 1000],
-  liters: ['volume', 1000],
-  litre: ['volume', 1000],
-  litres: ['volume', 1000],
-  cup: ['volume', 240],
-  cups: ['volume', 240],
-  tbsp: ['volume', 15],
-  tablespoon: ['volume', 15],
-  tablespoons: ['volume', 15],
-  tsp: ['volume', 5],
-  teaspoon: ['volume', 5],
-  teaspoons: ['volume', 5],
-  tl: ['volume', 5],
-  theelepel: ['volume', 5],
-  theelepels: ['volume', 5],
-  el: ['volume', 15],
-  eetlepel: ['volume', 15],
-  eetlepels: ['volume', 15],
-  'fl oz': ['volume', 30],
-  'fluid ounce': ['volume', 30],
-  'fluid ounces': ['volume', 30],
-  stuk: ['count', 1],
-  stuks: ['count', 1],
-  piece: ['count', 1],
-  pieces: ['count', 1],
-  pc: ['count', 1],
-  pcs: ['count', 1]
-};
+// Eenheid-omrekening, pakformaten en stukgewichten staan in js/ah-pricing.js,
+// zodat de datapipeline en de app dezelfde prijs berekenen.
 const NUTRITION_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 const MIN_REQUEST_INTERVAL = 300;
 const PRODUCT_SEARCH_CACHE_PREFIX = 'ah-search-v5:';
@@ -211,40 +118,7 @@ export class AHService {
   }
 
   isOnlineOnlyProduct(product) {
-    if (!product) return false;
-    if (product.isOnlineOnly === true ||
-        product.onlineOnly === true ||
-        product.isOnlineExclusive === true ||
-        product.isVirtualBundle === true ||
-        /ONLINE_ONLY|ONLINE_EXCLUSIVE/i.test(String(product.orderAvailabilityStatus || '')) ||
-        (product.availableOnline === true &&
-          (product.availableInStore === false || product.isAvailableInStore === false))) {
-      return true;
-    }
-    const availabilityDescription = [
-      product.title,
-      product.description,
-      product.descriptionFull,
-      product.descriptionHighlights,
-      product.orderAvailabilityDescription,
-      product.mainCategory,
-      product.subCategory,
-      ...(Array.isArray(product.extraDescriptions) ? product.extraDescriptions : []),
-      ...(Array.isArray(product.stickers)
-        ? product.stickers.flatMap(sticker => [sticker?.description, sticker?.label, sticker?.title])
-        : []),
-      ...(Array.isArray(product.propertyIcons)
-        ? product.propertyIcons.flatMap(icon => [icon?.description, icon?.label, icon?.title])
-        : [])
-    ].filter(value => typeof value === 'string').join(' ');
-    const onlineOnlyLabel = /alleen\s+online|uitsluitend\s+online|online[-\s]only|online[-\s]exclusief|alleen\s+via\s+(?:de\s+)?webshop/i;
-    if (onlineOnlyLabel.test(availabilityDescription)) return true;
-
-    const category = `${product.mainCategory || ''} ${product.subCategory || ''}`;
-    const digitalProduct = /beltegoed|sim[-\s]?kaarten|digitale?\s+(?:code|opwaardering|voucher)|e[-\s]?gift/i
-      .test(`${category} ${product.description || product.descriptionFull || ''}`);
-    return digitalProduct && /\bonline\b|digitale?\s+(?:code|opwaardering|voucher)|e[-\s]?gift/i
-      .test(`${product.title || ''} ${product.description || product.descriptionFull || ''}`);
+    return isOnlineOnlyProduct(product);
   }
 
   async getAnonymousToken() {
@@ -547,36 +421,7 @@ export class AHService {
   }
 
   normalizeProduct(product) {
-    const currentPrice = Number(product?.currentPrice);
-    const regularPrice = Number(product?.priceBeforeBonus);
-    const price = Number.isFinite(currentPrice) && currentPrice > 0 ? currentPrice : regularPrice;
-    if (!product || !Number.isFinite(price) || price <= 0 ||
-        (product.webshopId === undefined && product.hqId === undefined)) return null;
-    const bonusDescription = product.discountLabels?.map(label => label.defaultDescription).filter(Boolean).join(', ')
-      || product.bonusPeriodDescription || '';
-    const explicitlyOnlineOnly = this.isOnlineOnlyProduct(product);
-    return {
-      id: String(product.webshopId ?? product.hqId ?? ''),
-      title: product.title || 'AH-product',
-      price,
-      regularPrice: Number.isFinite(regularPrice) && regularPrice > 0 ? regularPrice : price,
-      unitSize: product.salesUnitSize || '',
-      unitPriceDescription: product.unitPriceDescription || '',
-      isBonus: Boolean(product.isBonus),
-      bonusDescription,
-      nutriScore: String(product.nutriscore || '').toUpperCase(),
-      imageUrl: product.images?.find(image => image.url)?.url || '',
-      priceIsRegularFallback: !(Number.isFinite(currentPrice) && currentPrice > 0),
-      availableOnline: Boolean(product.availableOnline),
-      isVirtualBundle: product.isVirtualBundle === true,
-      isOnlineOnly: explicitlyOnlineOnly,
-      isOrderable: product.isOrderable !== false,
-      mainCategory: product.mainCategory || '',
-      subCategory: product.subCategory || '',
-      productUrl: product.webshopId
-        ? `https://www.ah.nl/producten/product/wi${encodeURIComponent(product.webshopId)}`
-        : `https://www.ah.nl/zoeken?query=${encodeURIComponent(product.title || '')}`
-    };
+    return normalizeProduct(product);
   }
 
   async getSavedMatch(recipeId, ingredientName) {
@@ -627,7 +472,9 @@ export class AHService {
     recipe.ingredients.forEach(ingredient => {
       let actualPrice;
       let regularPrice;
-      if (recipe.sourceUrl || recipe.livePriced) {
+      // Static dataset recipes are priced from the same product-shaped
+      // snapshot as a live search, so they take the same branch.
+      if (recipe.sourceUrl || recipe.livePriced || recipe.staticPriced) {
         const product = ingredient.selectedAHProduct;
         if (product) matchedIngredientCount++;
         const quantityCost = product && this.calculateQuantityCost(ingredient, product, scale);
@@ -681,105 +528,28 @@ export class AHService {
    * @returns {{amount: number, unit: string}|null}
    */
   parsePackageSize(unitSize) {
-    const raw = String(unitSize || '').trim();
-    if (!raw) return null;
-    // "per stuk" / "los" zonder gewicht: één exemplaar.
-    if (!/\d/.test(raw)) {
-      return /\bstuks?\b|\bper\s+stuk\b|\blos\b/i.test(raw) ? { amount: 1, unit: 'count' } : null;
-    }
-    const multi = raw.match(/(\d+)\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*(kg|g|gr|ml|cl|dl|l)\b/i);
-    if (multi) {
-      const single = this.normalizeQuantity(Number(multi[2].replace(',', '.')), multi[3]);
-      return single ? { amount: single.amount * Number(multi[1]), unit: single.unit } : null;
-    }
-    const match = raw.match(/(\d+(?:[.,]\d+)?)\s*(kg|g|gr|gram|ml|cl|dl|l|liter|stuks?|stuk|pieces?|pcs?)\b/i);
-    if (!match) return null;
-    return this.normalizeQuantity(Number(match[1].replace(',', '.')), match[2]);
+    return parsePackageSizeOf(unitSize);
   }
 
   /**
    * Prijs per kilo, liter of stuk, zodat verpakkingen onderling te vergelijken
-   * zijn. Berekend uit het pakformaat, met AH's eigen omschrijving als
-   * terugvaloptie wanneer het formaat niet te lezen is.
+   * zijn.
    * @param {Object} product
    * @returns {{amount: number, unit: 'kg'|'l'|'stuk', regular: number}|null}
    */
   unitPriceFor(product) {
-    if (!product || !Number.isFinite(product.price) || product.price <= 0) return null;
-    const regularPrice = Number.isFinite(product.regularPrice) && product.regularPrice > 0
-      ? product.regularPrice
-      : product.price;
-    const packageSize = this.parsePackageSize(product.unitSize);
-    if (packageSize?.amount > 0) {
-      if (packageSize.unit === 'weight') {
-        const kilos = packageSize.amount / 1000;
-        return { amount: product.price / kilos, unit: 'kg', regular: regularPrice / kilos };
-      }
-      if (packageSize.unit === 'volume') {
-        const litres = packageSize.amount / 1000;
-        return { amount: product.price / litres, unit: 'l', regular: regularPrice / litres };
-      }
-      if (packageSize.unit === 'count' && packageSize.amount > 1) {
-        return {
-          amount: product.price / packageSize.amount,
-          unit: 'stuk',
-          regular: regularPrice / packageSize.amount
-        };
-      }
-      // Eén los exemplaar: de stukprijs is gewoon de pakprijs, dus niets tonen.
-      if (packageSize.unit === 'count') return null;
-    }
-    // "prijs per kg €3.31": AH zet de eenheid vóór het bedrag.
-    const description = String(product.unitPriceDescription || '');
-    const match = description.match(/(kg|kilogram|g|gram|l|liter|ml|stuk|stuks)\D{0,14}(\d+(?:[.,]\d+)?)/i);
-    if (!match) return null;
-    const value = Number(match[2].replace(',', '.'));
-    if (!Number.isFinite(value) || value <= 0) return null;
-    const unit = /^(kg|kilogram)$/i.test(match[1])
-      ? 'kg'
-      : /^(l|liter)$/i.test(match[1])
-        ? 'l'
-        : /^(stuk|stuks)$/i.test(match[1])
-          ? 'stuk'
-          : null;
-    return unit ? { amount: value, unit, regular: value } : null;
+    return unitPriceForOf(product);
   }
 
   /**
-   * Berekent wat het receptgedeelte van dit product kost, uitgaande van een
-   * evenredig deel van de verpakking. Geeft null als het formaat niet past.
+   * Berekent wat het receptgedeelte van dit product kost.
+   * @param {Object} ingredient
+   * @param {Object} product
+   * @param {number} scale
+   * @returns {{current: number, regular: number, quantityRatio: number}|null}
    */
   calculateQuantityCost(ingredient, product, scale) {
-    if (!Number.isFinite(ingredient.amount) || ingredient.amount <= 0) return null;
-    const ingredientQuantity = this.normalizeQuantity(ingredient.amount, ingredient.unit);
-    const packageQuantity = this.parsePackageSize(product.unitSize);
-    if (!ingredientQuantity || !packageQuantity) return null;
-
-    let amountUsed = ingredientQuantity.amount * scale;
-    if (packageQuantity.unit !== ingredientQuantity.unit) {
-      const comparable = VOLUME_WEIGHT_EQUIVALENTS.has(`${ingredientQuantity.unit}>${packageQuantity.unit}`) ||
-        VOLUME_WEIGHT_EQUIVALENTS.has(`${packageQuantity.unit}>${ingredientQuantity.unit}`);
-      if (comparable) {
-        // 1 ml = 1 g: een eetlepel mosterd tegenover een pak in grammen.
-        amountUsed = ingredientQuantity.amount * scale;
-      } else if (packageQuantity.unit === 'weight' && ingredientQuantity.unit === 'count') {
-        // "4 tortilla's" tegenover een pak van 320 g.
-        const gramsPerPiece = PIECE_WEIGHT_GRAMS[this.ingredientHeadword(ingredient.name)];
-        if (!gramsPerPiece) return null;
-        amountUsed = ingredientQuantity.amount * scale * gramsPerPiece;
-      } else {
-        return null;
-      }
-    }
-    const quantityRatio = amountUsed / packageQuantity.amount;
-    // Een veel te kleine verpakking (kruidenmix voor een kilo groente) is geen
-    // zinnige match; die sluiten we uit in plaats van de prijs op te blazen.
-    if (quantityRatio > MAX_PACKS_PER_INGREDIENT) return null;
-    return {
-      current: product.price * quantityRatio,
-      regular: product.regularPrice * quantityRatio,
-      quantityRatio
-    };
+    return calculateQuantityCostOf(ingredient, product, scale);
   }
 
   normalizeText(value) {
@@ -833,8 +603,7 @@ export class AHService {
   }
 
   /**
-   * Sorteert producten op bruikbaarheid en daarna op prijs voor de benodigde
-   * hoeveelheid, zodat de goedkoopste zinnige optie bovenaan staat.
+   * Sorteert producten op bruikbaarheid en daarna op prijs.
    * @param {Object} ingredient
    * @param {Array} products
    * @param {number} scale
@@ -869,13 +638,7 @@ export class AHService {
   }
 
   normalizeQuantity(amount, unit = '') {
-    const normalizedUnit = unit.toLowerCase().replace(/\./g, '').trim();
-    // Eenheid -> [dimensie, factor naar de basisEenheid (g, ml of stuk)].
-    const conversion = QUANTITY_UNITS[normalizedUnit];
-    if (conversion) return { amount: amount * conversion[1], unit: conversion[0] };
-    // TheMealDB schrijft vaak alleen een getal, bijvoorbeeld "2" bij "Eggs".
-    if (!normalizedUnit && Number.isFinite(amount)) return { amount, unit: 'count' };
-    return null;
+    return normalizeQuantityOf(amount, unit);
   }
 
   emptyPrice() {

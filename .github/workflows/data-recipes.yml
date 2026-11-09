@@ -1,0 +1,84 @@
+name: Rebuild recipe data
+
+# Rebuilds the static dataset: recipes, translations, product matches and the
+# first price snapshot. Run by hand (or on the first of the month) because it
+# takes a while and only changes when the corpus or the curation rules change.
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Number of dinner recipes to build'
+        required: false
+        default: '2000'
+      allerhande_limit:
+        description: 'Number of Allerhande link-only entries'
+        required: false
+        default: '250'
+  schedule:
+    # First of the month, 03:00 UTC.
+    - cron: '0 3 1 * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: 'data-recipes'
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: scripts
+    steps:
+      - name: Checkout develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Cache pipeline models and translations
+        uses: actions/cache@v4
+        with:
+          path: scripts/.cache
+          key: kost-pipeline-cache-${{ github.run_id }}
+          restore-keys: |
+            kost-pipeline-cache-
+
+      - name: Install pipeline dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build recipes
+        env:
+          LIMIT: ${{ inputs.limit || '2000' }}
+        run: node build-recipes.js --limit "$LIMIT"
+
+      - name: Build products
+        run: node build-products.js
+
+      - name: Add Allerhande links
+        env:
+          ALLERHANDE_LIMIT: ${{ inputs.allerhande_limit || '250' }}
+        run: node build-allerhande.js --limit "$ALLERHANDE_LIMIT"
+
+      - name: Verify the dataset
+        run: node verify-data.js
+
+      - name: Commit the dataset
+        working-directory: .
+        run: |
+          git config user.name 'kost-data-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add data/
+          if git diff --cached --quiet; then
+            echo 'No data changes.'
+            exit 0
+          fi
+          git commit -m "chore(data): rebuild recipe dataset"
+          git push origin develop

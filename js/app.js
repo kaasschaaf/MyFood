@@ -853,10 +853,9 @@ class KostApp {
   }
 
   /**
-   * Vult de kaarten die nu zichtbaar zijn met echte receptgegevens: eerst
-   * ingrediënten en stappen, daarna de live AH-prijzen. Zo draait het dure
-   * AH-zoekwerk alleen voor wat de bezoeker echt ziet, in plaats van voor de
-   * hele catalogus.
+   * Loads the body (ingredients, steps and static products) of the cards on
+   * screen. With a static dataset this is one small JSON request per shard;
+   * nothing is fetched from Albert Heijn and no price is computed live.
    */
   async hydrateVisibleRecipes() {
     if (this.hydrationPromise) return this.hydrationPromise;
@@ -864,38 +863,39 @@ class KostApp {
     const visibleRecipes = this.recipesService
       .getFilteredRecipes()
       .slice(0, this.visibleRecipeCount);
-    const pending = visibleRecipes.filter(recipe =>
-      this.recipesService.isLivePricedRecipe(recipe) &&
-      (
-        this.recipesService.needsDetails(recipe) ||
-        (recipe.ingredients?.length && !recipe.priceUpdatedAt && !recipe.priceAttempted)
-      )
-    );
+    const pending = visibleRecipes.filter(recipe => !recipe.bodyLoaded && !recipe.ahRecipeOnly);
     if (pending.length === 0) {
       if (status) status.textContent = t('catalog.status.done', { total: visibleRecipes.length });
       return null;
     }
 
     if (status) status.textContent = t('catalog.status.checking', { count: pending.length });
-    let failedRecipes = 0;
-    this.hydrationPromise = this.recipesService.hydrateRecipes(pending, ({ phase, completed, total, recipe }) => {
-      if (recipe.priceError || recipe.detailError) failedRecipes++;
-      if (status) {
-        const progress = phase === 'details'
-          ? t('catalog.status.details', { done: completed, total })
-          : t('catalog.status.progress', { done: completed, total });
-        status.textContent = progress + (failedRecipes ? t('catalog.status.withErrors', { count: failedRecipes }) : '');
+    let failed = 0;
+    this.hydrationPromise = (async () => {
+      for (const recipe of pending) {
+        try {
+          await this.recipesService.ensureRecipeBody(recipe);
+        } catch (error) {
+          console.warn(`Recept "${recipe.title}" kon niet worden geladen.`, error);
+          recipe.detailError = true;
+          failed++;
+        }
+        if (status) {
+          status.textContent = t('catalog.status.details', {
+            done: pending.indexOf(recipe) + 1,
+            total: pending.length
+          }) + (failed ? t('catalog.status.withErrors', { count: failed }) : '');
+        }
+        // Een volle hertekening per recept laat de foto's knipperen; daarom
+        // bundelen we de tussenstanden en tekenen we aan het eind definitief.
+        this.scheduleRender();
+        if (recipe.id === this.activeRecipeId) this.refreshModalContent();
       }
-      // Een volle hertekening per recept laat de foto's knipperen; daarom
-      // bundelen we de tussenstanden en tekenen we aan het eind definitief.
-      this.scheduleRender();
-      if (recipe.id === this.activeRecipeId) this.refreshModalContent();
-    }).then(() => {
       if (status) {
-        status.textContent = t('catalog.status.done', { total: pending.length }) +
-          (failedRecipes ? t('catalog.status.withErrors', { count: failedRecipes }) : '');
+        status.textContent = t('catalog.status.done', { total: visibleRecipes.length }) +
+          (failed ? t('catalog.status.withErrors', { count: failed }) : '');
       }
-    }).catch(error => {
+    })().catch(error => {
       console.error('Receptgegevens konden niet worden bijgewerkt.', error);
       if (status) status.textContent = t('catalog.status.failed', { message: error.message });
     }).finally(() => {

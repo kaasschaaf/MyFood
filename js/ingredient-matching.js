@@ -139,8 +139,9 @@ export function wordMatchesHeadword(word, headword) {
   const plural = headword.endsWith('en') ? headword.slice(0, -2) : null;
   if (plural && word === plural) return true;
   if (word.endsWith('en') && word.slice(0, -2) === headword) return true;
-  // "ei" belongs to "eieren", "ui" to "uien".
-  if (headword.length <= 3 && word.startsWith(headword)) return true;
+  // "ei" belongs to "eieren", "ui" to "uien". A one-letter headword would make
+  // every word that starts with that letter a match ("c" matching "chips").
+  if (headword.length >= 2 && headword.length <= 3 && word.startsWith(headword)) return true;
   // In Dutch the head is at the end: "basmatirijst" is rice and "puntpaprika"
   // is paprika. A shorter form in front only matches ("uien" vs "ui"), so
   // "bloemkool" does not become flour.

@@ -1,6 +1,6 @@
 // Service worker for Kost. Bump CACHE_VERSION when the precache list or the
 // caching strategy changes, so old caches are cleaned up on activate.
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const CACHE_PREFIX = 'kost-';
 const STATIC_CACHE = `${CACHE_PREFIX}static-${CACHE_VERSION}`;
 const FONT_CACHE = `${CACHE_PREFIX}fonts-${CACHE_VERSION}`;
@@ -16,6 +16,12 @@ const PRECACHE_URLS = [
   './js/runtime-config.js',
   './js/pwa.js',
   './js/app.js',
+  './js/ah-pricing.js',
+  './js/ah-product.js',
+  './js/ingredient-canonical.js',
+  './js/ingredient-matching.js',
+  './js/static-data.js',
+  './js/static-products.js',
   './js/ah-service.js',
   './js/browser-cache.js',
   './js/browser-translator.js',
@@ -29,6 +35,10 @@ const PRECACHE_URLS = [
   './js/ui-components.js',
   './js/utils.js',
   './data/recipes.json',
+  './data/catalog.json',
+  './data/products.json',
+  './data/prices.json',
+  './data/meta.json',
   './icons/icon.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',

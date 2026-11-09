@@ -62,6 +62,10 @@ const INLINE_QUALIFIERS = [
   'very cold',
   'cut into pieces',
   'cut into chunks',
+  'cut into slices',
+  'cut into rounds',
+  'cut into matchsticks',
+  'sliced into rounds',
   'cut into cubes',
   'cut into wedges',
   'cut into strips',
@@ -117,7 +121,7 @@ const UNIT_WORDS = [
   'kilograms', 'kilogram', 'kilos', 'kilo', 'kg', 'grams', 'gram', 'gr', 'g',
   'millilitres', 'milliliters', 'millilitre', 'milliliter', 'ml', 'cl', 'dl', 'litres', 'liters', 'litre', 'liter', 'l',
   'ounces', 'ounce', 'oz', 'pounds', 'pound', 'lbs', 'lb',
-  'cups', 'cup', 'pints', 'pint', 'quarts', 'quart',
+  'cups', 'cup', 'pints', 'pint', 'quarts', 'quart', 'c',
   'packets', 'packet', 'packs', 'pack', 'pkg', 'tins', 'tin', 'cans', 'can', 'jars', 'jar', 'bottles', 'bottle',
   'slices', 'slice', 'pieces', 'piece', 'cloves', 'clove', 'sprigs', 'sprig', 'leaves', 'leaf',
   'tenen', 'teen', 'takjes', 'takje', 'plakjes', 'plakje', 'blikjes', 'blikje', 'zakjes', 'zakje',
@@ -215,7 +219,11 @@ export function stripBrackets(text) {
  * @returns {string}
  */
 export function stripQualifiers(text) {
-  let value = ` ${normalizeIngredient(text)} `;
+  // "cut into 3/4-inch slices" and friends, with or without a size.
+  let value = ` ${String(text || '')
+    .replace(/\b(?:cut|sliced|chopped|diced|torn)\s+(?:\w+\s+)?into\b[^,;]*?\b(?:slices?|pieces?|chunks?|cubes?|rounds?|wedges?|strips?|matchsticks?|thirds?|quarters?|halves)\b/gi, ' ')
+    .replace(/\s+/g, ' ')} `;
+  value = ` ${normalizeIngredient(value)} `;
   let changed = true;
   while (changed) {
     changed = false;
