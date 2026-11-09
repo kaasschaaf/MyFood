@@ -116,11 +116,11 @@ never wipes the preview and a preview push never touches production. The preview
 is marked `noindex, nofollow` and carries a small `dev · <sha>` badge that links
 back to production.
 
-**Repository setting.** The site must be published by this workflow, so
-**Settings → Pages → Build and deployment → Source** has to be **GitHub
-Actions**. With "Deploy from a branch" left on, GitHub's own
-`pages build and deployment` job republishes `main` after every release and
-removes `/dev/`; the deploy job warns when that happens.
+**The `github-pages` environment only accepts deployments from `main`.** A push
+to `develop` therefore verifies its own commit and then dispatches the same
+workflow on `main`, which rebuilds both trees; the deployment itself always runs
+from a `main` ref, so no repository setting has to change for the preview to
+work.
 
 ---
 

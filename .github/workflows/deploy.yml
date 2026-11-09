@@ -1,8 +1,13 @@
 name: Deploy Kost naar GitHub Pages
 
 # Production is the site root and always comes from `main`. The integration
-# branch is published next to it under /dev/, so a deploy triggered by either
-# branch refreshes both trees and neither can wipe the other.
+# branch is published next to it under /dev/, so a deploy refreshes both trees
+# and neither can wipe the other.
+#
+# The `github-pages` environment only accepts deployments from `main`, so a
+# push to `develop` cannot publish by itself: it verifies its own commit and
+# then dispatches this workflow on `main`, which rebuilds both branches. The
+# environment is only touched by that `main`-ref run.
 on:
   push:
     branches:
@@ -16,9 +21,10 @@ permissions:
   pages: write
   id-token: write
 
+# Never cancel a deployment halfway; queue instead.
 concurrency:
   group: 'pages'
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   PROD_REF: main
@@ -47,14 +53,35 @@ jobs:
       - name: Test
         run: npm test
 
-      # main does not carry the data pipeline yet, so only run it when present.
+      # Only some branches carry the data pipeline yet.
       - name: Verify static data
         if: hashFiles('scripts/verify-data.js') != ''
         run: node scripts/verify-data.js
 
+  # A push to any branch other than `main` (that is, `develop`) hands the work
+  # to a `main`-ref run, because the Pages environment refuses the rest.
+  handoff:
+    name: Hand off to main
+    needs: verify
+    if: github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Dispatch the Pages deployment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          gh workflow run deploy.yml --ref main --repo "$REPO"
+          echo "Dispatched deploy.yml on main to publish ${{ github.ref_name }}@$SHA"
+
   deploy:
     name: Deploy
     needs: verify
+    if: github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -81,7 +108,6 @@ jobs:
       # it to finish keeps this deployment last. When Pages is set to "GitHub
       # Actions" there is nothing to wait for and the step returns at once.
       - name: Wait for the branch publisher, if any
-        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
@@ -123,18 +149,18 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
 
-      # GitHub only serves what the last publisher wrote. If the repository is
-      # still set to "Deploy from a branch", its built-in Jekyll workflow
-      # republishes main after this job and drops the preview.
+      # Reports what is actually live, so a silently missing preview is visible
+      # in the run instead of only in the browser.
       - name: Smoke check the published site
-        continue-on-error: true
         env:
           BASE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
-          sleep 20
-          production=$(curl -s -o /dev/null -w '%{http_code}' "$BASE_URL")
-          preview=$(curl -s -o /dev/null -w '%{http_code}' "${BASE_URL}dev/")
-          echo "production $production · preview $preview"
-          if [ "$preview" != "200" ]; then
-            echo "::warning title=Preview not published::${BASE_URL}dev/ returned $preview. Set Settings → Pages → Source to 'GitHub Actions' so this workflow is the only publisher."
-          fi
+          for attempt in $(seq 1 10); do
+            production=$(curl -s -o /dev/null -w '%{http_code}' "$BASE_URL")
+            preview=$(curl -s -o /dev/null -w '%{http_code}' "${BASE_URL}dev/")
+            echo "attempt $attempt: production $production · preview $preview"
+            [ "$production" = "200" ] && [ "$preview" = "200" ] && exit 0
+            sleep 15
+          done
+          echo "::error title=Preview not published::${BASE_URL}dev/ returned $preview after deploy."
+          exit 1
