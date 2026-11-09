@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -73,6 +74,36 @@ jobs:
 
       - name: Fetch both branches
         run: git fetch --no-tags origin '+refs/heads/*:refs/remotes/origin/*'
+
+      # Pages serves whatever was published last. When the repository is still
+      # set to "Deploy from a branch", GitHub's own Jekyll workflow publishes
+      # main *after* this job starts and would replace the preview; waiting for
+      # it to finish keeps this deployment last. When Pages is set to "GitHub
+      # Actions" there is nothing to wait for and the step returns at once.
+      - name: Wait for the branch publisher, if any
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          for attempt in $(seq 1 30); do
+            state=$(gh api "repos/$REPO/actions/runs?head_sha=$SHA&per_page=50" \
+              --jq '[.workflow_runs[] | select(.name == "pages build and deployment")] | "\(length) \(map(select(.status != "completed")) | length)"' \
+              2>/dev/null || echo '0 0')
+            total=${state% *}
+            pending=${state#* }
+            if [ "$total" -gt 0 ] && [ "$pending" -eq 0 ]; then
+              echo 'branch publisher finished'
+              exit 0
+            fi
+            if [ "$total" -eq 0 ] && [ "$attempt" -ge 6 ]; then
+              echo 'no branch publisher for this commit'
+              exit 0
+            fi
+            sleep 10
+          done
+          echo '::warning::Still waiting for the branch publisher; publishing anyway.'
 
       - name: Build site (production + /dev preview)
         env:
