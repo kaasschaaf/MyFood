@@ -24,6 +24,7 @@ import { createReport } from './lib/report.js';
 import { ahStats, getNutrition, searchProducts } from './lib/ah.js';
 import { DATA_DIR, writeJson } from './lib/data.js';
 import { parseArgs, readJsonFile } from './lib/cli.js';
+import { writeCatalogMetrics } from './lib/recipe-price.js';
 import { normalizeProduct } from '../js/ah-product.js';
 import { ingredientHeadword, rankProductsForIngredient } from '../js/ingredient-matching.js';
 import { calculateQuantityCost, normalizeQuantity, parsePackageSize } from '../js/ah-pricing.js';
@@ -279,6 +280,11 @@ async function main() {
     writeJson(resolve(DATA_DIR, 'products.json'), products);
     writeJson(resolve(DATA_DIR, 'prices.json'), prices);
   });
+
+  const catalogStats = await report.phase('price catalogue', () => writeCatalogMetrics(recipes, products, prices));
+  report.data('catalogue prices', catalogStats.priced,
+    `${catalogStats.priced.toLocaleString('en-US')} of ${catalogStats.total.toLocaleString('en-US')} recipes priced (mean coverage ${(catalogStats.coverage * 100).toFixed(1)}%)`);
+  report.data('catalogue score', catalogStats.meanScore, `mean recommendation ${catalogStats.meanScore.toFixed(1)} / 100`);
 
   const stats = ahStats();
   report.data('products', Object.keys(prices.prices).length, `${Object.keys(prices.prices).length.toLocaleString('en-US')} priced products`);

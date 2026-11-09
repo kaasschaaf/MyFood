@@ -61,6 +61,14 @@ export const PRODUCT_PREFIXES = [
 ];
 export const PRODUCT_PREFIX_PATTERN = new RegExp(`^(?:${PRODUCT_PREFIXES.join('|')}) +`);
 
+// Shelves that never contain a cooking ingredient. "split" in an English
+// ingredient name matched a "Vaillant Single split airco" and "poeder" matched
+// washing powder, so the shelf is checked before the name.
+export const NON_FOOD_MAIN_CATEGORIES = [
+  'drogisterij', 'huishouden', 'huisdier', 'gezondheid en sport', 'koken, tafelen, vrije tijd',
+  'ah bloemenshop', 'tuin'
+];
+
 // Shelves with ready-made dishes or baby food: the ingredient is in there, but
 // it is not a usable substitute. Only the sub-shelf is checked; AH files sugar
 // under "Maaltijden, salades".
@@ -165,6 +173,7 @@ export function isRelevantProductForIngredient(ingredientName, product) {
   const title = normalizeText(product.title);
   const mainCategory = normalizeText(product.mainCategory);
   const subCategoryText = normalizeText(product.subCategory);
+  if (NON_FOOD_MAIN_CATEGORIES.some(category => mainCategory.includes(category))) return false;
   if (PREPARED_FOOD_MAIN_CATEGORIES.some(category => mainCategory.includes(category))) return false;
   if (PREPARED_FOOD_SUBCATEGORIES.some(category => subCategoryText.includes(category))) return false;
   if (COMPOSITE_MARKERS.some(marker => title.includes(marker) && !ingredient.includes(marker))) return false;

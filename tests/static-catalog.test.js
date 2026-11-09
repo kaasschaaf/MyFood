@@ -133,3 +133,42 @@ test('decorating a recipe attaches the stored products and prices it', () => {
   assert.equal(recipe.priceEstimate.pricePerPerson, 2.15);
   assert.ok(recipe.priceUpdatedAt > 0, 'price timestamp comes from the snapshot');
 });
+
+test('the catalogue price is used before a recipe body is loaded', () => {
+  const ahService = {
+    emptyPrice: () => ({ totalPrice: 0, hasPriceData: false, hasAnyPriceData: false }),
+    roundEuro: value => Math.round((value + Number.EPSILON) * 100) / 100,
+    calculateRecipePrice: () => ({}),
+    catalogPrice: (recipe, servings) => {
+      const scale = servings / (recipe.baseServings || 2);
+      return {
+        totalPrice: recipe.catalogPrice.total * scale,
+        pricePerPerson: (recipe.catalogPrice.total * scale) / servings,
+        hasPriceData: recipe.catalogPrice.full,
+        hasAnyPriceData: recipe.catalogPrice.priced > 0
+      };
+    }
+  };
+  const rs = new RecipesService(ahService, noopCache);
+  const recipe = rs.catalogToRecipe({
+    id: 'r-y',
+    title: 'Test',
+    baseServings: 2,
+    ingredientCount: 6,
+    source: 'dataset',
+    price: { total: 8, savings: 0, bonus: false, matched: 4, priced: 3, full: false },
+    recommendation: 71
+  });
+
+  assert.equal(recipe.recommendation, 71);
+  assert.deepEqual(recipe.catalogPrice, { total: 8, savings: 0, bonus: false, matched: 4, priced: 3, full: false });
+  // Bodies are not loaded yet; the grid still has a price to show.
+  assert.deepEqual(recipe.ingredients, []);
+});
+
+test('an entry without stored metrics keeps nulls', () => {
+  const rs = new RecipesService({}, noopCache);
+  const recipe = rs.catalogToRecipe({ id: 'r-z', title: 'Test', source: 'dataset' });
+  assert.equal(recipe.catalogPrice, null);
+  assert.equal(recipe.recommendation, null);
+});

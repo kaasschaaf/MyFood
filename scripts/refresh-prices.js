@@ -23,6 +23,7 @@ import { createReport } from './lib/report.js';
 import { ahStats, searchProducts } from './lib/ah.js';
 import { DATA_DIR, writeJson } from './lib/data.js';
 import { parseArgs, readJsonFile } from './lib/cli.js';
+import { writeCatalogMetrics } from './lib/recipe-price.js';
 import { normalizeProduct } from '../js/ah-product.js';
 
 const MAX_MISSING_RATIO = 0.2;
@@ -73,6 +74,16 @@ function median(values) {
   const sorted = [...values].sort((a, b) => a - b);
   const middle = Math.floor(sorted.length / 2);
   return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+/**
+ * Loads every recipe from the shards named in the catalogue.
+ * @returns {Object[]}
+ */
+function loadRecipes() {
+  const catalog = readJsonFile(resolve(DATA_DIR, 'catalog.json'), []);
+  const shards = [...new Set(catalog.map(entry => entry.shard).filter(Boolean))];
+  return shards.flatMap(shard => readJsonFile(resolve(DATA_DIR, 'recipes', shard), []) || []);
 }
 
 async function main() {
@@ -181,6 +192,13 @@ async function main() {
       prices
     });
   });
+
+  // The grid shows and sorts by the price stored in the catalogue, so it has to
+  // follow the snapshot or it would keep advertising last week's totals.
+  const catalogStats = await report.phase('price catalogue', () =>
+    writeCatalogMetrics(loadRecipes(), products, { prices }));
+  report.data('catalogue prices', catalogStats.priced,
+    `${catalogStats.priced.toLocaleString('en-US')} of ${catalogStats.total.toLocaleString('en-US')} recipes priced`);
 
   report.data('coverage', coverage, `${(coverage * 100).toFixed(1)}% of stored products`);
   report.size(resolve(DATA_DIR, 'prices.json'));

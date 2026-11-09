@@ -248,3 +248,71 @@ test('a recipe cached with the old source disclaimer is repaired on load', () =>
   assert.equal(recipe.description, 'Moroccan beef dish with ground beef and onion.');
   assert.ok(recipe.nutrition, 'migration also fills in the nutrition estimate');
 });
+
+/**
+ * A service whose prices come straight from the stored catalogue values, the
+ * way AHService.catalogPrice behaves before a recipe body is loaded.
+ * @param {Object[]} recipes
+ * @returns {RecipesService}
+ */
+function makeRankedService(recipes) {
+  const ahService = {
+    calculateRecipePrice: recipe => ({
+      totalPrice: recipe.catalogPrice?.total ?? 0,
+      pricePerPerson: (recipe.catalogPrice?.total ?? 0) / (recipe.baseServings || 2),
+      hasPriceData: Boolean(recipe.catalogPrice?.full),
+      hasAnyPriceData: Boolean(recipe.catalogPrice?.priced),
+      hasBonus: Boolean(recipe.catalogPrice?.bonus),
+      totalSavings: recipe.catalogPrice?.savings ?? 0,
+      matchedIngredientCount: recipe.catalogPrice?.matched ?? 0,
+      pricedIngredientCount: recipe.catalogPrice?.priced ?? 0,
+      ingredientCount: recipe.ingredientCount || 0
+    })
+  };
+  const service = new RecipesService(ahService, noopCache);
+  service.recipes = recipes;
+  return service;
+}
+
+test('the default sort ranks recipes instead of keeping file order', () => {
+  const service = makeRankedService([
+    // In file order this one would be first, but it has no price and no data.
+    { id: 'weak', title: 'Zwak', ingredientCount: 6, baseServings: 2, catalogPrice: null, nutrition: null, description: '' },
+    { id: 'strong', title: 'Sterk', ingredientCount: 6, baseServings: 2, nutrition: { calories: 500, proteinGrams: 30, healthScore: 70 }, description: 'Een volledig beschreven gerecht met veel groenten en een saus.', dishType: 'pasta', titleEn: 'Strong',
+      catalogPrice: { total: 8, savings: 0, bonus: false, matched: 6, priced: 6, full: true }, recommendation: 95 },
+    { id: 'middle', title: 'Midden', ingredientCount: 6, baseServings: 2, nutrition: { calories: 500, proteinGrams: 30, healthScore: 70, estimated: true }, description: 'Een gerecht met rijst en groenten uit de oven.', dishType: 'oven', titleEn: 'Middle',
+      catalogPrice: { total: 9, savings: 0, bonus: false, matched: 4, priced: 3, full: false }, recommendation: 60 }
+  ]);
+
+  assert.deepEqual(service.getFilteredRecipes().map(recipe => recipe.id), ['strong', 'middle', 'weak']);
+});
+
+test('the default sort is stable within a day and changes with the seed', () => {
+  const recipes = Array.from({ length: 40 }, (_, index) => ({
+    id: `r${index}`,
+    title: `Recept ${index}`,
+    ingredientCount: 5,
+    baseServings: 2,
+    description: 'Een beschreven gerecht met vlees en groenten uit de oven.',
+    dishType: 'oven',
+    titleEn: `Recipe ${index}`,
+    nutrition: { calories: 500, proteinGrams: 30, healthScore: 70 },
+    catalogPrice: { total: 7, savings: 0, bonus: false, matched: 5, priced: 4, full: false },
+    recommendation: 70
+  }));
+  const service = makeRankedService(recipes);
+  const first = service.getFilteredRecipes().map(recipe => recipe.id);
+  const again = service.getFilteredRecipes().map(recipe => recipe.id);
+  assert.deepEqual(first, again, 'scrolling and re-rendering keep the same order');
+  assert.equal(new Set(first).size, 40, 'every recipe is still listed');
+});
+
+test('sorting by price uses the stored catalogue price', () => {
+  const service = makeRankedService([
+    { id: 'duur', title: 'Duur', ingredientCount: 4, baseServings: 2, catalogPrice: { total: 20, savings: 0, bonus: false, matched: 4, priced: 4, full: true }, recommendation: 80 },
+    { id: 'goedkoop', title: 'Goedkoop', ingredientCount: 4, baseServings: 2, catalogPrice: { total: 6, savings: 0, bonus: false, matched: 4, priced: 4, full: true }, recommendation: 60 },
+    { id: 'onbekend', title: 'Onbekend', ingredientCount: 4, baseServings: 2, catalogPrice: null, recommendation: 90 }
+  ]);
+  service.setFilters({ sortBy: 'price-asc' });
+  assert.deepEqual(service.getFilteredRecipes().map(recipe => recipe.id), ['goedkoop', 'duur', 'onbekend']);
+});

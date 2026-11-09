@@ -6,6 +6,7 @@ import {
   calculateQuantityCost as calculateQuantityCostOf,
   normalizeQuantity as normalizeQuantityOf,
   parsePackageSize as parsePackageSizeOf,
+  recipePriceEstimate as recipePriceEstimateOf,
   unitPriceFor as unitPriceForOf
 } from './ah-pricing.js';
 import {
@@ -456,68 +457,52 @@ export class AHService {
     }
   }
 
+  /**
+   * Wat het recept kost met de gekozen producten.
+   *
+   * De berekening zelf staat in `ah-pricing.js`, zodat de datapijplijn exact
+   * dezelfde schatting in de catalogus kan opslaan. Is de recepttekst nog niet
+   * geladen, dan valt deze methode terug op die opgeslagen schatting: het raster
+   * kan dus prijzen tonen en sorteren zonder alle shards op te halen.
+   * @param {Object} recipe
+   * @param {number} [servings]
+   * @returns {Object}
+   */
   calculateRecipePrice(recipe, servings = 2) {
-    const scale = servings / (recipe.baseServings || 2);
-    let totalPrice = 0;
-    let totalStandardPrice = 0;
-    let bonusCount = 0;
-    let allIngredientsPriced = Boolean(recipe.ingredients?.length);
-    let matchedIngredientCount = 0;
-    let pricedIngredientCount = 0;
-
-    if (!Array.isArray(recipe.ingredients) || recipe.ingredients.length === 0) {
-      return this.emptyPrice();
+    if (!Array.isArray(recipe?.ingredients) || recipe.ingredients.length === 0) {
+      return this.catalogPrice(recipe, servings);
     }
+    return recipePriceEstimateOf(recipe, servings);
+  }
 
-    recipe.ingredients.forEach(ingredient => {
-      let actualPrice;
-      let regularPrice;
-      // Static dataset recipes are priced from the same product-shaped
-      // snapshot as a live search, so they take the same branch.
-      if (recipe.sourceUrl || recipe.livePriced || recipe.staticPriced) {
-        const product = ingredient.selectedAHProduct;
-        if (product) matchedIngredientCount++;
-        const quantityCost = product && this.calculateQuantityCost(ingredient, product, scale);
-        if (!quantityCost) {
-          allIngredientsPriced = false;
-          return;
-        }
-        actualPrice = quantityCost.current;
-        regularPrice = quantityCost.regular;
-      } else {
-        regularPrice = ingredient.standardPrice;
-        if (!Number.isFinite(regularPrice) || regularPrice <= 0) {
-          allIngredientsPriced = false;
-          return;
-        }
-        actualPrice = regularPrice;
-        actualPrice *= scale;
-        regularPrice *= scale;
-        matchedIngredientCount++;
-      }
-
-      totalPrice += actualPrice;
-      totalStandardPrice += regularPrice;
-      pricedIngredientCount++;
-      if (regularPrice > actualPrice) bonusCount++;
-    });
-
-    totalPrice = this.roundEuro(totalPrice);
-    totalStandardPrice = this.roundEuro(totalStandardPrice);
+  /**
+   * Scales the compact price the pipeline stored in `data/catalog.json`.
+   * @param {Object} recipe
+   * @param {number} [servings]
+   * @returns {Object}
+   */
+  catalogPrice(recipe, servings = 2) {
+    const stored = recipe?.catalogPrice;
+    if (!stored || !Number.isFinite(stored.total)) return this.emptyPrice();
+    const scale = servings / (recipe.baseServings || 2);
+    const total = stored.total * scale;
+    const ingredientCount = Number(recipe.ingredientCount) || Number(stored.matched) + Number(stored.priced) || 0;
+    const matched = Number(stored.matched) || 0;
+    const priced = Number(stored.priced) || 0;
     return {
-      totalPrice,
-      pricePerPerson: servings > 0 ? this.roundEuro(totalPrice / servings) : 0,
-      totalStandardPrice,
-      totalSavings: this.roundEuro(Math.max(0, totalStandardPrice - totalPrice)),
-      hasBonus: bonusCount > 0,
-      bonusCount,
-      hasPriceData: allIngredientsPriced,
-      hasAnyPriceData: pricedIngredientCount > 0,
-      matchedIngredientCount,
-      ingredientCount: recipe.ingredients.length,
-      pricedIngredientCount,
-      unmatchedIngredientCount: recipe.ingredients.length - matchedIngredientCount,
-      unpricedIngredientCount: recipe.ingredients.length - pricedIngredientCount
+      totalPrice: this.roundEuro(total),
+      pricePerPerson: servings > 0 ? this.roundEuro(total / servings) : 0,
+      totalStandardPrice: this.roundEuro(total + (stored.savings || 0) * scale),
+      totalSavings: this.roundEuro((stored.savings || 0) * scale),
+      hasBonus: Boolean(stored.bonus),
+      bonusCount: stored.bonus ? 1 : 0,
+      hasPriceData: Boolean(stored.full),
+      hasAnyPriceData: priced > 0,
+      matchedIngredientCount: matched,
+      ingredientCount,
+      pricedIngredientCount: priced,
+      unmatchedIngredientCount: Math.max(0, ingredientCount - matched),
+      unpricedIngredientCount: Math.max(0, ingredientCount - priced)
     };
   }
 
