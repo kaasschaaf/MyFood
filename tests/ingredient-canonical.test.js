@@ -107,3 +107,34 @@ test('the same ingredient written differently gets one key', () => {
   const keys = new Set(variants.map(line => canonicalIngredient(line).key));
   assert.deepEqual([...keys], ['olijfolie']);
 });
+
+test('a measurement never ends up in the name', () => {
+  assert.equal(canonicalIngredient('1 lb ground beef').nameEn, 'ground beef');
+  assert.equal(canonicalIngredient('1 Tbsp. cooking sherry').nameEn, 'cooking sherry');
+  assert.equal(canonicalIngredient('8 fl oz MAXWELL HOUSE coffee').nameEn, 'maxwell house coffee');
+  assert.equal(canonicalIngredient('2 tablespoons extra virgin olive oil').unit, 'tablespoons');
+});
+
+test('a line that is only a measurement is not an ingredient', () => {
+  assert.equal(canonicalIngredient('5 oz.').key, '');
+  assert.equal(canonicalIngredient('2 cloves').key, '');
+});
+
+test('a fraction whose slash the source lost is repaired', () => {
+  assert.equal(canonicalIngredient('34 cup sour cream').amount, 0.75);
+  assert.equal(canonicalIngredient('23 cup sugar').amount, 2 / 3);
+  assert.equal(canonicalIngredient('12 cups water').amount, 0.5);
+  // Fourteen ounces is plausible, so it stays fourteen ounces.
+  assert.equal(canonicalIngredient('14 oz tomatoes').amount, 14);
+  assert.equal(canonicalIngredient('12 tbsp butter').amount, 12);
+});
+
+test('"or" alternatives become separate ingredients', () => {
+  const [hotDogs, bologna] = canonicalIngredients('1 pound hot dogs or 8 ounces bologna');
+  assert.equal(hotDogs.key, 'hot dogs');
+  assert.equal(hotDogs.amount, 1);
+  assert.equal(bologna.key, 'bologna');
+  assert.equal(bologna.amount, 8);
+  // Without a second amount it is one line, not two ingredients.
+  assert.equal(canonicalIngredients('1 cup milk or water').length, 1);
+});

@@ -16,6 +16,12 @@
  */
 
 import { translateIngredientToDutch } from './ingredient-dutch.js';
+import { toMetric } from './measure.js';
+
+// A single ingredient line never needs this much: past these limits the stored
+// number is a data error, not a big batch.
+const MAX_LINE_GRAMS = 2000;
+const MAX_LINE_ML = 2000;
 
 // Qualifiers that say nothing about the ingredient itself. Matched at the end
 // of the line (after the quantity has been removed).
@@ -117,6 +123,7 @@ const NOISE_WORDS = new Set([
 // A unit that follows the leading number, longest first so "tablespoons" wins
 // over "tbsp".
 const UNIT_WORDS = [
+  'fluid ounces', 'fluid ounce', 'fl oz', 'floz',
   'tablespoons', 'tablespoon', 'tbsp', 'tbs', 'teaspoons', 'teaspoon', 'tsp',
   'kilograms', 'kilogram', 'kilos', 'kilo', 'kg', 'grams', 'gram', 'gr', 'g',
   'millilitres', 'milliliters', 'millilitre', 'milliliter', 'ml', 'cl', 'dl', 'litres', 'liters', 'litre', 'liter', 'l',
@@ -130,7 +137,8 @@ const UNIT_WORDS = [
   'portions', 'portion', 'servings', 'serves'
 ];
 
-const UNIT_PATTERN = new RegExp(`^(?:${UNIT_WORDS.join('|')})\\b\\.?`);
+// Longest alternatives first, so "fluid ounces" wins over "fluid".
+const UNIT_PATTERN = new RegExp(`^(?:${UNIT_WORDS.join('|')})\\b\\.?`, 'i');
 
 /**
  * Normalises text for comparison: no accents, no punctuation, single spaces.
@@ -260,6 +268,58 @@ export function stripNoiseWords(text) {
   return words.join(' ');
 }
 
+// A measurement belongs in the amount, never in the name. Sources write
+// "2 tablespoons olive oil 1 teaspoon salt" or "1 lb ground beef, 4 lb roast"
+// on one line; whatever lands in the name is removed here.
+const MEASURE_WORDS = 'fluid ounces?|fl oz|tablespoons?|teaspoons?|tbsp|tblsp|tbs|tsp|cups?|ounces?|oz|lbs?|pounds?|pints?|quarts?|gallons?|ml|cl|dl|litres?|liters?|l|grams?|gr|g|kg';
+const NUMBER_WORDS = 'one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|half|quarter';
+const MEASUREMENT_PHRASE = new RegExp(`\\d+(?:\\s+\\d+)?(?:[.,/]\\d+)?\\s*(?:${MEASURE_WORDS})\\b`, 'g');
+// "four pound beef roast", "seven ounce cans", "about two pounds"
+const SPELLED_MEASUREMENT_PHRASE = new RegExp(`\\b(?:${NUMBER_WORDS})\\s+(?:${MEASURE_WORDS})\\b`, 'gi');
+// "tablespoons paprika", "lb rigatoni", "heaping tbsp relish": a measure left
+// behind by a line the parser could not split.
+const LEADING_MEASUREMENT = new RegExp(`^(?:[a-z]\\s+)?(?:${MEASURE_WORDS})\\b\\s*`, 'i');
+const INLINE_STRAY_MEASUREMENT = new RegExp(`\\b[a-z]+\\s+(?:${MEASURE_WORDS})\\b`, 'gi');
+// Retail noise that crawls along with copied shopping lists.
+const PROMO_PHRASE = /\b(?:target|thru)\b.*$/i;
+
+/**
+ * Removes measurements and shop noise from an ingredient name.
+ * @param {string} text
+ * @returns {string}
+ */
+export function stripMeasurements(text) {
+  const cleaned = stripNoiseWords(text)
+    .replace(PROMO_PHRASE, ' ')
+    .replace(MEASUREMENT_PHRASE, ' ')
+    .replace(SPELLED_MEASUREMENT_PHRASE, ' ')
+    .replace(INLINE_STRAY_MEASUREMENT, ' ');
+  return stripNoiseWords(cleaned.replace(LEADING_MEASUREMENT, ' '));
+}
+
+/**
+ * Repairs a fraction whose slash the source lost: "34 cup sour cream" is
+ * three-quarter cup, "23 cup sugar" two-thirds. Only applied to measuring
+ * units when the literal reading is far too large for one ingredient line, so
+ * "14 oz tomatoes" stays fourteen ounces.
+ * @param {number|null} amount
+ * @param {string} unit
+ * @returns {number|null}
+ */
+export function repairLostFraction(amount, unit) {
+  if (!Number.isFinite(amount) || amount < 11 || !Number.isInteger(amount)) return amount;
+  const direct = toMetric(amount, unit);
+  const grams = direct.unit === 'kg' ? direct.amount * 1000 : direct.unit === 'g' ? direct.amount : null;
+  const millilitres = direct.unit === 'l' ? direct.amount * 1000 : direct.unit === 'ml' ? direct.amount : null;
+  const tooMuch = (grams !== null && grams > MAX_LINE_GRAMS) || (millilitres !== null && millilitres > MAX_LINE_ML);
+  if (!tooMuch) return amount;
+  const digits = String(amount);
+  if (digits.length !== 2) return amount;
+  const numerator = Number(digits[0]);
+  const denominator = Number(digits[1]);
+  return numerator < denominator ? numerator / denominator : amount;
+}
+
 /**
  * Splits a raw ingredient line into amount, unit and name.
  * @param {string} line
@@ -282,9 +342,24 @@ export function parseIngredientLine(line) {
   }
 
   rest = stripBrackets(rest);
-  const { amount, rest: afterAmount } = parseLeadingAmount(rest);
+  const { amount: firstAmount, rest: firstRest } = parseLeadingAmount(rest);
+  let amount = firstAmount;
+  let afterAmount = firstRest;
+  // The source data lost some fraction slashes ("1 12 cups water" for
+  // "1 1/2 cups water"), leaving a second number in front of the unit. The
+  // number nearest the unit is the real amount.
+  if (amount !== null && /^(\d+(?:[.,]\d+)?)\s*[a-z]/i.test(afterAmount)) {
+    const second = parseLeadingAmount(afterAmount);
+    if (second.amount !== null && parseLeadingUnit(second.rest).unit) {
+      amount = second.amount;
+      afterAmount = second.rest;
+    }
+  }
   const { unit, rest: afterUnit } = parseLeadingUnit(afterAmount);
-  const name = stripNoiseWords(stripQualifiers(afterUnit || afterAmount));
+  amount = repairLostFraction(amount, unit);
+  // When a unit was read, an empty remainder means the line is only a
+  // measurement ("5 oz."), not an ingredient.
+  const name = stripNoiseWords(stripQualifiers(unit ? afterUnit : afterUnit || afterAmount));
   return { amount, unit, name };
 }
 
@@ -312,7 +387,10 @@ export function canonicalIngredient(line) {
   const parsed = parseIngredientLine(raw);
   // Qualifiers can survive the parse when they follow the amount directly
   // ("2 cloves garlic, crushed" → "garlic"), so clean the name once more.
-  const name = stripNoiseWords(stripQualifiers(parsed.name)) || stripNoiseWords(stripQualifiers(raw));
+  const parsedName = stripMeasurements(stripQualifiers(parsed.name));
+  // "5 oz." is a measurement without a product; falling back to the raw line
+  // would store "oz" as an ingredient, so only fall back when no unit parsed.
+  const name = parsedName || (parsed.unit ? '' : stripMeasurements(stripQualifiers(raw)));
   const translated = translateIngredientToDutch(name);
   const nameNl = translated.changed && translated.text ? normalizeIngredient(translated.text) : normalizeIngredient(name);
   return {
@@ -333,6 +411,12 @@ export function canonicalIngredient(line) {
  * @returns {Array<{ key: string, nameEn: string, nameNl: string, amount: number|null, unit: string, raw: string }>}
  */
 export function canonicalIngredients(line) {
+  // "1 lb hot dogs or 8 oz bologna" offers two products for one line; keeping
+  // them together leaves a measurement inside the name.
+  const alternatives = String(line || '').split(/\s+or\s+/i).map(part => part.trim());
+  if (alternatives.length > 1 && alternatives.every(part => parseIngredientLine(part).amount !== null)) {
+    return alternatives.map(part => canonicalIngredient(part));
+  }
   const single = canonicalIngredient(line);
   const parsed = parseIngredientLine(line);
   if (parsed.amount !== null) return [single];

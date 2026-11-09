@@ -1,5 +1,6 @@
 import { BrowserCache } from './browser-cache.js';
 import { canonicalCuisine } from './i18n.js';
+import { toMetric } from './measure.js';
 import { estimateRecipeNutrition } from './nutrition-estimator.js';
 import { productsForKey, selectStaticProduct } from './static-data.js';
 
@@ -238,6 +239,7 @@ export class RecipesService {
    */
   decorateStaticRecipe(recipe) {
     if (!recipe?.ingredients?.length) return recipe;
+    this.toMetricIngredients(recipe);
     const { products, prices } = this.static;
     if (products?.keys) {
       recipe.ingredients.forEach(ingredient => {
@@ -251,6 +253,21 @@ export class RecipesService {
     }
     recipe.priceEstimate = this.ahService.calculateRecipePrice(recipe, recipe.baseServings);
     recipe.priceUpdatedAt = prices?.generatedAt ? Date.parse(prices.generatedAt) : null;
+    return recipe;
+  }
+
+  /**
+   * Converts every ingredient amount to metric, so prices, nutrition and the
+   * rendered list all work from grams and millilitres.
+   * @param {Object} recipe
+   * @returns {Object}
+   */
+  toMetricIngredients(recipe) {
+    (recipe?.ingredients || []).forEach(ingredient => {
+      const metric = toMetric(ingredient.amount, ingredient.unit);
+      ingredient.amount = metric.amount;
+      ingredient.unit = metric.unit;
+    });
     return recipe;
   }
 
