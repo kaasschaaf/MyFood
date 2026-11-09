@@ -1,9 +1,13 @@
-name: Deploy MyFood naar GitHub Pages
+name: Deploy Kost naar GitHub Pages
 
+# Production is the site root and always comes from `main`. The integration
+# branch is published next to it under /dev/, so a deploy triggered by either
+# branch refreshes both trees and neither can wipe the other.
 on:
   push:
     branches:
       - main
+      - develop
   workflow_dispatch:
 
 permissions:
@@ -15,11 +19,13 @@ concurrency:
   group: 'pages'
   cancel-in-progress: true
 
+env:
+  PROD_REF: main
+  DEV_REF: develop
+
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  verify:
+    name: Verify
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -40,14 +46,39 @@ jobs:
       - name: Test
         run: npm test
 
-      - name: Configure AH API proxy
-        env:
-          AH_API_PROXY_URL: ${{ vars.AH_API_PROXY_URL }}
-        run: |
-          node -e "const fs=require('node:fs');const cfg='// This file is regenerated at deploy time by .github/workflows/deploy.yml.\nglobalThis.MYFOOD_AH_API_BASE = '+JSON.stringify(process.env.AH_API_PROXY_URL || '')+';\nglobalThis.MYFOOD_BUILD_TIME = '+JSON.stringify(new Date().toISOString())+';\n';fs.writeFileSync('js/runtime-config.js',cfg)"
+      # main does not carry the data pipeline yet, so only run it when present.
+      - name: Verify static data
+        if: hashFiles('scripts/verify-data.js') != ''
+        run: node scripts/verify-data.js
 
-      - name: Build Tailwind CSS
-        run: npm run build:css
+  deploy:
+    name: Deploy
+    needs: verify
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          # Both branches are built, and `git archive` needs their commits.
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Fetch both branches
+        run: git fetch --no-tags origin '+refs/heads/*:refs/remotes/origin/*'
+
+      - name: Build site (production + /dev preview)
+        env:
+          OUT: ${{ github.workspace }}/_site
+          AH_API_BASE: ${{ vars.AH_API_PROXY_URL }}
+        run: bash .github/scripts/build-site.sh
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -55,10 +86,8 @@ jobs:
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: '_site'
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-

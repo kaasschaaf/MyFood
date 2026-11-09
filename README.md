@@ -100,6 +100,22 @@ python3 -m http.server 8000
 
 Then open `http://localhost:3000` or `http://localhost:8000` in your browser.
 
+## 🚀 Deployment
+
+`.github/workflows/deploy.yml` publishes to GitHub Pages. Pages serves one site
+per repository, so both branches ship from a single artifact built by
+[`.github/scripts/build-site.sh`](./.github/scripts/build-site.sh):
+
+| Path | Branch | Purpose |
+| --- | --- | --- |
+| `/` | `main` | production, the public URL |
+| `/dev/` | `develop` | preview of the integration branch |
+
+Every deploy rebuilds both trees, whichever branch triggered it, so a release
+never wipes the preview and a preview push never touches production. The preview
+is marked `noindex, nofollow` and carries a small `dev · <sha>` badge that links
+back to production.
+
 ---
 
 ## 📲 Install as an App
