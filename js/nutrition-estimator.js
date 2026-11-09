@@ -212,8 +212,8 @@ const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 const MAX_GRAMS_PER_LINE = 2500;
 const MAX_PIECES = 12;
 // A portion stays within these bounds; beyond them the servings field is wrong.
-const MAX_KCAL_PER_SERVING = 900;
-const MAX_PROTEIN_PER_SERVING = 55;
+const MAX_KCAL_PER_SERVING = 1000;
+const MAX_PROTEIN_PER_SERVING = 75;
 const MAX_PORTIONS = 12;
 
 function normalizeUnit(unit) {
