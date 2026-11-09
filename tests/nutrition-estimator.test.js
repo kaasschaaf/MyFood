@@ -64,3 +64,29 @@ test('estimateRecipeNutrition refuses to guess from too little data', () => {
   assert.equal(estimateRecipeNutrition({ ingredients: [line('Zzz', 2, '')] }, 2), null);
   assert.equal(estimateRecipeNutrition({ ingredients: [line('Salt', 5, 'g')] }, 2), null);
 });
+
+test('an amount without a unit is not treated as a pile of pieces', () => {
+  // "200 rund lam" means 200 g, not 200 pieces of meat.
+  const beef = findFood('rund lam');
+  assert.equal(ingredientGrams({ name: 'rund lam', amount: 200, unit: '' }, beef), null);
+  // A plausible count still works.
+  assert.ok(ingredientGrams({ name: 'Onion', amount: 2, unit: '' }, findFood('Onion')) > 0);
+});
+
+test('a single ingredient line is capped at a pan-sized amount', () => {
+  const grams = ingredientGrams({ name: 'Rice', amount: 900, unit: 'cups' }, findFood('Rice'));
+  assert.ok(grams <= 2500, `grams was ${grams}`);
+});
+
+test('an implausible recipe yields no estimate instead of a wrong one', () => {
+  const nonsense = {
+    baseServings: 1,
+    ingredients: [
+      line('Beef', 900, 'cups'),
+      line('Rice', 900, 'cups'),
+      line('Butter', 900, 'cups')
+    ]
+  };
+  const estimate = estimateRecipeNutrition(nonsense, 1);
+  assert.equal(estimate, null);
+});

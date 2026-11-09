@@ -207,6 +207,15 @@ const FOODS = [
 
 const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 
+// Sanity limits: a recipe line that weighs more than this is a parsing
+// accident, and a portion with more than this many calories is not a dinner.
+const MAX_GRAMS_PER_LINE = 2500;
+const MAX_PIECES = 12;
+// A portion stays within these bounds; beyond them the servings field is wrong.
+const MAX_KCAL_PER_SERVING = 900;
+const MAX_PROTEIN_PER_SERVING = 55;
+const MAX_PORTIONS = 12;
+
 function normalizeUnit(unit) {
   return String(unit || '')
     .toLowerCase()
@@ -239,13 +248,21 @@ export function ingredientGrams(ingredient, food) {
   const amount = Number(ingredient?.amount);
   if (!Number.isFinite(amount) || amount <= 0) return null;
   const unit = normalizeUnit(ingredient.unit);
-  if (GRAM_UNITS[unit]) return amount * GRAM_UNITS[unit];
-  if (VOLUME_UNITS[unit]) return amount * VOLUME_UNITS[unit];
-  const countWeight = COUNT_WEIGHTS[unit] || 0;
-  if (countWeight > 0) return amount * countWeight;
-  // Anything else ("2 large", "1 chopped") is treated as a count; without a
-  // piece weight there is nothing to weigh, so leave it out.
-  return food?.piece ? amount * food.piece : null;
+  const grams = (() => {
+    if (GRAM_UNITS[unit]) return amount * GRAM_UNITS[unit];
+    if (VOLUME_UNITS[unit]) return amount * VOLUME_UNITS[unit];
+    const countWeight = COUNT_WEIGHTS[unit] || 0;
+    if (countWeight > 0) return amount * countWeight;
+    // Anything else ("2 large", "1 chopped") is treated as a count. A big
+    // number without a unit is not a pile of pieces ("200 rund lam" is grams),
+    // so the piece weight only applies to plausible counts.
+    if (!food?.piece || amount > MAX_PIECES) return null;
+    return amount * food.piece;
+  })();
+  if (!Number.isFinite(grams) || grams <= 0) return null;
+  // A single ingredient line never weighs more than a large pan's worth; the
+  // dataset sometimes writes "200" where it means grams.
+  return Math.min(grams, MAX_GRAMS_PER_LINE);
 }
 
 /**
@@ -289,7 +306,22 @@ export function estimateRecipeNutrition(recipe, servings) {
   // One recognisable ingredient is not a nutrition profile.
   if (matched < 2 || calories <= 0 || totalGrams <= 0) return null;
 
-  const perServing = Math.max(1, calories / portions);
+  if (calories / portions < 60) return null;
+  // The dataset's servings field is frequently wrong ("serves 4" on a family
+  // pot), so derive the portion count from the food that is actually in the
+  // pot: a portion never carries more than a big dinner plate of energy or a
+  // very protein-heavy serving. Everything is divided by the same number, so
+  // the ratios (and the health score) stay intact.
+  const requiredPortions = Math.max(
+    portions,
+    Math.ceil(calories / MAX_KCAL_PER_SERVING),
+    Math.ceil(protein / MAX_PROTEIN_PER_SERVING)
+  );
+  // Needing more than a dozen portions means the amounts were misread: no
+  // estimate is better than a card claiming 19 000 kcal.
+  if (requiredPortions > MAX_PORTIONS) return null;
+  const effectivePortions = Math.max(1, requiredPortions);
+  const perServing = calories / effectivePortions;
   if (perServing < 60) return null;
 
   const proteinShare = (protein * 4) / calories;
@@ -305,10 +337,10 @@ export function estimateRecipeNutrition(recipe, servings) {
   );
 
   return {
-    calories: Math.round(calories / portions),
-    proteinGrams: Math.round(protein / portions),
-    carbsGrams: Math.round(carbs / portions),
-    fatGrams: Math.round(fat / portions),
+    calories: Math.round(calories / effectivePortions),
+    proteinGrams: Math.round(protein / effectivePortions),
+    carbsGrams: Math.round(carbs / effectivePortions),
+    fatGrams: Math.round(fat / effectivePortions),
     healthScore: Math.min(98, Math.max(15, score)),
     estimated: true
   };
