@@ -139,7 +139,9 @@ function loadCuratedRecipes() {
     return {
       ...recipe,
       shard: '',
-      titleEn: '',
+      // A hand-written English title beats machine translation of the Dutch
+      // one; the pipeline only fills this in when the recipe has none.
+      titleEn: recipe.titleEn || '',
       descriptionEn,
       dishType: dishTypeFor(recipe.title),
       source: 'curated',
@@ -223,7 +225,9 @@ async function translateRecipes(recipes) {
   if (fromDutch.length) {
     const titlesEn = await translateBatch(fromDutch.map(recipe => recipe.title), 'nl>en');
     fromDutch.forEach((recipe, index) => {
-      recipe.titleEn = titlesEn[index] || recipe.title;
+      // A curated recipe may ship its own English title; only translate the
+      // ones without.
+      if (!recipe.titleEn) recipe.titleEn = titlesEn[index] || recipe.title;
     });
     const steps = fromDutch.flatMap(recipe => recipe.instructions || []);
     if (steps.length) {
