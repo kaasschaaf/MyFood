@@ -91,3 +91,19 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      # GitHub only serves what the last publisher wrote. If the repository is
+      # still set to "Deploy from a branch", its built-in Jekyll workflow
+      # republishes main after this job and drops the preview.
+      - name: Smoke check the published site
+        continue-on-error: true
+        env:
+          BASE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          sleep 20
+          production=$(curl -s -o /dev/null -w '%{http_code}' "$BASE_URL")
+          preview=$(curl -s -o /dev/null -w '%{http_code}' "${BASE_URL}dev/")
+          echo "production $production · preview $preview"
+          if [ "$preview" != "200" ]; then
+            echo "::warning title=Preview not published::${BASE_URL}dev/ returned $preview. Set Settings → Pages → Source to 'GitHub Actions' so this workflow is the only publisher."
+          fi
