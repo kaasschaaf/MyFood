@@ -34,6 +34,20 @@ trap 'rm -rf "$WORK"' EXIT
 
 say() { printf '%s\n' "$*"; }
 
+# Resolves a branch name to a ref that exists in this checkout. A CI checkout
+# has a local branch only for the ref that triggered the run; the other branch
+# is a remote-tracking ref, so both spellings have to be tried.
+resolve_ref() {
+  local ref=$1 candidate
+  for candidate in "$ref" "refs/remotes/origin/$ref"; do
+    if git rev-parse --verify --quiet "$candidate^{commit}" >/dev/null; then
+      printf '%s' "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
 # Extracts a ref, installs its dependencies and produces its stylesheet.
 build_ref() {
   local ref=$1 dir=$2
@@ -104,18 +118,24 @@ say "  production  $PROD_REF -> /"
 say "  preview     $DEV_REF -> /dev/"
 say "  output      $OUT"
 
+PROD=$(resolve_ref "$PROD_REF") || {
+  say "! $PROD_REF not found; nothing to publish"
+  exit 1
+}
+DEV=$(resolve_ref "$DEV_REF") || DEV=''
+
 rm -rf "$OUT"
 mkdir -p "$OUT"
 
-build_ref "$PROD_REF" "$WORK/prod"
+build_ref "$PROD" "$WORK/prod"
 write_runtime_config "$WORK/prod" production
 copy_app "$WORK/prod" "$OUT"
 
-if git rev-parse --verify --quiet "$DEV_REF^{commit}" >/dev/null; then
-  build_ref "$DEV_REF" "$WORK/dev"
+if [ -n "$DEV" ]; then
+  build_ref "$DEV" "$WORK/dev"
   write_runtime_config "$WORK/dev" dev
   copy_app "$WORK/dev" "$OUT/dev"
-  add_preview_marks "$OUT/dev" "$(git rev-parse --short "$DEV_REF")"
+  add_preview_marks "$OUT/dev" "$(git rev-parse --short "$DEV")"
   say "· preview marked noindex with a badge back to production"
 else
   say "· $DEV_REF not found, preview skipped"
