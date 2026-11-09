@@ -148,8 +148,28 @@ more than 20 % of the products disappear from AH, or fewer than 80 % of stored
 products come back, the job aborts instead of writing a half-filled snapshot.
 
 `.github/workflows/data-recipes.yml` rebuilds the whole dataset by hand (and on
-the first of the month). `main` deploys to GitHub Pages; `develop` is the
-integration branch and is not deployed.
+the first of the month).
+
+### Deployment
+
+`.github/workflows/deploy.yml` publishes the site to GitHub Pages. GitHub Pages
+serves one site per repository, so both branches are shipped from a single
+artifact built by [`.github/scripts/build-site.sh`](./.github/scripts/build-site.sh):
+
+| Path | Branch | Purpose |
+| --- | --- | --- |
+| `/` | `main` | production, the public URL |
+| `/dev/` | `develop` | preview of the integration branch |
+
+Every deploy rebuilds both trees, whichever branch triggered it, so releasing
+`main` never wipes the preview and pushing `develop` never touches production.
+The preview is marked `noindex, nofollow` and carries a small `dev · <sha>`
+badge that links back to production; it uses its own service-worker cache
+(`kost-<scope>-static-vN`), so the two installs never share storage.
+
+`main` is production and is only fast-forwarded from `develop` when a change is
+ready. The workflow also runs lint, the tests and, when the pipeline is present,
+`scripts/verify-data.js` before anything is uploaded.
 
 ---
 

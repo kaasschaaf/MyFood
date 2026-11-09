@@ -17,3 +17,6 @@ worker/.wrangler/
 # Data pipeline scratch: model/translation cache and run reports
 scripts/.cache/
 .reports/
+
+# GitHub Pages artifact built by .github/scripts/build-site.sh
+_site/

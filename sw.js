@@ -1,9 +1,39 @@
 // Service worker for Kost. Bump CACHE_VERSION when the precache list or the
 // caching strategy changes, so old caches are cleaned up on activate.
 const CACHE_VERSION = 'v6';
+// Production and the /dev preview share one origin, so the cache name carries
+// the scope path. Without it both apps would write into the same cache.
+const SCOPE_KEY = self.registration.scope
+  .replace(/^[a-z]+:\/\/[^/]+/i, '')
+  .replace(/[^a-z0-9]+/gi, '-')
+  .replace(/^-+|-+$/g, '');
 const CACHE_PREFIX = 'kost-';
-const STATIC_CACHE = `${CACHE_PREFIX}static-${CACHE_VERSION}`;
-const FONT_CACHE = `${CACHE_PREFIX}fonts-${CACHE_VERSION}`;
+// Scopes can prefix each other (/MyFood/ and /MyFood/dev/), so the scope goes
+// at the end of the name; a suffix cannot collide the way a prefix would.
+const SCOPE_TAG = SCOPE_KEY || 'root';
+const SCOPE_SUFFIX = `@${SCOPE_TAG}`;
+// The app served from the shallowest path is the one that owns the cache names
+// used before the preview existed.
+const IS_SITE_ROOT = new URL(self.registration.scope).pathname.split('/').filter(Boolean).length <= 1;
+const STATIC_CACHE = `${CACHE_PREFIX}static-${CACHE_VERSION}${SCOPE_SUFFIX}`;
+const FONT_CACHE = `${CACHE_PREFIX}fonts-${CACHE_VERSION}${SCOPE_SUFFIX}`;
+
+/**
+ * Whether a cache belongs to an older version of *this* deployment.
+ *
+ * Production and the /dev preview share one origin, so a cache name is only
+ * ours when it carries our scope; deleting the other one would break its
+ * offline mode for a visitor who opens both. The scope-less names from before
+ * the preview existed belong to the root app and are cleaned by it alone.
+ * @param {string} key
+ * @returns {boolean}
+ */
+function isStaleCache(key) {
+  if (!key.startsWith(CACHE_PREFIX)) return false;
+  if (key === STATIC_CACHE || key === FONT_CACHE) return false;
+  if (key.endsWith(SCOPE_SUFFIX)) return true;
+  return IS_SITE_ROOT && /^kost-(?:static|fonts)-v\d+$/.test(key);
+}
 
 // All paths are resolved against the service worker's scope, so the app keeps
 // working from a GitHub Pages subpath (for example /MyFood/).
@@ -62,11 +92,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(
-        keys
-          .filter(key => key.startsWith(CACHE_PREFIX) && key !== STATIC_CACHE && key !== FONT_CACHE)
-          .map(key => caches.delete(key))
-      ))
+      .then(keys => Promise.all(keys.filter(isStaleCache).map(key => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
