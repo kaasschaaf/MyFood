@@ -1,6 +1,7 @@
 import { BrowserCache } from './browser-cache.js';
 import { canonicalCuisine } from './i18n.js';
 import { estimateRecipeNutrition } from './nutrition-estimator.js';
+import { productsForKey, selectStaticProduct } from './static-data.js';
 
 const THEMEALDB_API = 'https://www.themealdb.com/api/json/v1/1';
 const RECIPE_CATALOG_KEY = 'recipes:catalog';
@@ -82,9 +83,198 @@ export class RecipesService {
     this.ingredientTranslator = null;
     this.detailRequests = new Map();
     this.matchRequests = new Map();
+    // Static data written by scripts/: products, prices and build metadata.
+    this.static = { products: null, prices: null, meta: null, loaded: false };
+    // Set when data/catalog.json exists; the app then never fetches recipes.
+    this.staticCatalog = false;
+    this.shardRequests = new Map();
+  }
+
+  /**
+   * The static catalog, when the pipeline has produced one.
+   * @returns {Promise<Array|null>}
+   */
+  async readStaticCatalog() {
+    try {
+      const response = await fetch('./data/catalog.json');
+      if (!response.ok) return null;
+      const catalog = await response.json();
+      return Array.isArray(catalog) && catalog.length ? catalog : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * The visitor's own product choices, read once from the cache.
+   * @returns {Map<string, Object>}
+   */
+  savedMatchMap() {
+    if (!this.savedMatches) this.savedMatches = new Map();
+    return this.savedMatches;
+  }
+
+  /**
+   * Reads the stored choice for each ingredient of a recipe.
+   * @param {Object} recipe
+   * @returns {Promise<void>}
+   */
+  async loadSavedMatches(recipe) {
+    if (!this.ahService?.getSavedMatch) return;
+    const map = this.savedMatchMap();
+    await Promise.all((recipe.ingredients || []).map(async ingredient => {
+      const key = this.matchKey(recipe.id, ingredient.name);
+      if (map.has(key)) return;
+      try {
+        const saved = await this.ahService.getSavedMatch(recipe.id, ingredient.name);
+        map.set(key, saved?.value || null);
+      } catch {
+        map.set(key, null);
+      }
+    }));
+  }
+
+  /**
+   * Reads the generated data files. Missing files are not an error: the app
+   * still works from the hand-written recipes.
+   * @returns {Promise<void>}
+   */
+  async loadStaticData() {
+    if (this.static.loaded) return;
+    this.static.loaded = true;
+    const read = async path => {
+      try {
+        const response = await fetch(path);
+        if (!response.ok) return null;
+        return await response.json();
+      } catch {
+        return null;
+      }
+    };
+    const [products, prices, meta] = await Promise.all([
+      read('./data/products.json'),
+      read('./data/prices.json'),
+      read('./data/meta.json')
+    ]);
+    this.static = { products, prices, meta, loaded: true };
+  }
+
+  /**
+   * Turns a catalog entry into the recipe shape the UI uses.
+   * @param {Object} entry
+   * @returns {Object}
+   */
+  catalogToRecipe(entry) {
+    return {
+      id: entry.id,
+      shard: entry.shard,
+      title: entry.title,
+      titleEn: entry.titleEn || '',
+      description: entry.description || '',
+      descriptionEn: entry.descriptionEn || '',
+      cuisine: entry.cuisine || '',
+      mealType: entry.mealType || '',
+      dishType: entry.dishType || '',
+      prepTimeMinutes: entry.prepTimeMinutes || 0,
+      baseServings: entry.baseServings || 2,
+      difficulty: entry.difficulty || '',
+      nutrition: entry.nutrition || null,
+      tags: entry.tags || [],
+      image: entry.image || '',
+      ingredients: [],
+      instructions: [],
+      source: entry.source || 'dataset',
+      sourceUrl: entry.sourceUrl || '',
+      staticPriced: entry.source !== 'allerhande',
+      ahRecipeOnly: entry.source === 'allerhande',
+      ingredientCount: entry.ingredientCount || 0
+    };
+  }
+
+  /**
+   * Loads the body (ingredients + steps) of one recipe and decorates it with
+   * its static AH products.
+   * @param {Object} recipe
+   * @returns {Promise<Object>}
+   */
+  async ensureRecipeBody(recipe) {
+    if (!recipe || recipe.bodyLoaded || recipe.ahRecipeOnly) return recipe;
+    if (recipe.ingredients?.length) {
+      recipe.bodyLoaded = true;
+      await this.loadSavedMatches(recipe);
+      this.decorateStaticRecipe(recipe);
+      return recipe;
+    }
+    if (!recipe.shard) {
+      recipe.bodyLoaded = true;
+      return recipe;
+    }
+    if (!this.shardRequests.has(recipe.shard)) {
+      const request = fetch(`./data/recipes/${recipe.shard}`)
+        .then(response => {
+          if (!response.ok) throw new Error(`receptenbestand ${recipe.shard} laden mislukt (${response.status}).`);
+          return response.json();
+        })
+        .finally(() => this.shardRequests.delete(recipe.shard));
+      this.shardRequests.set(recipe.shard, request);
+    }
+    try {
+      const body = (await this.shardRequests.get(recipe.shard)) || [];
+      const found = body.find(item => item.id === recipe.id);
+      if (found) Object.assign(recipe, found, { ingredients: found.ingredients || [], instructions: found.instructions || [] });
+    } catch (error) {
+      console.warn('Receptdetails konden niet worden geladen.', error);
+      recipe.detailError = true;
+    }
+    recipe.bodyLoaded = true;
+    await this.loadSavedMatches(recipe);
+    this.decorateStaticRecipe(recipe);
+    return recipe;
+  }
+
+  /**
+   * Attaches the stored AH products and recomputes the price from the snapshot.
+   * @param {Object} recipe
+   */
+  decorateStaticRecipe(recipe) {
+    if (!recipe?.ingredients?.length) return recipe;
+    const { products, prices } = this.static;
+    if (products?.keys) {
+      recipe.ingredients.forEach(ingredient => {
+        const options = productsForKey(products, prices, ingredient.key);
+        const saved = this.savedMatches?.get(this.matchKey(recipe.id, ingredient.name)) || null;
+        const { selected } = selectStaticProduct(ingredient, options, saved);
+        ingredient.ahProductOptions = options;
+        ingredient.selectedAHProduct = selected;
+        ingredient.staticOptions = true;
+      });
+    }
+    recipe.priceEstimate = this.ahService.calculateRecipePrice(recipe, recipe.baseServings);
+    recipe.priceUpdatedAt = prices?.generatedAt ? Date.parse(prices.generatedAt) : null;
+    return recipe;
+  }
+
+  /**
+   * Key for the visitor's own product choice.
+   * @param {string} recipeId
+   * @param {string} ingredientName
+   * @returns {string}
+   */
+  matchKey(recipeId, ingredientName) {
+    return `${recipeId}:${String(ingredientName || '').toLowerCase()}`;
   }
 
   async loadRecipes(onCatalogUpdate = () => {}) {
+    // Static dataset first: everything the grid needs is committed by the
+    // pipeline, so no third-party API is called to show a recipe.
+    await this.loadStaticData();
+    const staticCatalog = await this.readStaticCatalog();
+    if (staticCatalog) {
+      this.staticCatalog = true;
+      this.recipes = staticCatalog.map(entry => this.catalogToRecipe(entry));
+      return this.recipes;
+    }
+
     let localRecipes = [];
     try {
       const response = await fetch('./data/recipes.json');
@@ -339,7 +529,9 @@ export class RecipesService {
   }
 
   isLivePricedRecipe(recipe) {
-    return Boolean(recipe && !recipe.ahRecipeOnly && (recipe.external || recipe.livePriced));
+    // `staticPriced` marks recipes whose prices come from data/prices.json.
+    return Boolean(recipe && !recipe.ahRecipeOnly &&
+      (recipe.external || recipe.livePriced || recipe.staticPriced));
   }
 
   /**
@@ -638,6 +830,7 @@ export class RecipesService {
     const product = (ingredient.ahProductOptions || []).find(option => option.id === productId);
     if (!product) throw new Error('Gekozen AH-product bestaat niet meer in de zoekresultaten.');
     ingredient.selectedAHProduct = { ...product, matchesIngredient: true };
+    this.savedMatchMap().set(this.matchKey(recipe.id, ingredient.name), product);
     await this.ahService.saveMatch(recipe.id, ingredient.name, product);
     recipe.priceEstimate = this.ahService.calculateRecipePrice(recipe, recipe.baseServings);
     const stored = await this.writeCache(this.priceCacheKey(recipe.id), recipe);
@@ -831,6 +1024,12 @@ export class RecipesService {
     const summary = this.getRecipeById(id);
     if (!summary) return null;
     if (summary.ahRecipeOnly) return summary;
+    if (this.staticCatalog) {
+      // Static data: the body comes from the shard, the products from the
+      // snapshot. Nothing is fetched from Albert Heijn.
+      await this.ensureRecipeBody(summary);
+      return summary;
+    }
     if (!summary.external) {
       // Eigen recept heeft al ingrediënten; haal alleen live AH-matches op.
       await this.loadAHMatches(summary);

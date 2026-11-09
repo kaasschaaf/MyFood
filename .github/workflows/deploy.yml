@@ -1,4 +1,4 @@
-name: Deploy MyFood naar GitHub Pages
+name: Deploy Kost naar GitHub Pages
 
 on:
   push:
@@ -39,6 +39,9 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Verify static data
+        run: node scripts/verify-data.js
 
       - name: Configure AH API proxy
         env:

@@ -95,13 +95,52 @@ export class ContentTranslator {
 
   /**
    * Whether this recipe still needs translating for the active language.
+   * Recipes from the static dataset carry both languages already.
    * @param {Object} recipe
    * @returns {boolean}
    */
   needsTranslation(recipe) {
     if (!recipe || recipe.ahRecipeOnly) return false;
+    if (this.hasStaticTranslation(recipe)) return false;
     const target = getLang() === 'en' ? 'en' : 'nl';
     return this.sourceLang(recipe) !== target;
+  }
+
+  /**
+   * Whether the dataset already ships an English version of this recipe.
+   * @param {Object} recipe
+   * @returns {boolean}
+   */
+  hasStaticTranslation(recipe) {
+    return Boolean(recipe?.titleEn);
+  }
+
+  /**
+   * Applies the English text the pipeline stored next to the Dutch source.
+   * @param {Object} recipe
+   * @returns {Object}
+   */
+  applyStaticTranslation(recipe) {
+    if (!recipe?.titleEn) return recipe;
+    const translation = {
+      title: recipe.titleEn,
+      description: recipe.descriptionEn || this.descriptionIn(recipe, 'en'),
+      ingredients: (recipe.ingredients || []).map(ingredient => ingredient.nameEn || ingredient.name),
+      instructions: recipe.instructionsEn?.length ? recipe.instructionsEn : recipe.instructions
+    };
+    return this.applyTranslation(recipe, translation, 'en');
+  }
+
+  /**
+   * The Dutch description of a recipe, either stored or derived.
+   * @param {Object} recipe
+   * @param {'nl'|'en'} lang
+   * @returns {string}
+   */
+  descriptionIn(recipe, lang) {
+    const stored = lang === 'en' ? recipe.descriptionEn : recipe.description;
+    if (stored) return stored;
+    return recipe.description || '';
   }
 
   /**
@@ -233,7 +272,13 @@ export class ContentTranslator {
    */
   field(recipe, key) {
     const value = this.translationFor(recipe)?.[key];
-    return typeof value === 'string' && value ? value : undefined;
+    if (typeof value === 'string' && value) return value;
+    // The dataset ships the English text next to the Dutch source.
+    if (getLang() === 'en') {
+      if (key === 'title' && recipe?.titleEn) return recipe.titleEn;
+      if (key === 'description' && recipe?.descriptionEn) return recipe.descriptionEn;
+    }
+    return undefined;
   }
 
   /**
@@ -264,7 +309,9 @@ export class ContentTranslator {
   ingredientName(ingredient) {
     if (!ingredient) return '';
     const lang = getLang() === 'en' ? 'en' : 'nl';
-    return ingredient.translations?.[lang] || ingredient.name;
+    if (ingredient.translations?.[lang]) return ingredient.translations[lang];
+    if (lang === 'en' && ingredient.nameEn) return ingredient.nameEn;
+    return ingredient.name;
   }
 
   /**
@@ -274,9 +321,10 @@ export class ContentTranslator {
    */
   instructions(recipe) {
     if (!recipe) return [];
-    return this.translationFor(recipe)?.instructions?.length
-      ? this.translationFor(recipe).instructions
-      : (recipe.instructions || []);
+    const translated = this.translationFor(recipe)?.instructions;
+    if (translated?.length) return translated;
+    if (getLang() === 'en' && recipe.instructionsEn?.length) return recipe.instructionsEn;
+    return recipe.instructions || [];
   }
 
   cacheKey(recipe, lang, withDetails) {

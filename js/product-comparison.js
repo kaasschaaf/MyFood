@@ -1,6 +1,7 @@
 import { AHService, ONLINE_ONLY_SETTING_KEY, PRODUCT_SEARCH_CATEGORIES } from './ah-service.js';
 import { escapeHtml, formatEuro } from './utils.js';
 import { getLocale, initLanguage, t } from './i18n.js';
+import { searchStaticProducts } from './static-products.js';
 
 const LIST_KEY = 'myfood_frequent_products';
 const SORT_KEY = 'myfood_product_comparison_sort';
@@ -198,6 +199,51 @@ export class ProductComparisonApp {
     this.previewTimer = null;
     this.previewRequestId = 0;
     this.categoryRefreshRequestId = 0;
+    // Static data is loaded once; known queries never touch Albert Heijn.
+    this.staticData = { products: null, prices: null, ready: false };
+    this.staticDataPromise = null;
+  }
+
+  /**
+   * Loads data/products.json and data/prices.json once.
+   * @returns {Promise<{ products: Object|null, prices: Object|null }>}
+   */
+  loadStaticData() {
+    if (this.staticData.ready) return Promise.resolve(this.staticData);
+    if (this.staticDataPromise) return this.staticDataPromise;
+    const read = async path => {
+      try {
+        const response = await fetch(path);
+        if (!response.ok) return null;
+        return await response.json();
+      } catch {
+        return null;
+      }
+    };
+    this.staticDataPromise = Promise.all([read('./data/products.json'), read('./data/prices.json')])
+      .then(([products, prices]) => {
+        this.staticData = { products, prices, ready: true };
+        this.staticDataPromise = null;
+        return this.staticData;
+      });
+    return this.staticDataPromise;
+  }
+
+  /**
+   * Tries to answer a query from the static database.
+   * @param {Object} item
+   * @param {boolean} forceRefresh
+   * @returns {Promise<Object|null>} null when the live search should run
+   */
+  async staticResultFor(item, forceRefresh) {
+    if (forceRefresh) return null;
+    const { products, prices } = await this.loadStaticData();
+    if (!products?.keys) return null;
+    const result = searchStaticProducts(products, prices, item.query, {
+      categoryLabel: item.categoryLabel || ''
+    });
+    if (!result.matched) return null;
+    return result;
   }
 
   init() {
@@ -768,7 +814,9 @@ export class ProductComparisonApp {
       const query = item.query;
       const category = item.category || '';
       const categoryLabel = item.categoryLabel || '';
-      const result = await this.ahService.searchProducts(item.query, {
+      // Static first: an ingredient Kost already knows needs no request.
+      const staticResult = await this.staticResultFor(item, forceRefresh);
+      const result = staticResult || await this.ahService.searchProducts(item.query, {
         forceRefresh,
         category,
         categoryLabel
@@ -780,9 +828,11 @@ export class ProductComparisonApp {
         products,
         query,
         category,
-        pageInfo: result.pageInfo,
-        updatedAt: result.updatedAt,
-        stale: result.stale
+        // A static answer is complete: there is no next page to fetch.
+        pageInfo: staticResult ? { nextPage: null, totalElements: products.length } : result.pageInfo,
+        updatedAt: staticResult ? Date.parse(result.updatedAt || '') || null : result.updatedAt,
+        stale: false,
+        source: staticResult ? 'static' : 'live'
       });
       if (this.editingDraft && this.getItemKey(this.editingDraft) === key) {
         this.preview = {
@@ -856,6 +906,7 @@ export class ProductComparisonApp {
     const result = this.results.get(key);
     if (!result || result.status !== 'loaded') return;
     const pendingProducts = result.products.filter(product =>
+      product.nutritionStatic !== true &&
       product.proteinGrams === undefined &&
       !product.nutritionLoadError &&
       !this.nutritionLoading.has(product.id)
@@ -919,7 +970,9 @@ export class ProductComparisonApp {
         ? t('products.proteinUnavailable')
         : product.proteinGrams !== undefined && product.proteinGrams !== null
           ? t('products.proteinInfo', { grams: product.proteinGrams, score: product.proteinScore === null ? t('products.proteinNoScore') : t('products.proteinScore', { score: product.proteinScore }) })
-          : t('products.proteinNoData');
+          : product.nutritionStatic
+            ? t('products.proteinNoDataStatic')
+            : t('products.proteinNoData');
 
     return `<article class="grid grid-cols-[2.75rem_minmax(0,1fr)] items-center gap-x-2.5 gap-y-1.5 rounded-xl border px-3 py-2.5 transition sm:grid-cols-[2.75rem_minmax(0,1fr)_5.75rem_6.75rem_3.25rem] sm:gap-3 ${bonus ? 'border-amber-300/80 bg-amber-50/40 dark:border-amber-800/70 dark:bg-amber-950/20' : 'border-slate-200/80 bg-white hover:border-emerald-200 hover:bg-emerald-50/20 dark:border-white/10 dark:bg-neutral-900/40 dark:hover:border-emerald-500/30 dark:hover:bg-neutral-900'}">
       <span class="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-lg border border-slate-100 bg-white p-1 dark:border-white/10 dark:bg-neutral-800">
@@ -1024,8 +1077,11 @@ export class ProductComparisonApp {
       const staleNotice = result.stale
         ? `<span class="inline-flex items-center gap-1.5 text-amber-700 dark:text-amber-300"><span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span> ${this.escape(t('products.stale'))}</span>`
         : updatedAt
-          ? `<span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> ${this.escape(t('products.updatedAt', { date: updatedAt }))}</span>`
+          ? `<span class="inline-flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full ${result.source === 'static' ? 'bg-indigo-500' : 'bg-emerald-500'}"></span> ${this.escape(result.source === 'static' ? t('products.staticUpdatedAt', { date: updatedAt }) : t('products.updatedAt', { date: updatedAt }))}</span>`
           : '';
+      const liveNotice = result.source === 'live'
+        ? `<p class="mt-1 text-[11px] text-slate-400 dark:text-neutral-500">${this.escape(t('products.liveNotice'))}</p>`
+        : '';
       const moreButton = result.pageInfo?.nextPage !== null && result.pageInfo?.nextPage !== undefined
         ? `<div class="pt-4 text-center">
             ${result.pageError ? `<p class="mb-2 text-sm text-rose-600 dark:text-rose-400">${this.escape(t('products.loadMoreFailed', { message: result.pageError }))}</p>` : ''}
@@ -1035,7 +1091,7 @@ export class ProductComparisonApp {
             </button>
           </div>`
         : '';
-      body = `<div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] font-medium text-slate-500 dark:text-neutral-400"><span>${pageStatus}</span><span class="ml-auto text-right">${staleNotice}</span></div>${productTableHeader}<div class="mt-1 space-y-2">${products.map(product => this.renderProduct(product)).join('')}</div>${moreButton}`;
+      body = `<div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] font-medium text-slate-500 dark:text-neutral-400"><span>${pageStatus}</span><span class="ml-auto text-right">${staleNotice}</span></div>${liveNotice}${productTableHeader}<div class="mt-1 space-y-2">${products.map(product => this.renderProduct(product)).join('')}</div>${moreButton}`;
     }
 
     return `<section class="surface-card p-4 sm:p-5">

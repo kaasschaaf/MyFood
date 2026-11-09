@@ -1,0 +1,73 @@
+name: Refresh AH prices
+
+# Monday morning, just after midnight UTC (= 01:00 in Amsterdam in winter).
+# Re-reads the prices of the products already stored in data/products.json and
+# commits the new snapshot. Nothing else is touched.
+on:
+  schedule:
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Only refresh the first N ingredient keys (0 = all)'
+        required: false
+        default: '0'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: 'data-prices'
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: scripts
+    steps:
+      - name: Checkout develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Cache pipeline models and translations
+        uses: actions/cache@v4
+        with:
+          path: scripts/.cache
+          key: kost-pipeline-cache-${{ github.run_id }}
+          restore-keys: |
+            kost-pipeline-cache-
+
+      - name: Install pipeline dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Refresh prices
+        env:
+          LIMIT: ${{ inputs.limit || '0' }}
+        run: |
+          if [ "$LIMIT" = "0" ]; then
+            node refresh-prices.js
+          else
+            node refresh-prices.js --limit "$LIMIT"
+          fi
+
+      - name: Commit the new snapshot
+        working-directory: .
+        run: |
+          git config user.name 'kost-data-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add data/prices.json data/products.json
+          if git diff --cached --quiet; then
+            echo 'No price changes.'
+            exit 0
+          fi
+          git commit -m "chore(data): refresh AH prices ($(date -u +%Y-%m-%d))"
+          git push origin develop

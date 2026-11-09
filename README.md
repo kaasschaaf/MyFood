@@ -2,7 +2,16 @@
 
 A modern, fast, and mobile-friendly recipe web app for finding dishes, checking current **Albert Heijn prices and bonus deals** (calculated for **2 people by default**), viewing visual **protein and health indicators**, and asking the integrated **Gemini AI cooking assistant** your cooking questions.
 
-Recipes are sourced from the built-in Kost collection, up to 250 recipes from [TheMealDB](https://www.themealdb.com/), and up to 250 genuine recipes listed in the official [Allerhande recipe sitemap](https://www.ah.nl/sitemaps/entities/allerhande/recipes.xml). Allerhande recipes link directly to AH for their ingredients and instructions. AH product search uses the anonymous, unofficial Albert Heijn mobile API; no AH account or login is needed. Every recipe — including the built-in Kost collection — is priced from the same live AH product results, so prices and bonus deals are always current. Live product results, recipe catalogues, recipe details, and product choices are cached in IndexedDB in your browser and refreshed as they expire; the price cache always expires at local midnight so the day's new bonus deals are fetched automatically.
+Recipes, translations and product matches are **static data files** built by a pipeline in [`scripts/`](./scripts) and committed to the repository, so the app itself only downloads JSON and does the price arithmetic locally:
+
+- `data/catalog.json` — the lean index the recipe grid renders (one entry per recipe).
+- `data/recipes/NNN.json` — full recipes, 100 per shard, with Dutch **and** English titles, steps and ingredient names.
+- `data/products.json` — every ingredient Kost needs, with the Albert Heijn products that match it, including nutrition.
+- `data/prices.json` — the current price snapshot for those products, refreshed every Monday.
+
+The recipe corpus is a curated **dinner** selection from the [Recipe Dataset (over 2M)](https://www.kaggle.com/datasets/wilmerarltstrmberg/recipe-dataset-over-2m), queried through ClickHouse's public playground (the dataset's original source), plus the hand-written Kost recipes and Allerhande links from the official [AH recipe sitemap](https://www.ah.nl/sitemaps/entities/allerhande/recipes.xml). Allerhande recipes link directly to AH for their ingredients and instructions, because AH blocks automated access to the recipe pages.
+
+AH product search still exists, but only for **Mijn producten**: queries that the static database knows are answered from the snapshot, and only unknown queries go to the anonymous, unofficial Albert Heijn mobile API. No AH account or login is needed.
 
 ---
 
@@ -25,10 +34,10 @@ Recipes are sourced from the built-in Kost collection, up to 250 recipes from [T
     - 🥩 **High Protein**: Filter recipes with more than 30 grams of protein per person.
     - ⏱️ **Quick**: Filter recipes ready within 25 minutes.
   - Sort by: *Price per person (low-high), biggest bonus savings, most protein, health score, or prep time*.
-  - Browse genuine Allerhande recipes alongside the built-in and TheMealDB collections.
+  - Browse genuine Allerhande recipes alongside the cooked dataset; dinner dishes are tagged by type (pasta, kip, vis, stoof, oven…).
 
 - **🛒 Albert Heijn Prices & Bonus Deals (Default: 2 people)**:
-  - Matches every recipe's ingredients — built-in and external alike — against live AH product search results.
+  - Matches every ingredient against the AH products stored in `data/products.json`, ranked by the same rules as a live search (completeness, exactness, pack size, price).
   - Shows the suitable AH products per ingredient as clickable links straight to the AH store page, with the current match highlighted.
   - Estimates the cost of the used quantity only when product-pack size and recipe units can be reliably converted. Other products show their pack price without inventing a quantity cost.
   - Recipe prices are calculated and cached so recipes with complete price data can be sorted by estimated price per person; unpriced recipes appear after priced recipes.
@@ -76,6 +85,78 @@ Recipes are sourced from the built-in Kost collection, up to 250 recipes from [T
 
 ---
 
+## 🗂️ Data pipeline
+
+The app never builds its own dataset. [`scripts/`](./scripts) does, and the
+result is committed so GitHub Pages serves it as plain files.
+
+```bash
+cd scripts
+npm install                 # @huggingface/transformers for local translation
+
+npm run build:recipes       # dinner curation + local translation -> catalog + shards
+npm run build:products      # one AH search per ingredient -> products + first prices
+npm run build:allerhande    # Allerhande sitemap -> link-only cards
+npm run verify              # integrity gate (also runs in CI and the test suite)
+```
+
+Useful flags: `--limit N` (dataset size), `--dry-run` (fetch and count only),
+`--stage filter` (reuse the fetched candidates), `--verbose`.
+
+**Curation.** Every row passes a counted funnel: structure (6–14 ingredients,
+≥3 steps), blog noise, dessert markers in the title, dessert make-up in the
+ingredients, a savoury dinner anchor, sweet-dominance, a parseable-ingredient
+check and duplicate detection. The report prints how many rows each gate kept
+and dropped, so the rules can be tuned from real numbers.
+
+**Translation.** Titles, steps and ingredient names are translated with a local
+MarianMT model (`Xenova/opus-mt-en-nl` / `Xenova/opus-mt-nl-en`, int8 ONNX)
+through transformers.js. Nothing is sent to a translation service, results are
+cached in `scripts/.cache/translations.json`, and outputs that look broken fall
+back to the source text.
+
+**Ingredients.** [`js/ingredient-canonical.js`](./js/ingredient-canonical.js)
+turns a raw line into a stable Dutch key — fractions, ranges, brackets, prep
+qualifiers and Dutch wording are normalised, so `To taste salt` is simply
+`zout` and `1 1/2 cups (180 g) all-purpose flour, divided` is `bloem`.
+
+**Reports.** Every script prints one aligned block at the end: per-phase timings
+with share of total, the per-gate funnel, translation/cache counts, ingredient
+mapping coverage, real output sizes, throughput, and a sizing table extrapolated
+from the run (build time, data size, product count and weekly price-job length
+for 500 / 2 000 / 5 000 / 10 000 recipes). The same block is written to
+`scripts/.reports/*.json` and to the GitHub Actions step summary, so the
+dataset size can be chosen from measurements.
+
+### Refreshing prices
+
+`.github/workflows/data-prices.yml` runs every **Monday at 00:00 UTC (01:00
+Amsterdam)** and on demand. It re-reads only the products already stored in
+`data/products.json`, updates `data/prices.json`, and commits to `develop`. If
+more than 20 % of the products disappear from AH, or fewer than 80 % of stored
+products come back, the job aborts instead of writing a half-filled snapshot.
+
+`.github/workflows/data-recipes.yml` rebuilds the whole dataset by hand (and on
+the first of the month). `main` deploys to GitHub Pages; `develop` is the
+integration branch and is not deployed.
+
+---
+
+## 📜 Data & licences
+
+- **Recipe corpus**: [Recipe Dataset (over 2M)](https://www.kaggle.com/datasets/wilmerarltstrmberg/recipe-dataset-over-2m)
+  by Wilmer Arlt Strömberg, licensed **CC BY-NC-SA 4.0** (attribution,
+  non-commercial, share-alike). Kost curates it to dinner recipes and translates
+  the text; the derived data in `data/` carries the same licence.
+- **TheMealDB** — free for non-commercial use.
+- **Albert Heijn** — product names, pack sizes and prices come from the public
+  mobile API and are a snapshot, not a live quote. Allerhande recipe pages are
+  linked, not copied.
+
+Because the corpus is non-commercial, so is this app.
+
+---
+
 ## 🤖 Set Up Your Gemini API Key (optional)
 
 A key is only needed for the cooking assistant and as a translation fallback. Recipe translation works without one in browsers that ship the on-device `Translator` API.
@@ -112,4 +193,4 @@ Kost is a Progressive Web App. Open the deployed site over HTTPS (or `http://loc
 
 The first visit caches the app shell. After that, Kost opens offline; live prices, new recipes, and Gemini answers still need a connection. Service workers only run on HTTPS or localhost, so opening `index.html` directly from disk will not register one.
 
-> **Note:** The Albert Heijn mobile API is unofficial and undocumented. AH may change or limit it, and prices or availability may differ by store and over time. TheMealDB recipe data may not include nutrition information or an original publisher link for every recipe.
+> **Note:** The Albert Heijn mobile API is unofficial and undocumented. AH may change or limit it, and prices or availability may differ by store and over time. Static prices are a Monday snapshot, not a live quote; Mijn producten still queries AH live for products Kost does not know.
