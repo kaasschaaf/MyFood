@@ -27,6 +27,12 @@
 // Bump when the weights change, so stored scores can be recognised as stale.
 export const RANKING_VERSION = 1;
 
+// A dinner under this many kilocalories per serving is not a portion: the
+// ingredient amounts were mis-parsed ("1 aardappel" for four people). Those
+// recipes stay reachable, but they do not lead the ranking and their price is
+// not trusted as "cheapest".
+export const MIN_DINNER_KCAL = 150;
+
 // Width of a score band. Bigger bands mean more rotation, smaller bands mean
 // the order sticks closer to the score.
 const BAND_SIZE = 10;
@@ -53,6 +59,16 @@ export function priceCoverage(price) {
   const priced = Number(price.pricedIngredientCount);
   if (Number.isFinite(total) && total > 0 && Number.isFinite(priced)) return clamp01(priced / total);
   return price.hasAnyPriceData ? 0.5 : 0;
+}
+
+/**
+ * Whether a recipe's amounts describe a real dinner.
+ * @param {Object} recipe
+ * @returns {boolean}
+ */
+export function isPlausibleRecipe(recipe) {
+  const calories = Number(recipe?.nutrition?.calories);
+  return Number.isFinite(calories) && calories >= MIN_DINNER_KCAL;
 }
 
 /**
@@ -95,12 +111,17 @@ export function recommendationScore(recipe, price = null) {
   score += priceCoverage(price) * 30;
 
   const nutrition = recipe.nutrition;
-  if (nutrition && Number(nutrition.calories) > 0) {
+  const calories = Number(nutrition?.calories) || 0;
+  if (calories >= MIN_DINNER_KCAL) {
     // Documented beats estimated; an estimate is still better than nothing.
     score += nutrition.estimated ? 12 : 20;
+    if (Number(nutrition.proteinGrams) >= 15 && Number(nutrition.proteinGrams) <= 60) score += 5;
+    if (Number(nutrition.healthScore) > 0) score += 5;
+  } else if (calories > 0) {
+    // Present but too low to be a portion: the amounts are wrong, so the
+    // recipe is kept for completeness and ranked behind real dinners.
+    score += 2;
   }
-  if (nutrition && Number(nutrition.proteinGrams) >= 15 && Number(nutrition.proteinGrams) <= 60) score += 5;
-  if (nutrition && Number(nutrition.healthScore) > 0) score += 5;
 
   const count = Number(recipe.ingredientCount ?? recipe.ingredients?.length ?? 0);
   score += ingredientScore(count ? count : 0);

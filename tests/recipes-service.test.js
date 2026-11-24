@@ -316,3 +316,27 @@ test('sorting by price uses the stored catalogue price', () => {
   service.setFilters({ sortBy: 'price-asc' });
   assert.deepEqual(service.getFilteredRecipes().map(recipe => recipe.id), ['goedkoop', 'duur', 'onbekend']);
 });
+
+test('a dish type filter narrows the grid', () => {
+  const service = makeRankedService([
+    { id: 'a', title: 'Kip', dishType: 'kip', ingredientCount: 5, baseServings: 2, catalogPrice: null },
+    { id: 'b', title: 'Pasta', dishType: 'pasta-rijst', ingredientCount: 5, baseServings: 2, catalogPrice: null },
+    { id: 'c', title: 'Nog kip', dishType: 'kip', ingredientCount: 5, baseServings: 2, catalogPrice: null }
+  ]);
+  service.setFilters({ dishType: 'kip' });
+  assert.deepEqual(service.getFilteredRecipes().map(recipe => recipe.id).sort(), ['a', 'c']);
+  service.setFilters({ dishType: 'all' });
+  assert.equal(service.getFilteredRecipes().length, 3);
+});
+
+test('the cheapest sort ignores prices built from implausible amounts', () => {
+  const service = makeRankedService([
+    // 12 cents per person because the recipe says one potato for four people.
+    { id: 'onzin', title: 'Onzin', ingredientCount: 6, baseServings: 4, nutrition: { calories: 76 },
+      catalogPrice: { total: 0.5, savings: 0, bonus: false, matched: 6, priced: 6, full: true } },
+    { id: 'echt', title: 'Echt', ingredientCount: 6, baseServings: 2, nutrition: { calories: 500 },
+      catalogPrice: { total: 8, savings: 0, bonus: false, matched: 6, priced: 6, full: true } }
+  ]);
+  service.setFilters({ sortBy: 'price-asc' });
+  assert.deepEqual(service.getFilteredRecipes().map(recipe => recipe.id), ['echt', 'onzin']);
+});

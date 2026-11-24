@@ -1,6 +1,6 @@
 // Service worker for Kost. Bump CACHE_VERSION when the precache list or the
 // caching strategy changes, so old caches are cleaned up on activate.
-const CACHE_VERSION = 'v7';
+const CACHE_VERSION = 'v8';
 // Production and the /dev preview share one origin, so the cache name carries
 // the scope path. Without it both apps would write into the same cache.
 const SCOPE_KEY = self.registration.scope
@@ -56,6 +56,7 @@ const PRECACHE_URLS = [
   './js/browser-cache.js',
   './js/browser-translator.js',
   './js/content-translator.js',
+  './js/cuisine.js',
   './js/gemini-service.js',
   './js/i18n.js',
   './js/nutrition-estimator.js',

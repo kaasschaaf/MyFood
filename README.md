@@ -35,6 +35,8 @@ AH product search still exists, but only for **Mijn producten**: queries that th
     - ⏱️ **Quick**: Filter recipes ready within 25 minutes.
   - Sort by: *Aanbevolen (default), Price per person (low-high), biggest bonus savings, most protein, health score, or prep time*.
   - **Aanbevolen** is a real ranking, not file order: a quality score per recipe (how much of it the price snapshot can price, documented nutrition, a believable ingredient list, a written description, a dish type, a translation) in 10-point bands, with the order *inside* a band rotated daily. Better recipes always lead, but the front page is a different mix of the corpus every day instead of the same handful. The score and price are computed by the pipeline and stored in `data/catalog.json`, so the grid can rank and price 2 000 recipes without loading a single recipe body.
+  - Two filter rows: **keukenstijl** (detected per recipe by [`js/cuisine.js`](./js/cuisine.js) — Italiaans, Mexicaans, Chinees, Indiaas, Grieks…) and **gerechtsoort** (kip, pasta & rijst, vis, vlees, salade, oven, soep, vegetarisch, stoof & curry).
+  - **An incomplete price is shown as a lower bound.** When an ingredient has no good AH match, the card says *vanaf €X* and how many ingredients were matched, instead of presenting a cheaper-than-reality total as the price.
   - Browse genuine Allerhande recipes alongside the cooked dataset; dinner dishes are tagged by type (pasta, kip, vis, stoof, oven…).
 
 - **🛒 Albert Heijn Prices & Bonus Deals (Default: 2 people)**:
@@ -121,6 +123,15 @@ back to the source text.
 turns a raw line into a stable Dutch key — fractions, ranges, brackets, prep
 qualifiers and Dutch wording are normalised, so `To taste salt` is simply
 `zout` and `1 1/2 cups (180 g) all-purpose flour, divided` is `bloem`.
+
+**Matching.** [`js/ingredient-matching.js`](./js/ingredient-matching.js) decides
+whether an AH product really is the ingredient: the shelf may never be
+non-food (a "muffin split" once matched a €1 899 air conditioner), a compound
+name needs more than a generic noun (`dille augurk sap` is not pineapple juice),
+and a pack that cannot be converted to the amount is left unpriced rather than
+guessed. `PIECE_WEIGHT_GRAMS` in
+[`js/ah-pricing.js`](./js/ah-pricing.js) bridges counted ingredients to weight
+products, which is what prices the protein.
 
 **Metric only.** Recipes arrive in cups, spoons, ounces and pounds as often as in
 grams. [`js/measure.js`](./js/measure.js) converts every amount once, at build

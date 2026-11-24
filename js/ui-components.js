@@ -391,6 +391,10 @@ export class UIComponents {
               <div>
                 <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/70">${this.escapeHtml(t('catalog.card.priceEstimate'))}</p>
                 <p class="mt-0.5 flex items-baseline gap-1.5">
+                  ${/* An incomplete total leaves ingredients out, so it is a lower
+                       bound. Saying "vanaf" stops a missing main ingredient from
+                       advertising the recipe at fifty cents. */ ''}
+                  ${!priceInfo.hasPriceData ? `<span class="text-[11px] font-semibold uppercase tracking-wide text-white/80">${this.escapeHtml(t('catalog.card.from'))}</span>` : ''}
                   <span class="text-xl font-bold tracking-tight">${this.ahService.formatEuro(priceInfo.totalPrice)}</span>
                   <span class="text-[11px] font-medium text-white/75">${!priceInfo.hasPriceData ? this.escapeHtml(t('catalog.card.partial')) : ''}${this.escapeHtml(t('catalog.card.perPerson', { price: this.ahService.formatEuro(priceInfo.pricePerPerson) }))}</span>
                 </p>
@@ -732,7 +736,7 @@ export class UIComponents {
                   }))}
               </div>
               <div class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-                ${this.ahService.formatEuro(priceInfo.totalPrice)}
+                ${!priceInfo.hasPriceData ? `<span class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">${this.escapeHtml(t('catalog.card.from'))}</span> ` : ''}${this.ahService.formatEuro(priceInfo.totalPrice)}
                 <span class="text-xs font-medium text-slate-500 dark:text-neutral-400">${this.escapeHtml(t('catalog.card.perPerson', { price: this.ahService.formatEuro(priceInfo.pricePerPerson) }))}</span>
               </div>
             </div>
