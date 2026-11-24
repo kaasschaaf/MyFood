@@ -15,6 +15,7 @@ const HOLD_MOVE_TOLERANCE_PX = 12;
 // Hoe lang na het loslaten de klik wordt tegengehouden (die zou AH openen).
 const SUPPRESS_CLICK_MS = 900;
 const MAX_CUISINE_PILLS = 10;
+const MAX_DISH_PILLS = 9;
 
 class KostApp {
   constructor() {
@@ -44,11 +45,13 @@ class KostApp {
     // 1. Laad recepten (AH-prijzen worden live opgehaald)
     await this.recipesService.loadRecipes(() => {
       this.initCuisineFilters();
+      this.initDishFilters();
       this.render();
     });
 
     // 2. Initialiseer UI elementen & filters
     this.initCuisineFilters();
+    this.initDishFilters();
     this.bindEvents();
     this.initTheme();
     this.initBuildTimeBadge();
@@ -94,6 +97,49 @@ class KostApp {
     });
 
     cuisineContainer.innerHTML = pillsHtml;
+  }
+
+  /**
+   * Builds the "gerechtsoort" row.
+   *
+   * The corpus is international, so cuisine alone leaves large groups of
+   * recipes unreachable. What people actually pick for dinner is the dish:
+   * kip, pasta, vis, soep, vegetarisch, oven. The pipeline already tags every
+   * recipe with one (`dishType`), so this is a direct view on the data.
+   */
+  initDishFilters() {
+    const container = document.getElementById('dish-pills');
+    if (!container) return;
+
+    const counts = new Map();
+    this.recipesService.recipes.forEach(recipe => {
+      if (recipe.ahRecipeOnly) return;
+      const key = recipe.dishType;
+      if (!key) return;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+
+    const dishes = [...counts.entries()]
+      // "Overig" is a bucket, not a dish: it would take the first slot while
+      // saying nothing. Those recipes stay reachable through "Alles".
+      .filter(([key, count]) => key !== 'overig' && count >= MIN_RECIPES_PER_CUISINE_PILL)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'nl'))
+      .slice(0, MAX_DISH_PILLS)
+      .map(([key]) => key);
+
+    let html = `
+      <button type="button" class="cuisine-pill is-active" data-dish="all" aria-pressed="true">
+        ${this.ui.escapeHtml(t('catalog.allDishes'))}
+      </button>
+    `;
+    dishes.forEach(dish => {
+      html += `
+        <button type="button" class="cuisine-pill" data-dish="${this.ui.escapeHtml(dish)}" aria-pressed="false">
+          ${this.ui.escapeHtml(t(`dish.${dish}`))}
+        </button>
+      `;
+    });
+    container.innerHTML = html;
   }
 
   bindEvents() {
@@ -156,6 +202,26 @@ class KostApp {
         btn.setAttribute('aria-pressed', 'true');
 
         this.recipesService.setFilters({ cuisine: btn.dataset.cuisine });
+        this.render();
+      });
+    }
+
+    // Gerechtsoort filters
+    const dishContainer = document.getElementById('dish-pills');
+    if (dishContainer) {
+      dishContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('.cuisine-pill');
+        if (!btn) return;
+
+        dishContainer.querySelectorAll('.cuisine-pill').forEach(b => {
+          b.classList.remove('is-active');
+          b.setAttribute('aria-pressed', 'false');
+        });
+
+        btn.classList.add('is-active');
+        btn.setAttribute('aria-pressed', 'true');
+
+        this.recipesService.setFilters({ dishType: btn.dataset.dish });
         this.render();
       });
     }
@@ -715,6 +781,7 @@ class KostApp {
    */
   async onLanguageChanged() {
     this.initCuisineFilters();
+    this.initDishFilters();
     this.syncPortionLabels?.();
     this.render();
     if (this.activeRecipeId) {

@@ -276,10 +276,19 @@ async function main() {
     }
   });
 
+  // A key that was cleared and refetched leaves its old product ids behind in
+  // prices.json. Those prices belong to nothing, so drop them instead of
+  // shipping a snapshot that verify-data rejects.
+  const referenced = new Set();
+  Object.values(products.keys).forEach(entry =>
+    (entry.options || []).forEach(option => referenced.add(option.productId)));
+  const stalePrices = Object.keys(prices.prices).filter(id => !referenced.has(id));
+
   await report.phase('write data', async () => {
     writeJson(resolve(DATA_DIR, 'products.json'), products);
     writeJson(resolve(DATA_DIR, 'prices.json'), prices);
   });
+  report.data('pruned prices', stalePrices.length, `${stalePrices.length.toLocaleString('en-US')} unreferenced prices dropped`);
 
   const catalogStats = await report.phase('price catalogue', () => writeCatalogMetrics(recipes, products, prices));
   report.data('catalogue prices', catalogStats.priced,

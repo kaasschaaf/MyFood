@@ -2,7 +2,7 @@ import { BrowserCache } from './browser-cache.js';
 import { canonicalCuisine } from './i18n.js';
 import { toMetric } from './measure.js';
 import { estimateRecipeNutrition } from './nutrition-estimator.js';
-import { rankRecipes } from './recipe-ranking.js';
+import { isPlausibleRecipe, rankRecipes } from './recipe-ranking.js';
 import { productsForKey, selectStaticProduct } from './static-data.js';
 
 const THEMEALDB_API = 'https://www.themealdb.com/api/json/v1/1';
@@ -73,6 +73,7 @@ export class RecipesService {
     this.filters = {
       searchQuery: '',
       cuisine: 'all',
+      dishType: 'all',
       maxTime: 0,
       highProteinOnly: false,
       bonusOnly: false,
@@ -969,6 +970,7 @@ export class RecipesService {
     this.filters = {
       searchQuery: '',
       cuisine: 'all',
+      dishType: 'all',
       maxTime: 0,
       highProteinOnly: false,
       bonusOnly: false,
@@ -1000,6 +1002,8 @@ export class RecipesService {
       }
       if (this.filters.cuisine !== 'all' &&
           canonicalCuisine(recipe.cuisine) !== this.filters.cuisine) return false;
+      if (this.filters.dishType && this.filters.dishType !== 'all' &&
+          recipe.dishType !== this.filters.dishType) return false;
       if (this.filters.maxTime > 0 &&
           (!recipe.prepTimeMinutes || recipe.prepTimeMinutes > this.filters.maxTime)) return false;
       if (this.filters.highProteinOnly &&
@@ -1027,8 +1031,13 @@ export class RecipesService {
       const priceB = this.ahService.calculateRecipePrice(b, this.activeServings);
       switch (this.filters.sortBy) {
         case 'price-asc': {
-          const rankA = priceA.hasPriceData ? 0 : priceA.hasAnyPriceData ? 1 : 2;
-          const rankB = priceB.hasPriceData ? 0 : priceB.hasAnyPriceData ? 1 : 2;
+          // Complete and believable first; a price derived from mis-parsed
+          // amounts ("1 aardappel" for four) must not win "cheapest".
+          const rankOf = (price, recipe) => (price.hasPriceData
+            ? (isPlausibleRecipe(recipe) ? 0 : 1)
+            : (price.hasAnyPriceData ? 2 : 3));
+          const rankA = rankOf(priceA, a);
+          const rankB = rankOf(priceB, b);
           if (rankA !== rankB) return rankA - rankB;
           if (!priceA.hasAnyPriceData && !priceB.hasAnyPriceData) return 0;
           return priceA.pricePerPerson - priceB.pricePerPerson;

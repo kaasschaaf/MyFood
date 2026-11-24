@@ -132,3 +132,27 @@ test('selectProductForIngredient returns no product when nothing matches', () =>
   assert.equal(selection.relevant, false);
   assert.deepEqual(selection.matchedIds, []);
 });
+
+test('a generic noun alone does not make a product the ingredient', () => {
+  const juiceShelf = { mainCategory: 'Frisdrank, sappen, water', subCategory: 'Sap' };
+  // "dille augurk sap" matched AH Ananassap because both contain "sap".
+  assert.equal(isRelevantProductForIngredient('dille augurk sap', { title: 'AH Ananassap', ...juiceShelf }), false);
+  // The ingredient's own word still matches.
+  assert.equal(isRelevantProductForIngredient('appelsap', { title: 'AH Appelsap', ...juiceShelf }), true);
+  assert.equal(isRelevantProductForIngredient('sinaasappelsap', { title: 'AH Appelsap', ...juiceShelf }), false);
+});
+
+test('a non-food shelf is never offered as an ingredient', () => {
+  // "split" in "muffin split" once matched a €1 899 air conditioner.
+  assert.equal(isRelevantProductForIngredient('muffin split', {
+    title: 'Vaillant Single split airco 2,5 KW per stuk',
+    mainCategory: 'Koken, tafelen, vrije tijd',
+    subCategory: 'Airco'
+  }), false);
+  // "poeder" once matched washing powder.
+  assert.equal(isRelevantProductForIngredient('komijn poeder', {
+    title: 'AH Eco Wasmiddel puur wit poeder',
+    mainCategory: 'Huishouden',
+    subCategory: 'Waspoeder'
+  }), false);
+});

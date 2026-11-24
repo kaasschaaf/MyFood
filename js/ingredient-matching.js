@@ -61,6 +61,16 @@ export const PRODUCT_PREFIXES = [
 ];
 export const PRODUCT_PREFIX_PATTERN = new RegExp(`^(?:${PRODUCT_PREFIXES.join('|')}) +`);
 
+// Nouns so generic that matching one says almost nothing: a "dille augurk sap"
+// matched AH Ananassap, and "zonnebloemolie" and "olijfolie" are the same word.
+// When one of these is the only match, another word from the ingredient has to
+// match too.
+export const GENERIC_HEADWORDS = new Set([
+  'sap', 'sappen', 'olie', 'olien', 'azijn', 'saus', 'sauzen', 'siroop', 'poeder', 'meel',
+  'mix', 'room', 'melk', 'yoghurt', 'kaas', 'vlees', 'vis', 'water', 'zout', 'suiker', 'bloem',
+  'pasta', 'rijst', 'brood', 'stroop', 'puree', 'pasta', 'bouillon', 'wijn', 'bier', 'thee', 'koffie'
+]);
+
 // Shelves that never contain a cooking ingredient. "split" in an English
 // ingredient name matched a "Vaillant Single split airco" and "poeder" matched
 // washing powder, so the shelf is checked before the name.
@@ -180,6 +190,25 @@ export function isRelevantProductForIngredient(ingredientName, product) {
 
   // The shelf is the most reliable hint: "AH Gele uien" sits under "Ui".
   const categoryMatches = words(product.subCategory).some(matchesAny);
+
+  // A generic noun alone is not enough: "dille augurk sap" must not become
+  // pineapple juice. Require the other words of the ingredient to appear too.
+  if (headwords.length > 1 && headwords.every(word => GENERIC_HEADWORDS.has(word))) {
+    const distinctive = words(ingredient).filter(word =>
+      !GENERIC_HEADWORDS.has(word) && !INGREDIENT_STOPWORDS.has(word) && !PRODUCT_ADJECTIVES.has(word));
+    const haystack = `${title} ${normalizeText(product.subCategory)} ${normalizeText(product.mainCategory)}`;
+    const hasDistinctiveMatch = distinctive.length === 0 ||
+      distinctive.some(word => haystack.includes(word));
+    if (!hasDistinctiveMatch) return false;
+  }
+  // Same rule when the headword is generic but sits in a compound name
+  // ("dille augurk sap" has headwords dille, augurk, sap).
+  if (headwords.length > 1 && GENERIC_HEADWORDS.has(headwords[headwords.length - 1])) {
+    const distinctive = headwords.slice(0, -1).filter(word =>
+      !GENERIC_HEADWORDS.has(word) && !PRODUCT_ADJECTIVES.has(word));
+    const haystack = `${title} ${normalizeText(product.subCategory)} ${normalizeText(product.mainCategory)}`;
+    if (distinctive.length && !distinctive.some(word => haystack.includes(word))) return false;
+  }
   // In the title the ingredient has to be the first noun: "gele uien" and
   // "rode puntpaprika" yes, "bloemkool broccoli kleinverpakking" and
   // "boterhamworst" no.

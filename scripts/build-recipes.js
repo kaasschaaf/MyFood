@@ -25,6 +25,7 @@ import { createReport } from './lib/report.js';
 import { countCandidates, fetchCandidates } from './lib/clickhouse.js';
 import { cleanTitle, curateDinnerRecipes, dishTypeFor } from './lib/dinner.js';
 import { describeRecipe } from './lib/describe.js';
+import { cuisineFor } from '../js/cuisine.js';
 import { translationStats, translateBatch } from './lib/translate.js';
 import { DATA_DIR, SCRIPT_FILE, SHARD_SIZE, catalogEntry, metaBlock, recipeId, shardName, writeJson } from './lib/data.js';
 import { canonicalIngredients } from '../js/ingredient-canonical.js';
@@ -91,8 +92,14 @@ function toRecipe(row, index) {
     .map(step => truncateStep(String(step).replace(/\s+/g, ' ').trim()))
     .filter(step => step.length > 3);
   const dishType = dishTypeFor(titleEn);
+  // The corpus rows carry no cuisine; detecting one from the title and
+  // ingredients turns a useless "Internationaal" filter into real pills.
+  const cuisine = cuisineFor({
+    title: titleEn,
+    ingredientNames: ingredients.map(ingredient => ingredient.nameEn || ingredient.name)
+  });
   const { description, descriptionEn } = describeRecipe({
-    cuisine: 'Internationaal',
+    cuisine,
     mealType: 'Hoofdgerecht',
     ingredients
   });
@@ -106,7 +113,7 @@ function toRecipe(row, index) {
     titleEn,
     description,
     descriptionEn,
-    cuisine: 'Internationaal',
+    cuisine,
     mealType: 'Hoofdgerecht',
     dishType,
     prepTimeMinutes: 0,

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
+  isPlausibleRecipe,
   priceCoverage,
   rankRecipes,
   recommendationScore,
@@ -119,4 +120,15 @@ test('a stored score wins over a recomputed one', () => {
 test('an empty list is handled', () => {
   assert.deepEqual(rankRecipes([]), []);
   assert.deepEqual(rankRecipes(null), []);
+});
+
+test('a recipe whose amounts are too small to feed anyone does not lead', () => {
+  // "1 aardappel" for four people: 76 kcal is not a portion.
+  const implausible = complete({ id: 'tiny', nutrition: { calories: 76, proteinGrams: 3, healthScore: 60 } });
+  const real = complete({ id: 'real' });
+  const ranked = rankRecipes([implausible, real], { priceFor: () => fullPrice, seed: '20261109' });
+  assert.equal(ranked[0].id, 'real');
+  assert.equal(isPlausibleRecipe(implausible), false);
+  assert.equal(isPlausibleRecipe(real), true);
+  assert.equal(isPlausibleRecipe({ nutrition: null }), false);
 });
